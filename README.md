@@ -1,5 +1,5 @@
 ## TaxiPoint – Taxi Rank Locator for Johannesburg
-Find every taxi rank in Jozi — fast.
+### Jozi taxi ranks at your fingertips..
 
 TaxiPoint is a web and mobile application designed to help commuters and visitors easily locate taxi ranks in Johannesburg. Whether you’re heading to work, school, or exploring the city, TaxiPoint puts every rank on an interactive map, giving you:
 
