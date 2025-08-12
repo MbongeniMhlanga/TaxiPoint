@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './screens/users/Login';
 import Register from './screens/users/Register';
 import Landing from './screens/Landing'; // Landing page component
+import 'leaflet/dist/leaflet.css';
+
 
 function App() {
   // user: full user object or null
@@ -14,9 +16,11 @@ function App() {
   }, []);
 
   const handleLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
+  // userData example: { email: 'email@gmail.com', role: 'ROLE_USER' }
+  setUser(userData);
+  localStorage.setItem('user', JSON.stringify(userData));
+};
+
 
   const handleLogout = () => {
     setUser(null);

@@ -24,15 +24,15 @@ L.Icon.Default.mergeOptions({
 });
 
 const taxiRanks = [
-  { id: 1, name: 'Noord Taxi Rank', position: [-26.065, 28.043] },
-  { id: 2, name: 'Park Station', position: [-26.2044, 28.0473] },
-  { id: 3, name: 'Orlando Taxi Rank', position: [-26.245, 27.858] },
+  { id: 1, name: 'Noord Taxi Rank', position: [ -26.198994210900764, 28.047953539238694] },
+  { id: 2, name: 'Wanderes Taxi Rank', position: [-26.19802346982102, 28.044844241410118] },
+  { id: 3, name: 'Enkomeni Taxi Rank', position: [-26.199147086918053, 28.05813659392256] },
 ];
 
 const Landing = ({ user, onLogout }: LandingProps) => {
   return (
     <div style={{ padding: 20 }}>
-      <h1>Welcome, {user.email}!</h1>
+      <h1>Welcome, {user.name}!</h1>
       <button onClick={onLogout}>Logout</button>
 
       <MapContainer
