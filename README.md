@@ -34,7 +34,7 @@ bash
 Copy
 Edit
 ### Clone the repo
-git clone https://github.com/yourusername/taxipoint.git
+git clone https://github.com/mbongenimhlanga/taxipoint.git
 
 ### Navigate into the project folder
 cd taxipoint
