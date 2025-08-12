@@ -7,7 +7,7 @@ TaxiPoint is a web and mobile application designed to help commuters and visitor
 
 ## 🗺 Interactive map view
 
-##🚶‍♂️ Directions to your nearest rank
+## 🚶‍♂️ Directions to your nearest rank
 
 ## 📌 Details on routes served
 
