@@ -33,14 +33,17 @@ public class UserController {
         }
     }
     
-// za.co.taxipoint.controller.UserController (excerpt)
-@PostMapping("/login")
-public ResponseEntity<?> login(@RequestBody UserLoginDTO dto) {
-    var authResp = userService.loginUser(dto); // returns AuthResponse
-    return ResponseEntity.ok(authResp);
-}
-
-    
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody UserLoginDTO dto) {
+        try {
+            var authResp = userService.loginUser(dto);
+            return ResponseEntity.ok(authResp);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Login failed: " + e.getMessage());
+        }
+    }
     @GetMapping
     public ResponseEntity<List<UserDTO>> listUsers() {
         return ResponseEntity.ok(userService.listUsers());

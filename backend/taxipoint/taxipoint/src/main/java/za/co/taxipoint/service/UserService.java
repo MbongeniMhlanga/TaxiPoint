@@ -39,15 +39,22 @@ public class UserService {
     }
 
     public UserDTO loginUser(UserLoginDTO dto) {
+        System.out.println("Attempting login for: " + dto.getEmail());
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
-
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
+    
+        System.out.println("User found: " + user.getEmail());
+        System.out.println("Stored hash: " + user.getPasswordHash());
+        boolean matches = passwordEncoder.matches(dto.getPassword(), user.getPasswordHash());
+        System.out.println("Password matches? " + matches);
+        
+        if (!matches) {
             throw new IllegalArgumentException("Invalid credentials");
         }
-
+    
         return toDTO(user);
     }
+    
 
     public List<UserDTO> listUsers() {
         return userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
@@ -65,6 +72,7 @@ public class UserService {
         dto.setSurname(user.getSurname());
         dto.setEmail(user.getEmail());
         // Add roles or other properties if needed
+        dto.setRole(user.getRole());
         return dto;
     }
 }

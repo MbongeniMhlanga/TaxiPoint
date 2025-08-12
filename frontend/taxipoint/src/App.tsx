@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './screens/users/Login';
 import Register from './screens/users/Register';
-import Landing from './screens/Landing'; // Simple landing page component
+import Landing from './screens/Landing'; // Landing page component
 
 function App() {
-  // user: { email, role } or null
+  // user: full user object or null
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -23,14 +23,14 @@ function App() {
     localStorage.removeItem('user');
   };
 
-  // Role-based private route
+  // Role-based private route component
   const PrivateRoute = ({ children, allowedRoles = [] }) => {
     if (!user) {
-      // Not logged in -> send to register first
+      // Not logged in -> redirect to register
       return <Navigate to="/register" replace />;
     }
     if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      // Logged in but no permission -> maybe redirect or show message
+      // Logged in but no permission -> redirect to login
       return <Navigate to="/login" replace />;
     }
     return children;
@@ -50,7 +50,7 @@ function App() {
           }
         />
         {/* Redirect unknown paths */}
-        <Route path="*" element={<Navigate to={user ? "/" : "/register"} replace />} />
+        <Route path="*" element={<Navigate to={user ? '/' : '/register'} replace />} />
       </Routes>
     </Router>
   );
