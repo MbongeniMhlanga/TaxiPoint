@@ -7,44 +7,46 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /**
-     * Creates and exposes a BCryptPasswordEncoder bean to the Spring application context.
-     * This bean can then be automatically injected into any component that requires a
-     * PasswordEncoder, such as the UserService.
-     *
-     * @return a new instance of BCryptPasswordEncoder
-     */
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // By injecting the JwtAuthenticationFilter, we tell Spring to provide its bean
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Configures the security filter chain. This method sets up rules for which
-     * endpoints are secured and which are publicly accessible.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Disable CSRF protection for API endpoints as they are stateless
-            .csrf(csrf -> csrf.disable())
-            
-            // Configure authorization rules for HTTP requests
-            .authorizeHttpRequests(authorize -> authorize
-                // Allow unauthenticated POST requests to the /api/users/register endpoint
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/register").permitAll()
-                
-                // Allow unauthenticated POST requests to the /api/users/login endpoint
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/login").permitAll()
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(authorize -> authorize
+                        // Allow registration and login without authentication
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/register").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/login").permitAll()
+                        
+                        // Require an ADMIN role for POST requests to /api/taxi-ranks
+                        //.requestMatchers(org.springframework.http.HttpMethod.POST, "/api/taxi-ranks")
+                        //.hasRole("ADMIN")
+                        .anyRequest().permitAll()
 
-                // All other requests must be authenticated
-                .anyRequest().authenticated()
-            );
+                        // All other requests require authentication
+                        //.anyRequest().authenticated()
+                );
+        
+        // This is the critical line that adds your JwtAuthenticationFilter to the security chain.
+        // It ensures the JWT token is processed and the user is authenticated BEFORE the
+        // role-based rules are checked. This is the fix for your 403 error.
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

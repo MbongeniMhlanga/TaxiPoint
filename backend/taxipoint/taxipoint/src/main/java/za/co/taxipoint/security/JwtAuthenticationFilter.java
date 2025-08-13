@@ -1,4 +1,3 @@
-// za.co.taxipoint.security.JwtAuthenticationFilter
 package za.co.taxipoint.security;
 
 import jakarta.servlet.FilterChain;
@@ -10,9 +9,12 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import io.jsonwebtoken.Claims;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+// The @Component annotation is what tells Spring to manage this class as a bean.
+@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -47,3 +49,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
+
