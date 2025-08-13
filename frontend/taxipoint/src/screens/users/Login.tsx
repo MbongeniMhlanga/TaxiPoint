@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -17,6 +17,10 @@ interface LoginForm {
   password: string;
 }
 
+interface ErrorResponse {
+    message?: string;
+}
+
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,15 +32,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-
-  // Restore user if already logged in
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      onLogin(JSON.parse(savedUser));
-      navigate("/");
-    }
-  }, [onLogin, navigate]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -54,28 +49,30 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       });
 
       const contentType = res.headers.get("content-type");
-      let data: User | null = null;
+      let data: User | ErrorResponse | null = null;
 
       if (contentType && contentType.includes("application/json")) {
         data = await res.json();
       }
 
       if (!res.ok) {
-        toast.error((data as any)?.message || `Login failed (${res.status})`);
+        const errorMessage = (data as ErrorResponse)?.message || `Login failed (${res.status})`;
+        toast.error(errorMessage);
         setIsLoading(false);
         return;
       }
 
-      toast.success(`Welcome back, ${form.email}!`);
+      if (data && 'email' in data) {
+          toast.success(`Welcome back, ${data.email}!`);
+          onLogin(data);
+          navigate("/");
+      } else {
+          toast.error("Login successful, but user data is missing.");
+      }
 
-      // Save to localStorage for persistence
-      localStorage.setItem("user", JSON.stringify(data));
-
-      onLogin(data!);
-      navigate("/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      toast.error(error.message || "Unexpected error");
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -34,18 +34,7 @@ const taxiRanks = [
 ];
 
 const Landing = ({ user, onLogout }: LandingProps) => {
-  useEffect(() => {
-    // Redirect if not logged in
-    if (!user?.email) {
-      const savedUser = localStorage.getItem("user");
-      if (!savedUser) {
-        window.location.href = "/login";
-      }
-    }
-  }, [user]);
-
   const handleLogout = () => {
-    localStorage.removeItem("user");
     onLogout();
   };
 
@@ -72,7 +61,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {taxiRanks.map((rank) => (
-              <Marker key={rank.id} position={rank.position} icon={taxiIcon}>
+              <Marker key={rank.id} position={rank.position as L.LatLngTuple} icon={taxiIcon}>
                 <Popup>🚖 <b>{rank.name}</b></Popup>
               </Marker>
             ))}

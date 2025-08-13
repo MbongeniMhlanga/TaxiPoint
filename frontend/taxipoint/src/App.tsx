@@ -2,40 +2,47 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './screens/users/Login';
 import Register from './screens/users/Register';
-import Landing from './screens/Landing'; // Landing page component
+import Landing from './screens/Landing';
 import 'leaflet/dist/leaflet.css';
 
+interface User {
+  email: string;
+  role?: string;
+  token?: string;
+}
 
-function App() {
-  // user: full user object or null
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
+// Function to get the initial user state from localStorage
+const getInitialUser = (): User | null => {
+  try {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
-
-  const handleLogin = (userData) => {
-  // userData example: { email: 'email@gmail.com', role: 'ROLE_USER' }
-  setUser(userData);
-  localStorage.setItem('user', JSON.stringify(userData));
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch (error) {
+    console.error("Failed to parse user from localStorage", error);
+    localStorage.removeItem('user');
+    return null;
+  }
 };
 
+function App() {
+  const [user, setUser] = useState<User | null>(getInitialUser);
+
+  // The rest of your component remains the same
+  const handleLogin = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
-  // Role-based private route component
-  const PrivateRoute = ({ children, allowedRoles = [] }) => {
+  const PrivateRoute = ({ children, allowedRoles = [] }: { children: React.ReactNode; allowedRoles?: string[] }) => {
     if (!user) {
-      // Not logged in -> redirect to register
-      return <Navigate to="/register" replace />;
-    }
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-      // Logged in but no permission -> redirect to login
       return <Navigate to="/login" replace />;
+    }
+    if (allowedRoles.length > 0 && user.role && !allowedRoles.includes(user.role)) {
+      return <Navigate to="/" replace />;
     }
     return children;
   };
@@ -49,12 +56,11 @@ function App() {
           path="/"
           element={
             <PrivateRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']}>
-              <Landing onLogout={handleLogout} user={user} />
+              <Landing onLogout={handleLogout} user={user!} />
             </PrivateRoute>
           }
         />
-        {/* Redirect unknown paths */}
-        <Route path="*" element={<Navigate to={user ? '/' : '/register'} replace />} />
+        <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
       </Routes>
     </Router>
   );
