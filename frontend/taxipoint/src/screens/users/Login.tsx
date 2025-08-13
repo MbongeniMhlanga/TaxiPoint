@@ -1,10 +1,11 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 
 interface User {
   email: string;
   role?: string;
+  token?: string;
 }
 
 interface LoginProps {
@@ -19,15 +20,23 @@ interface LoginForm {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
   const state = location.state as { email?: string; password?: string } | undefined;
 
   const [form, setForm] = useState<LoginForm>({
-    email: state?.email || '',
-    password: state?.password || '',
+    email: state?.email || "",
+    password: state?.password || "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Restore user if already logged in
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      onLogin(JSON.parse(savedUser));
+      navigate("/");
+    }
+  }, [onLogin, navigate]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -36,73 +45,85 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
-      const res = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
-      const contentType = res.headers.get('content-type');
+      const contentType = res.headers.get("content-type");
       let data: User | null = null;
 
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType && contentType.includes("application/json")) {
         data = await res.json();
       }
 
       if (!res.ok) {
-        toast.error(data?.message || `Login failed with status ${res.status}`);
+        toast.error((data as any)?.message || `Login failed (${res.status})`);
         setIsLoading(false);
         return;
       }
 
       toast.success(`Welcome back, ${form.email}!`);
-      onLogin(data!);  // pass full user object
 
-      // Redirect to landing page
-      navigate('/');
+      // Save to localStorage for persistence
+      localStorage.setItem("user", JSON.stringify(data));
+
+      onLogin(data!);
+      navigate("/");
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Unexpected error');
+      console.error("Login error:", error);
+      toast.error(error.message || "Unexpected error");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: 'auto', padding: 20 }}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: 10, padding: 8 }}
-          disabled={isLoading}
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', marginBottom: 10, padding: 8 }}
-          disabled={isLoading}
-        />
-        <button type="submit" style={{ width: '100%', padding: 10 }} disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
-      <p style={{ marginTop: '10px', textAlign: 'center' }}>
-        Don't have an account?{' '}
-        <a href="/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }} style={{ color: 'blue' }}>
-          Register
-        </a>
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+      <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
+        <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            disabled={isLoading}
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition"
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging in..." : "Login"}
+          </button>
+        </form>
+        <p className="mt-4 text-center text-gray-300">
+          Don't have an account?{" "}
+          <button
+            onClick={() => navigate("/register")}
+            className="text-blue-400 hover:underline"
+          >
+            Register
+          </button>
+        </p>
+      </div>
     </div>
   );
 };
