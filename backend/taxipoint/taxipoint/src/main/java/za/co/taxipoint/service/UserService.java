@@ -31,8 +31,16 @@ public class UserService {
         user.setSurname(dto.getSurname());
         user.setEmail(dto.getEmail());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
-        // Optionally set default role here if your User entity has roles
-        // user.setRole("ROLE_USER");
+
+        // --- Core Logic for Admin Role Assignment ---
+        if ("mbongeniroyce@gmail.com".equalsIgnoreCase(dto.getEmail())) {
+            user.setRole("ROLE_ADMIN");
+        } else {
+            // The default role is already set in the User model, but
+            // explicitly setting it here can be good practice.
+            user.setRole("ROLE_USER");
+        }
+        // ---------------------------------------------
 
         User savedUser = userRepository.save(user);
         return toDTO(savedUser);
@@ -42,19 +50,19 @@ public class UserService {
         System.out.println("Attempting login for: " + dto.getEmail());
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
-    
+
         System.out.println("User found: " + user.getEmail());
         System.out.println("Stored hash: " + user.getPasswordHash());
         boolean matches = passwordEncoder.matches(dto.getPassword(), user.getPasswordHash());
         System.out.println("Password matches? " + matches);
-        
+
         if (!matches) {
             throw new IllegalArgumentException("Invalid credentials");
         }
-    
+
         return toDTO(user);
     }
-    
+
 
     public List<UserDTO> listUsers() {
         return userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
@@ -71,7 +79,6 @@ public class UserService {
         dto.setName(user.getName());
         dto.setSurname(user.getSurname());
         dto.setEmail(user.getEmail());
-        // Add roles or other properties if needed
         dto.setRole(user.getRole());
         return dto;
     }

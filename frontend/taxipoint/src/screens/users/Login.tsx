@@ -1,128 +1,151 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { FcGoogle } from "react-icons/fc";
+import { FaFacebook } from "react-icons/fa";
 
-interface User {
-  email: string;
-  role?: string;
-  token?: string;
-}
-
-interface LoginProps {
-  onLogin: (userData: User) => void;
+interface UserResponse {
+    email: string;
+    name: string;
+    role: string;
+    // Add other fields as needed
 }
 
 interface LoginForm {
-  email: string;
-  password: string;
+    email: string;
+    password: string;
 }
 
-interface ErrorResponse {
-    message?: string;
+// Define the new prop for the onLogin function
+interface LoginProps {
+    onLogin: (userData: UserResponse) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as { email?: string; password?: string } | undefined;
+    const [form, setForm] = useState<LoginForm>({
+        email: "",
+        password: "",
+    });
 
-  const [form, setForm] = useState<LoginForm>({
-    email: state?.email || "",
-    password: state?.password || "",
-  });
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
-  const [isLoading, setIsLoading] = useState(false);
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsLoading(true);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
+        try {
+            const res = await fetch("/api/users/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            });
 
-    try {
-      const res = await fetch("/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+            if (!res.ok) {
+                const errorBody = await res.text();
+                throw new Error(`Login failed: ${errorBody}`);
+            }
 
-      const contentType = res.headers.get("content-type");
-      let data: User | ErrorResponse | null = null;
+            const userData: UserResponse = await res.json();
+            
+            // Call the onLogin prop to update the state in App.tsx
+            onLogin(userData);
 
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      }
+            toast.success(`Welcome back, ${userData.name}!`);
 
-      if (!res.ok) {
-        const errorMessage = (data as ErrorResponse)?.message || `Login failed (${res.status})`;
-        toast.error(errorMessage);
-        setIsLoading(false);
-        return;
-      }
+            // Check the role and navigate from here
+            if (userData.role === "ROLE_ADMIN") {
+                navigate("/admin");
+            } else {
+                navigate("/landing");
+            }
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-      if (data && 'email' in data) {
-          toast.success(`Welcome back, ${data.email}!`);
-          onLogin(data);
-          navigate("/");
-      } else {
-          toast.error("Login successful, but user data is missing.");
-      }
+    const handleGoogleLogin = () => {
+        toast.info("Google login coming soon!");
+    };
 
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const handleFacebookLogin = () => {
+        toast.info("Facebook login coming soon!");
+    };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
-      <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
-        <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            disabled={isLoading}
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition"
-            disabled={isLoading}
-          >
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-gray-300">
-          Don't have an account?{" "}
-          <button
-            onClick={() => navigate("/register")}
-            className="text-blue-400 hover:underline"
-          >
-            Register
-          </button>
-        </p>
-      </div>
-    </div>
-  );
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+            <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
+                <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
+
+                <div className="space-y-3 mb-6">
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-white text-gray-800 font-semibold shadow-md hover:bg-gray-100 transition"
+                    >
+                        <FcGoogle size={22} /> Login with Google
+                    </button>
+                    <button
+                        onClick={handleFacebookLogin}
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition"
+                    >
+                        <FaFacebook size={22} /> Login with Facebook
+                    </button>
+                </div>
+
+                <div className="flex items-center mb-6">
+                    <hr className="flex-1 border-gray-500" />
+                    <span className="px-3 text-gray-400 text-sm">or</span>
+                    <hr className="flex-1 border-gray-500" />
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        disabled={isLoading}
+                    />
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        value={form.password}
+                        onChange={handleChange}
+                        required
+                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        disabled={isLoading}
+                    />
+                    <button
+                        type="submit"
+                        className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Logging in..." : "Login"}
+                    </button>
+                </form>
+                
+                <p className="mt-4 text-center text-gray-300">
+                    Don't have an account?{" "}
+                    <button
+                        onClick={() => navigate("/register")}
+                        className="text-blue-400 hover:underline"
+                    >
+                        Register
+                    </button>
+                </p>
+            </div>
+        </div>
+    );
 };
 
 export default Login;
