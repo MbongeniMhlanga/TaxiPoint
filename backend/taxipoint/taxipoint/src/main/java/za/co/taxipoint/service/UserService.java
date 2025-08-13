@@ -1,7 +1,8 @@
 package za.co.taxipoint.service;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import za.co.taxipoint.security.JwtUtil;
 import za.co.taxipoint.dto.UserDTO;
 import za.co.taxipoint.dto.UserLoginDTO;
 import za.co.taxipoint.dto.UserRegisterDTO;
@@ -15,10 +16,15 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserService(UserRepository userRepository) {
+    // The constructor is now correctly configured for dependency injection.
+    // Spring will automatically provide the beans for these parameters.
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     public UserDTO registerUser(UserRegisterDTO dto) {
@@ -32,15 +38,11 @@ public class UserService {
         user.setEmail(dto.getEmail());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
 
-        // --- Core Logic for Admin Role Assignment ---
         if ("mbongeniroyce@gmail.com".equalsIgnoreCase(dto.getEmail())) {
             user.setRole("ROLE_ADMIN");
         } else {
-            // The default role is already set in the User model, but
-            // explicitly setting it here can be good practice.
             user.setRole("ROLE_USER");
         }
-        // ---------------------------------------------
 
         User savedUser = userRepository.save(user);
         return toDTO(savedUser);
@@ -52,7 +54,6 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         System.out.println("User found: " + user.getEmail());
-        System.out.println("Stored hash: " + user.getPasswordHash());
         boolean matches = passwordEncoder.matches(dto.getPassword(), user.getPasswordHash());
         System.out.println("Password matches? " + matches);
 
@@ -60,9 +61,14 @@ public class UserService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        return toDTO(user);
-    }
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+        System.out.println("Generated token: " + token);
 
+        UserDTO userDTO = toDTO(user);
+        userDTO.setToken(token);
+
+        return userDTO;
+    }
 
     public List<UserDTO> listUsers() {
         return userRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());

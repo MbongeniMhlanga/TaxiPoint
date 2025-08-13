@@ -1,98 +1,137 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './screens/users/Login';
-import Register from './screens/users/Register';
-import Landing from './screens/Landing';
-import AdminPage from './screens/AdminPage'; // Assuming you have this component
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-interface User {
+// Assuming these files exist in your project
+import Login from "./screens/users/Login";
+import Landing from "./screens/Landing";
+import AdminPage from "./screens/AdminPage";
+
+export interface User {
   email: string;
-  role?: string;
-  token?: string;
+  name: string;
+  role: string;
+  token: string;
 }
 
-// Function to get the initial user state from localStorage
-const getInitialUser = (): User | null => {
-  try {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  } catch (error) {
-    console.error("Failed to parse user from localStorage", error);
-    localStorage.removeItem('user');
-    return null;
+const isAuthenticated = (user: User | null) => !!(user && user.token);
+
+const ProtectedRoute: React.FC<{ user: User | null; children: JSX.Element; requiredRole?: string }> = ({ user, children, requiredRole }) => {
+  const location = useLocation();
+
+  if (!isAuthenticated(user)) {
+    console.log("ProtectedRoute: user not authenticated, redirecting to login");
+    // Removed the toast message from here. The logout function now handles toast messages.
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    console.log(`ProtectedRoute: user role ${user.role} does not match required ${requiredRole}`);
+    toast.warning("You do not have access to this page!");
+    return <Navigate to={user.role === "ROLE_ADMIN" ? "/admin" : "/landing"} replace />;
+  }
+
+  return children;
 };
 
-function App() {
-  const [user, setUser] = useState<User | null>(getInitialUser);
+// We will now create a new component to hold all the logic.
+// This component will be rendered inside the Router.
+const MainApp: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // This hook is now called correctly inside a component that is a child of Router
 
-  // The rest of your component remains the same
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("user");
+      }
+    }
+    setLoading(false);
+  }, []);
+
   const handleLogin = (userData: User) => {
+    console.log("App handleLogin userData:", userData);
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
+    toast.info("Logged out successfully!");
+    navigate("/login");
   };
 
-  // The PrivateRoute component is a good way to manage access control
-  const PrivateRoute = ({ children, allowedRoles = [] }: { children: React.ReactNode; allowedRoles?: string[] }) => {
-    if (!user) {
-      // Not logged in, redirect to login
-      return <Navigate to="/login" replace />;
-    }
-    if (allowedRoles.length > 0 && user.role && !allowedRoles.includes(user.role)) {
-      // Logged in but not authorized, redirect to landing page
-      return <Navigate to="/" replace />;
-    }
-    return children;
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Loading...
+      </div>
+    );
+  }
 
   return (
-    <Router>
+    <>
       <Routes>
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-
-        {/* Home page for both regular and admin users */}
         <Route
-          path="/"
+          path="/login"
           element={
-            <PrivateRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']}>
-              {/* Redirect to the appropriate page after login */}
-              {user?.role === "ROLE_ADMIN" ? <Navigate to="/admin" /> : <Navigate to="/landing" />}
-            </PrivateRoute>
+            user ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Login onLogin={handleLogin} />
+            )
           }
         />
 
-        {/* Landing page for regular users */}
-        <Route
-          path="/landing"
-          element={
-            <PrivateRoute allowedRoles={['ROLE_USER']}>
-              <Landing onLogout={handleLogout} user={user!} />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Admin page for admins only */}
         <Route
           path="/admin"
           element={
-            <PrivateRoute allowedRoles={['ROLE_ADMIN']}>
-              <AdminPage onLogout={handleLogout} user={user!} />
-            </PrivateRoute>
+            <ProtectedRoute user={user} requiredRole="ROLE_ADMIN">
+              {user && <AdminPage user={user} onLogout={handleLogout} />}
+            </ProtectedRoute>
           }
         />
-        
-        {/* Redirect any other path to the appropriate page */}
-        <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
+
+        <Route
+          path="/landing"
+          element={
+            <ProtectedRoute user={user}>
+              {user && <Landing user={user} onLogout={handleLogout} />}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/"
+          element={
+            user
+              ? user.role === "ROLE_ADMIN"
+                ? <Navigate to="/admin" replace />
+                : <Navigate to="/landing" replace />
+              : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* Catch-all route to redirect to the correct home page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+    </>
   );
-}
+};
+
+
+// The main App component now just provides the Router
+const App: React.FC = () => (
+  <Router>
+    <ToastContainer />
+    <MainApp />
+  </Router>
+);
 
 export default App;
