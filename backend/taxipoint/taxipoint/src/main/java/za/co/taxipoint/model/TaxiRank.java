@@ -1,15 +1,17 @@
 package za.co.taxipoint.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.locationtech.jts.geom.Point;
+
 import java.time.LocalDateTime;
-import java.util.UUID;
-import lombok.Data;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-@Data // <-- Lombok annotation to generate getters, setters, equals, hashCode, toString
+@Data
 @Entity
 @Table(name = "taxi_ranks")
 public class TaxiRank {
@@ -28,21 +30,17 @@ public class TaxiRank {
     @Column(length = 255)
     private String address;
 
-    @Column
-    private Double latitude;
-    
-    @Column
-    private Double longitude;
-    
+    // PostGIS Point
+    @Column(columnDefinition = "geometry(Point,4326)")
+    private Point location;
+
     @Column(length = 100)
     private String district;
 
-    // Use JdbcTypeCode for direct JSON to jsonb mapping
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<String> routesServed;
 
-    // Use a Map for hours as it's a key-value pair
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, String> hours;
@@ -50,7 +48,6 @@ public class TaxiRank {
     @Column(length = 20)
     private String phone;
 
-    // Use a Map for facilities
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> facilities;
