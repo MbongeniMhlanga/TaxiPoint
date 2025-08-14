@@ -61,12 +61,26 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     popupAnchor: [0, -40],
   });
 
-  const incidentIcon = L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/365/365989.png',
-    iconSize: [25, 25],
-    iconAnchor: [12, 25],
-    popupAnchor: [0, -25],
-  });
+  const createIncidentDivIcon = (count: number) => {
+    return L.divIcon({
+      html: `<div style="
+        background: red;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        border: 2px solid white;
+        font-size: 14px;
+      ">${count > 9 ? '9+' : count}</div>`,
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30],
+    });
+  };
 
   // --- Fetch Taxi Ranks ---
   const fetchTaxiRanks = async () => {
@@ -82,7 +96,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     }
   };
 
-  // Map incident DTO
   const mapIncident = (incident: any): Incident => ({
     id: incident.id,
     description: incident.description,
@@ -93,7 +106,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     formattedAddress: incident.formattedAddress || 'Unknown',
   });
 
-  // --- Fetch all incidents ---
   const fetchIncidents = async () => {
     try {
       const res = await fetch('/api/incidents', {
@@ -107,22 +119,21 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     }
   };
 
-  // --- Submit new incident (instant update) ---
   const submitIncident = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!incidentDescription.trim()) return;
 
+    const tempId = `temp-${Date.now()}`;
     const tempIncident: Incident = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       description: incidentDescription,
       reporter: user.name,
-      latitude: -26.2044, // temporary center location
+      latitude: -26.2044,
       longitude: 28.0473,
       createdAt: new Date().toISOString(),
       formattedAddress: 'Fetching location...',
     };
 
-    // Optimistic update: show immediately
     setIncidents((prev) => [...prev, tempIncident]);
     setIncidentDescription('');
 
@@ -150,14 +161,13 @@ const Landing = ({ user, onLogout }: LandingProps) => {
           if (!res.ok) throw new Error('Failed to create incident');
 
           const savedIncident = await res.json();
-          // Replace temporary incident with real one
           setIncidents((prev) =>
-            prev.map((i) => (i.id === tempIncident.id ? mapIncident(savedIncident) : i))
+            prev.map((i) => (i.id === tempId ? mapIncident(savedIncident) : i))
           );
           toast.success('Incident reported successfully!');
         } catch (err: any) {
           console.error(err);
-          setIncidents((prev) => prev.filter((i) => i.id !== tempIncident.id));
+          setIncidents((prev) => prev.filter((i) => i.id !== tempId));
           toast.error('Failed to report incident');
         }
       },
@@ -168,7 +178,22 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     );
   };
 
-  // --- WebSocket for real-time incidents ---
+  // --- Group incidents by location ---
+  const groupIncidentsByLocation = (incidents: Incident[]) => {
+    const groups: Record<string, Incident[]> = {};
+    const precision = 4; // ~10m accuracy
+    incidents.forEach((incident) => {
+      const key = `${incident.latitude.toFixed(precision)}-${incident.longitude.toFixed(precision)}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(incident);
+    });
+    return Object.values(groups).map((incidents) => ({
+      latitude: incidents[0].latitude,
+      longitude: incidents[0].longitude,
+      incidents,
+    }));
+  };
+
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8080/ws/incidents');
     ws.onmessage = (event) => {
@@ -230,7 +255,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
             {/* Taxi Ranks */}
             {taxiRanks.map((rank) => (
               <Marker
-                key={rank.id}
+                key={`taxi-${rank.id}`}
                 position={[rank.latitude, rank.longitude]}
                 icon={taxiIcon}
               >
@@ -249,19 +274,23 @@ const Landing = ({ user, onLogout }: LandingProps) => {
               </Marker>
             ))}
 
-            {/* Incidents */}
-            {incidents.map((incident) => (
+            {/* Incident Groups */}
+            {groupIncidentsByLocation(incidents).map((group, idx) => (
               <Marker
-                key={incident.id}
-                position={[incident.latitude, incident.longitude]}
-                icon={incidentIcon}
+                key={`group-${idx}`}
+                position={[group.latitude, group.longitude]}
+                icon={createIncidentDivIcon(group.incidents.length)}
               >
                 <Popup>
-                  🚨 <b>{incident.reporter}</b>: {incident.description}
-                  <br />
-                  📍 <b>Location:</b> {incident.formattedAddress}
-                  <br />
-                  <small>{new Date(incident.createdAt).toLocaleString()}</small>
+                  {group.incidents.map((incident) => (
+                    <div key={incident.id} className="mb-2">
+                      🚨 <b>{incident.reporter}</b>: {incident.description}
+                      <br />
+                      📍 <b>Location:</b> {incident.formattedAddress}
+                      <br />
+                      <small>{new Date(incident.createdAt).toLocaleString()}</small>
+                    </div>
+                  ))}
                 </Popup>
               </Marker>
             ))}
