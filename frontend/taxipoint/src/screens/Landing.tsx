@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface User {
   email: string;
@@ -29,30 +31,19 @@ interface TaxiRank {
   facilities: Record<string, any>;
 }
 
+interface Incident {
+  id: string;
+  description: string;
+  reporter: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+}
+
 const Landing = ({ user, onLogout }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
-
-  const fetchTaxiRanks = async () => {
-    try {
-      const res = await fetch('/api/taxi-ranks?page=0&size=1000', {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
-      if (!res.ok) throw new Error('Failed to fetch taxi ranks');
-      const data = await res.json();
-      setTaxiRanks(data.content || []);
-    } catch (err: any) {
-      console.error(err);
-      alert('Error fetching taxi ranks: ' + err.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchTaxiRanks();
-  }, []);
-
-  const handleLogout = () => onLogout();
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [incidentDescription, setIncidentDescription] = useState('');
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -69,7 +60,102 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     popupAnchor: [0, -40],
   });
 
-  // Helper to render hours nicely
+  const incidentIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/616/616408.png',
+    iconSize: [35, 35],
+    iconAnchor: [17, 35],
+    popupAnchor: [0, -35],
+  });
+
+  // --- Fetch Taxi Ranks ---
+  const fetchTaxiRanks = async () => {
+    try {
+      const res = await fetch('/api/taxi-ranks?page=0&size=1000', {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      setTaxiRanks(data.content || []);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to fetch taxi ranks');
+    }
+  };
+
+  // --- Fetch Incidents ---
+  const mapIncident = (incident: any): Incident => ({
+    id: incident.id,
+    description: incident.description,
+    reporter: incident.reporter,
+    createdAt: incident.createdAt,
+    latitude: incident.location?.coordinates?.[1] || 0,
+    longitude: incident.location?.coordinates?.[0] || 0,
+  });
+
+  const fetchIncidents = async () => {
+    try {
+      const res = await fetch('/api/incidents', {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      setIncidents(data.map(mapIncident));
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to fetch incidents');
+    }
+  };
+
+  // --- Submit New Incident ---
+  const submitIncident = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!incidentDescription.trim()) return;
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const res = await fetch('/api/incidents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({
+            description: incidentDescription,
+            reporter: user.email,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        });
+        const newIncident = await res.json();
+        setIncidents((prev) => [...prev, mapIncident(newIncident)]);
+        setIncidentDescription('');
+        toast.success('Incident reported successfully!');
+      } catch (err: any) {
+        toast.error('Failed to report incident');
+      }
+    });
+  };
+
+  // --- WebSocket for real-time incidents ---
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8080/ws/incidents');
+    ws.onmessage = (event) => {
+      const incident: Incident = mapIncident(JSON.parse(event.data));
+      setIncidents((prev) => [...prev, incident]);
+    };
+    return () => ws.close();
+  }, []);
+
+  useEffect(() => {
+    fetchTaxiRanks();
+    fetchIncidents();
+  }, []);
+
+  const handleLogout = () => onLogout();
+
   const renderHours = (hours: Record<string, string>) => (
     <ul className="list-disc list-inside">
       {Object.entries(hours).map(([day, time]) => (
@@ -78,7 +164,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     </ul>
   );
 
-  // Helper to render facilities nicely
   const renderFacilities = (facilities: Record<string, any>) => (
     <ul className="list-disc list-inside">
       {Object.entries(facilities).map(([name, value]) => (
@@ -88,8 +173,9 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl w-full max-w-5xl p-6 border border-white/20 animate-fadeIn">
+    <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+      <ToastContainer position="top-center" theme="dark" />
+      <div className="w-full max-w-6xl bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-white">Welcome, {user.name}!</h1>
           <button
@@ -100,16 +186,19 @@ const Landing = ({ user, onLogout }: LandingProps) => {
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg animate-slideUp">
+        {/* Map */}
+        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6">
           <MapContainer
             center={[-26.2044, 28.0473]}
             zoom={14}
             style={{ height: '500px', width: '100%' }}
           >
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              attribution='&copy; OpenStreetMap contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+
+            {/* Taxi Ranks */}
             {taxiRanks.map((rank) => (
               <Marker
                 key={rank.id}
@@ -122,27 +211,51 @@ const Landing = ({ user, onLogout }: LandingProps) => {
                     {rank.description && <p><b>Description:</b> {rank.description}</p>}
                     <p><b>Address:</b> {rank.address}</p>
                     <p><b>District:</b> {rank.district}</p>
-                    {rank.routesServed.length > 0 && (
-                      <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>
-                    )}
+                    {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
                     {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
-                    {rank.hours && (
-                      <div>
-                        <b>Hours:</b>
-                        {renderHours(rank.hours)}
-                      </div>
-                    )}
-                    {rank.facilities && (
-                      <div>
-                        <b>Facilities:</b>
-                        {renderFacilities(rank.facilities)}
-                      </div>
-                    )}
+                    {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
+                    {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
                   </div>
                 </Popup>
               </Marker>
             ))}
+
+            {/* Incidents */}
+            {incidents.map((incident) => (
+              <Marker
+                key={incident.id}
+                position={[incident.latitude, incident.longitude]}
+                icon={incidentIcon}
+              >
+                <Popup>
+                  🚨 <b>{incident.reporter}</b>: {incident.description}
+                  <br />
+                  <small>{new Date(incident.createdAt).toLocaleString()}</small>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
+        </div>
+
+        {/* Incident Reporting Form */}
+        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+          <h2 className="text-xl font-bold text-blue-400 mb-4">Report an Incident</h2>
+          <form onSubmit={submitIncident} className="flex flex-col md:flex-row gap-4">
+            <input
+              type="text"
+              placeholder="Describe the incident..."
+              value={incidentDescription}
+              onChange={(e) => setIncidentDescription(e.target.value)}
+              className="flex-1 p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              required
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+            >
+              Report
+            </button>
+          </form>
         </div>
       </div>
     </div>
