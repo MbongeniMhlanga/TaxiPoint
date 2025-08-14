@@ -38,6 +38,7 @@ interface Incident {
   latitude: number;
   longitude: number;
   createdAt: string;
+  formattedAddress: string;
 }
 
 const Landing = ({ user, onLogout }: LandingProps) => {
@@ -45,7 +46,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
 
-  // Leaflet default icon fix
+  // Leaflet icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -61,10 +62,10 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   });
 
   const incidentIcon = L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/616/616408.png',
-    iconSize: [35, 35],
-    iconAnchor: [17, 35],
-    popupAnchor: [0, -35],
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/365/365989.png',
+    iconSize: [25, 25],
+    iconAnchor: [12, 25],
+    popupAnchor: [0, -25],
   });
 
   // --- Fetch Taxi Ranks ---
@@ -81,16 +82,18 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     }
   };
 
-  // --- Fetch Incidents ---
+  // Map incident DTO
   const mapIncident = (incident: any): Incident => ({
     id: incident.id,
     description: incident.description,
     reporter: incident.reporter,
     createdAt: incident.createdAt,
-    latitude: incident.location?.coordinates?.[1] || 0,
-    longitude: incident.location?.coordinates?.[0] || 0,
+    latitude: incident.latitude || 0,
+    longitude: incident.longitude || 0,
+    formattedAddress: incident.formattedAddress || 'Unknown',
   });
 
+  // --- Fetch all incidents ---
   const fetchIncidents = async () => {
     try {
       const res = await fetch('/api/incidents', {
@@ -104,7 +107,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     }
   };
 
-  // --- Submit New Incident ---
+  // --- Submit new incident (instant update) ---
   const submitIncident = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!incidentDescription.trim()) return;
@@ -114,29 +117,55 @@ const Landing = ({ user, onLogout }: LandingProps) => {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      try {
-        const res = await fetch('/api/incidents', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({
-            description: incidentDescription,
-            reporter: user.email,
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          }),
-        });
-        const newIncident = await res.json();
-        setIncidents((prev) => [...prev, mapIncident(newIncident)]);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const tempIncident: Incident = {
+          id: `temp-${Date.now()}`,
+          description: incidentDescription,
+          reporter: user.name,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          createdAt: new Date().toISOString(),
+          formattedAddress: 'Fetching address...',
+        };
+
+        // Optimistic update
+        setIncidents((prev) => [...prev, tempIncident]);
         setIncidentDescription('');
-        toast.success('Incident reported successfully!');
-      } catch (err: any) {
-        toast.error('Failed to report incident');
+
+        try {
+          const res = await fetch('/api/incidents', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({
+              description: tempIncident.description,
+              reporter: tempIncident.reporter,
+              latitude: tempIncident.latitude,
+              longitude: tempIncident.longitude,
+            }),
+          });
+
+          if (!res.ok) throw new Error('Failed to create incident');
+
+          const savedIncident = await res.json();
+          setIncidents((prev) =>
+            prev.map((i) => (i.id === tempIncident.id ? mapIncident(savedIncident) : i))
+          );
+          toast.success('Incident reported successfully!');
+        } catch (err: any) {
+          console.error(err);
+          setIncidents((prev) => prev.filter((i) => i.id !== tempIncident.id));
+          toast.error('Failed to report incident');
+        }
+      },
+      (err) => {
+        console.error(err);
+        toast.error('Could not get your location.');
       }
-    });
+    );
   };
 
   // --- WebSocket for real-time incidents ---
@@ -229,6 +258,8 @@ const Landing = ({ user, onLogout }: LandingProps) => {
               >
                 <Popup>
                   🚨 <b>{incident.reporter}</b>: {incident.description}
+                  <br />
+                  📍 <b>Location:</b> {incident.formattedAddress}
                   <br />
                   <small>{new Date(incident.createdAt).toLocaleString()}</small>
                 </Popup>
