@@ -5,6 +5,8 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Assuming these files exist in your project
 import Login from "./screens/users/Login";
+import Register from "./screens/users/Register";
+
 import Landing from "./screens/Landing";
 import AdminPage from "./screens/AdminPage";
 
@@ -88,6 +90,11 @@ const MainApp: React.FC = () => {
             )
           }
         />
+        <Route
+  path="/register"
+  element={user ? <Navigate to="/" replace /> : <Register />}
+/>
+
 
         <Route
           path="/admin"

@@ -46,7 +46,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
 
-  // Leaflet icon fix
+  // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -112,6 +112,20 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     e.preventDefault();
     if (!incidentDescription.trim()) return;
 
+    const tempIncident: Incident = {
+      id: `temp-${Date.now()}`,
+      description: incidentDescription,
+      reporter: user.name,
+      latitude: -26.2044, // temporary center location
+      longitude: 28.0473,
+      createdAt: new Date().toISOString(),
+      formattedAddress: 'Fetching location...',
+    };
+
+    // Optimistic update: show immediately
+    setIncidents((prev) => [...prev, tempIncident]);
+    setIncidentDescription('');
+
     if (!navigator.geolocation) {
       toast.error('Geolocation not supported');
       return;
@@ -119,20 +133,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const tempIncident: Incident = {
-          id: `temp-${Date.now()}`,
-          description: incidentDescription,
-          reporter: user.name,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          createdAt: new Date().toISOString(),
-          formattedAddress: 'Fetching address...',
-        };
-
-        // Optimistic update
-        setIncidents((prev) => [...prev, tempIncident]);
-        setIncidentDescription('');
-
         try {
           const res = await fetch('/api/incidents', {
             method: 'POST',
@@ -143,14 +143,14 @@ const Landing = ({ user, onLogout }: LandingProps) => {
             body: JSON.stringify({
               description: tempIncident.description,
               reporter: tempIncident.reporter,
-              latitude: tempIncident.latitude,
-              longitude: tempIncident.longitude,
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
             }),
           });
-
           if (!res.ok) throw new Error('Failed to create incident');
 
           const savedIncident = await res.json();
+          // Replace temporary incident with real one
           setIncidents((prev) =>
             prev.map((i) => (i.id === tempIncident.id ? mapIncident(savedIncident) : i))
           );
