@@ -4,6 +4,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import za.co.taxipoint.model.TaxiRank;
 
 import java.util.List;
@@ -17,9 +19,44 @@ public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
             "OR LOWER(t.address) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<TaxiRank> searchByNameOrAddress(String query);
 
-    // PostGIS Nearby Query
-    @Query(value = "SELECT * FROM taxi_ranks " +
-            "WHERE ST_DWithin(location::geography, ST_SetSRID(ST_MakePoint(?2, ?1), 4326)::geography, ?3)", 
-            nativeQuery = true)
-    List<TaxiRank> findNearby(Double lat, Double lng, Double radiusMeters);
+    // Corrected method with distance calculation
+    @Query(value = """
+            SELECT *, ST_Distance(
+                CAST(location AS geography),
+                CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography)
+            ) as distance_meters
+            FROM taxi_ranks
+            WHERE ST_DWithin(
+                CAST(location AS geography),
+                CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
+                :radius
+            )
+            ORDER BY distance_meters
+            """, nativeQuery = true)
+    List<TaxiRank> findNearbyWithDistance(
+            @Param("lat") Double lat,
+            @Param("lng") Double lng,
+            @Param("radius") Double radius
+    );
+
+    // Corrected method without distance calculation
+    @Query(value = """
+            SELECT * FROM taxi_ranks
+            WHERE ST_DWithin(
+                CAST(location AS geography),
+                CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
+                :radius
+            )
+    """, nativeQuery = true)
+    List<TaxiRank> findNearby(
+            @Param("lat") Double lat,
+            @Param("lng") Double lng,
+            @Param("radius") Double radius
+    );
+
+    @Query("SELECT t FROM TaxiRank t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(t.address) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(CAST(t.routesServed as string)) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(t.district) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<TaxiRank> searchByNameOrAddressOrRoutesOrDistrict(@Param("query") String query);
 }

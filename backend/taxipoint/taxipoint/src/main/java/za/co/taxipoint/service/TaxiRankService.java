@@ -30,11 +30,15 @@ public class TaxiRankService {
         return taxiRankRepository.findAll(pageable);
     }
 
-    public List<TaxiRank> searchByText(String query) {
-        return taxiRankRepository.searchByNameOrAddress(query);
-    }
+ public List<TaxiRank> searchByText(String query) {
+    return taxiRankRepository.searchByNameOrAddressOrRoutesOrDistrict(query);
+}
+
+
+
 
     public List<TaxiRank> findNearby(Double lat, Double lng, Double radiusMeters) {
+        // The repository now handles the sorting, so we can just call this method.
         return taxiRankRepository.findNearby(lat, lng, radiusMeters);
     }
 
@@ -103,4 +107,39 @@ public class TaxiRankService {
 
         return dto;
     }
+
+    // Inside TaxiRankService
+private double distance(double lat1, double lon1, double lat2, double lon2) {
+    final int R = 6371000; // Earth radius in meters
+    double latRad1 = Math.toRadians(lat1);
+    double latRad2 = Math.toRadians(lat2);
+    double deltaLat = Math.toRadians(lat2 - lat1);
+    double deltaLon = Math.toRadians(lon2 - lon1);
+
+    double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+               Math.cos(latRad1) * Math.cos(latRad2) *
+               Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
+}
+
+
+    public List<TaxiRankDTO> findNearbyWithDistance(Double lat, Double lng, Double radiusMeters) {
+    // Call repository method that fetches all within radius
+    List<TaxiRank> nearbyRanks = taxiRankRepository.findNearby(lat, lng, radiusMeters);
+
+    // Map to DTO and calculate distance
+    return nearbyRanks.stream()
+            .map(rank -> {
+                TaxiRankDTO dto = toDTO(rank);
+                if (dto.getLatitude() != null && dto.getLongitude() != null) {
+                    double dist = distance(lat, lng, dto.getLatitude(), dto.getLongitude());
+                    dto.setDistanceMeters(dist);
+                }
+                return dto;
+            })
+            .sorted((r1, r2) -> Double.compare(r1.getDistanceMeters(), r2.getDistanceMeters()))
+            .toList();
+}
+
 }

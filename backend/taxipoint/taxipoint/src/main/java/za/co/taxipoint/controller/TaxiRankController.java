@@ -10,6 +10,7 @@ import za.co.taxipoint.model.TaxiRank;
 import za.co.taxipoint.service.TaxiRankService;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,9 +45,9 @@ public class TaxiRankController {
 
             Page<TaxiRankDTO> pageResult = new PageImpl<>(
                     nearby.subList(start, end)
-                          .stream()
-                          .map(taxiRankService::toDTO)
-                          .toList(),
+                            .stream()
+                            .map(taxiRankService::toDTO)
+                            .toList(),
                     pageable,
                     nearby.size()
             );
@@ -75,7 +76,7 @@ public class TaxiRankController {
     public ResponseEntity<TaxiRankDTO> createTaxiRank(@Valid @RequestBody TaxiRankDTO dto) {
         TaxiRank saved = taxiRankService.createTaxiRank(taxiRankService.fromDTO(dto));
         return ResponseEntity.created(URI.create("/api/taxi-ranks/" + saved.getId()))
-                             .body(taxiRankService.toDTO(saved));
+                .body(taxiRankService.toDTO(saved));
     }
 
     // Update an existing taxi rank
@@ -90,13 +91,31 @@ public class TaxiRankController {
         }
     }
 
-    // Search taxi ranks by text query
-    @GetMapping("/search")
-    public ResponseEntity<List<TaxiRankDTO>> searchTaxiRanks(@RequestParam String q) {
-        List<TaxiRankDTO> results = taxiRankService.searchByText(q)
-                                                   .stream()
-                                                   .map(taxiRankService::toDTO)
-                                                   .toList();
+
+    // Search taxi ranks by text query (name, route, district)
+    @GetMapping("/taxi-ranks/search")
+    public ResponseEntity<List<TaxiRankDTO>> searchTaxiRanks(@RequestParam String query) {
+        List<TaxiRankDTO> results = taxiRankService.searchByText(query)
+                .stream()
+                .map(taxiRankService::toDTO)
+                .toList();
         return ResponseEntity.ok(results);
     }
+
+   @GetMapping("/taxi-ranks/nearby")
+public ResponseEntity<List<TaxiRankDTO>> getNearbyTaxiRanks(
+        @RequestParam double lat,
+        @RequestParam double lng,
+        @RequestParam(defaultValue = "5000") double radius_m
+) {
+    try {
+        List<TaxiRankDTO> nearby = taxiRankService.findNearbyWithDistance(lat, lng, radius_m);
+
+        return ResponseEntity.ok(nearby);
+
+    } catch (Exception e) {
+        return ResponseEntity.status(500).body(Collections.emptyList());
+    }
+}
+
 }

@@ -16,4 +16,5 @@ public class TaxiRankDTO {
     private Map<String, String> hours;      // e.g. {"Mon-Fri": "6am-10pm"}
     private String phone;
     private Map<String, Object> facilities; // e.g. {"toilets": true}
+       private Double distanceMeters;
 }
