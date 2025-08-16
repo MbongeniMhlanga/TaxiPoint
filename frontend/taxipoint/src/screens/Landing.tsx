@@ -29,6 +29,7 @@ interface TaxiRank {
   hours: Record<string, string>;
   phone: string;
   facilities: Record<string, any>;
+  distanceMeters?: number;
 }
 
 interface Incident {
@@ -47,6 +48,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [incidentDescription, setIncidentDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Sidebar toggle
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -83,7 +85,23 @@ const Landing = ({ user, onLogout }: LandingProps) => {
       popupAnchor: [0, -30],
     });
 
-  // --- Fetch Taxi Ranks ---
+  // --- Fetch Nearby Taxi Ranks ---
+  const fetchNearbyTaxiRanks = async (lat: number, lng: number, radius: number = 5000) => {
+    try {
+      const res = await fetch(
+        `/api/taxi-ranks/nearby?lat=${lat}&lng=${lng}&radius_m=${radius}`,
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      if (!res.ok) throw new Error('Failed to fetch nearby taxi ranks');
+      const data = await res.json();
+      setTaxiRanks(data || []);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to fetch nearby taxi ranks');
+    }
+  };
+
+  // --- Fallback: All Taxi Ranks ---
   const fetchTaxiRanks = async () => {
     try {
       const res = await fetch('/api/taxi-ranks?page=0&size=1000', {
@@ -99,7 +117,14 @@ const Landing = ({ user, onLogout }: LandingProps) => {
 
   const searchTaxiRanks = async (query: string) => {
     if (!query.trim()) {
-      fetchTaxiRanks();
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude),
+          () => fetchTaxiRanks()
+        );
+      } else {
+        fetchTaxiRanks();
+      }
       return;
     }
     try {
@@ -196,7 +221,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     );
   };
 
-  // --- Group incidents by location ---
   const groupIncidentsByLocation = (incidents: Incident[]) => {
     const groups: Record<string, Incident[]> = {};
     const precision = 4;
@@ -222,7 +246,14 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   }, []);
 
   useEffect(() => {
-    fetchTaxiRanks();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude),
+        () => fetchTaxiRanks()
+      );
+    } else {
+      fetchTaxiRanks();
+    }
     fetchIncidents();
   }, []);
 
@@ -245,21 +276,41 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 p-6">
       <ToastContainer position="top-center" theme="dark" />
-      <div className="w-full max-w-6xl bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
-        <div className="flex justify-between items-center mb-6">
+
+      {/* Sidebar */}
+      <div
+        className={`bg-gray-900 text-white w-64 p-4 flex-shrink-0 transition-all ${
+          sidebarOpen ? 'block' : 'hidden'
+        }`}
+      >
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="mb-4 px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+        >
+          {sidebarOpen ? 'Close' : 'Open'}
+        </button>
+        {sidebarOpen && (
+          <ul className="space-y-3 mt-4">
+            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Dashboard</li>
+            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Taxi Ranks</li>
+            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Incidents</li>
+            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={handleLogout}>
+              Logout
+            </li>
+          </ul>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center w-full max-w-6xl bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl ml-4">
+        <div className="flex justify-between items-center mb-6 w-full">
           <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition"
-          >
-            Logout
-          </button>
         </div>
 
         {/* Search Input */}
-        <div className="mb-4">
+        <div className="mb-4 w-full">
           <input
             type="text"
             placeholder="Search taxi ranks by name, district, or routes..."
@@ -277,7 +328,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
         </div>
 
         {/* Map */}
-        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6">
+        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6 w-full">
           <MapContainer
             center={[-26.2044, 28.0473]}
             zoom={14}
@@ -288,7 +339,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* Taxi Ranks */}
             {taxiRanks.map((rank) => (
               <Marker
                 key={`taxi-${rank.id}`}
@@ -305,12 +355,14 @@ const Landing = ({ user, onLogout }: LandingProps) => {
                     {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
                     {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
                     {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
+                    {rank.distanceMeters !== undefined && (
+                      <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
+                    )}
                   </div>
                 </Popup>
               </Marker>
             ))}
 
-            {/* Incident Groups */}
             {groupIncidentsByLocation(incidents).map((group, idx) => (
               <Marker
                 key={`group-${idx}`}
@@ -334,7 +386,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
         </div>
 
         {/* Incident Reporting Form */}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 w-full">
           <h2 className="text-xl font-bold text-blue-400 mb-4">Report an Incident</h2>
           <form onSubmit={submitIncident} className="flex flex-col md:flex-row gap-4">
             <input
