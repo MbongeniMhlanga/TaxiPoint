@@ -45,6 +45,8 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -61,8 +63,8 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     popupAnchor: [0, -40],
   });
 
-  const createIncidentDivIcon = (count: number) => {
-    return L.divIcon({
+  const createIncidentDivIcon = (count: number) =>
+    L.divIcon({
       html: `<div style="
         background: red;
         color: white;
@@ -80,7 +82,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
       iconAnchor: [15, 30],
       popupAnchor: [0, -30],
     });
-  };
 
   // --- Fetch Taxi Ranks ---
   const fetchTaxiRanks = async () => {
@@ -93,6 +94,23 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to fetch taxi ranks');
+    }
+  };
+
+  const searchTaxiRanks = async (query: string) => {
+    if (!query.trim()) {
+      fetchTaxiRanks();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      setTaxiRanks(data);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to search taxi ranks');
     }
   };
 
@@ -181,7 +199,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   // --- Group incidents by location ---
   const groupIncidentsByLocation = (incidents: Incident[]) => {
     const groups: Record<string, Incident[]> = {};
-    const precision = 4; // ~10m accuracy
+    const precision = 4;
     incidents.forEach((incident) => {
       const key = `${incident.latitude.toFixed(precision)}-${incident.longitude.toFixed(precision)}`;
       if (!groups[key]) groups[key] = [];
@@ -238,6 +256,24 @@ const Landing = ({ user, onLogout }: LandingProps) => {
           >
             Logout
           </button>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search taxi ranks by name, district, or routes..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (searchTimeout) clearTimeout(searchTimeout);
+              const timeout = setTimeout(() => {
+                searchTaxiRanks(e.target.value);
+              }, 300);
+              setSearchTimeout(timeout);
+            }}
+            className="w-full p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
         </div>
 
         {/* Map */}
