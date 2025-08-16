@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -24,6 +24,13 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
   const [loading, setLoading] = useState(false);
 
+  // Keep local state synced with parent user updates
+  useEffect(() => {
+    setName(user.name);
+    setSurname(user.surname);
+    setEmail(user.email);
+  }, [user]);
+
   const safeFetch = async (url: string, options: RequestInit) => {
     const res = await fetch(url, options);
     const text = await res.text();
@@ -37,33 +44,40 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
     return data;
   };
 
-  const handleProfileUpdate = async () => {
-    setLoading(true);
-    try {
-      const updatedData = await safeFetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({ name, surname, email }),
-      });
+const handleProfileUpdate = async () => {
+  setLoading(true);
+  try {
+    const updatedData = await safeFetch(`/api/users/${user.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ name, surname, email }),
+    });
 
-      toast.success('Profile updated successfully!');
+    toast.success('Profile updated successfully!');
 
-      // Preserve token so auth doesn't break
-      onUpdateUser({ ...updatedData, token: user.token });
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || 'Profile update failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Update parent state
+    onUpdateUser({ ...updatedData, token: user.token });
+     // Update localStorage so changes persist after refresh
+ localStorage.setItem("user", JSON.stringify({ ...updatedData, token: user.token }));
+
+
+    // Update local state immediately so UI matches DB
+    setName(updatedData.name);
+    setSurname(updatedData.surname);
+    setEmail(updatedData.email);
+  } catch (err: any) {
+    console.error(err);
+    toast.error(err.message || 'Profile update failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handlePasswordUpdate = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) return;
-
     if (newPassword !== confirmPassword) {
       toast.error('New password and confirm password do not match');
       return;
@@ -94,9 +108,15 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleProfileUpdate(); // always update profile
+
+    // Only update profile if there are changes
+    if (name !== user.name || surname !== user.surname || email !== user.email) {
+      await handleProfileUpdate();
+    }
+
+    // Only update password if any fields are filled
     if (oldPassword || newPassword || confirmPassword) {
-      await handlePasswordUpdate(); // only update password if fields filled
+      await handlePasswordUpdate();
     }
   };
 
