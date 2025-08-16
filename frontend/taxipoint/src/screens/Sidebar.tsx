@@ -3,6 +3,7 @@ import type { User } from "../App"; // adjust path if needed
 import { LogOut, Settings, Info, HelpCircle, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+
 interface SidebarProps {
   user: User;
   onLogout: () => void;
@@ -33,11 +34,15 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <Settings size={18} />
           <span>Settings</span>
         </button>
-        <button className="flex items-center space-x-2 hover:text-gray-300 w-full">
+        <button
+         onClick={() => navigate("/about")}
+        className="flex items-center space-x-2 hover:text-gray-300 w-full">
           <Info size={18} />
           <span>About</span>
         </button>
-        <button className="flex items-center space-x-2 hover:text-gray-300 w-full">
+        <button
+         onClick={() => navigate("/support")}
+        className="flex items-center space-x-2 hover:text-gray-300 w-full">
           <HelpCircle size={18} />
           <span>Support</span>
         </button>

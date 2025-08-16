@@ -9,6 +9,8 @@ import Register from "./screens/users/Register";
 import UserSettings from "./screens/UserSettings";
 import Landing from "./screens/Landing";
 import AdminPage from "./screens/AdminPage";
+import About from "./screens/About";
+import Support from "./screens/Support";
 
 export interface User {
   email: string;
@@ -104,6 +106,9 @@ const MainApp: React.FC = () => {
             </ProtectedRoute>
           }
         />
+          {/* Public Pages */}
+  <Route path="/about" element={<About />} />
+  <Route path="/support" element={<Support />} />
 
         <Route
           path="/landing"
