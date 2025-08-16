@@ -249,7 +249,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
       <ToastContainer position="top-center" theme="dark" />
       <div className="w-full max-w-6xl bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-white">Welcome, {user.name}!</h1>
+          <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
           <button
             onClick={handleLogout}
             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition"
