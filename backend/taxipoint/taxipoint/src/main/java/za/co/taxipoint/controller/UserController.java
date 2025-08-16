@@ -51,20 +51,19 @@ public class UserController {
         return ResponseEntity.ok(userService.listUsers());
     }
 
-    @PatchMapping("/{id}")
-public ResponseEntity<?> updateUser(
-        @PathVariable Long id,
-        @RequestBody UserUpdateDTO dto
-) {
+@PatchMapping("/{id}")
+public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UserUpdateDTO dto) {
     try {
         UserDTO updatedUser = userService.updateUser(id, dto);
         return ResponseEntity.ok(updatedUser);
     } catch (IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
     } catch (Exception e) {
-        return ResponseEntity.status(500).body("Update failed: " + e.getMessage());
+        return ResponseEntity.status(500).body(Map.of("message", "Update failed: " + e.getMessage()));
     }
 }
+
+
 @PatchMapping("/{id}/password")
 public ResponseEntity<?> updatePassword(
         @PathVariable Long id,

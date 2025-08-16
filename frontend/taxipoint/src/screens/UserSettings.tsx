@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useNavigate } from 'react-router-dom';
 
 interface UserSettingsProps {
   user: {
@@ -15,7 +14,6 @@ interface UserSettingsProps {
 }
 
 const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
-  const navigate = useNavigate();
   const [name, setName] = useState(user.name);
   const [surname, setSurname] = useState(user.surname);
   const [email, setEmail] = useState(user.email);
@@ -26,10 +24,23 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
   const [loading, setLoading] = useState(false);
 
+  const safeFetch = async (url: string, options: RequestInit) => {
+    const res = await fetch(url, options);
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+    if (!res.ok) throw new Error(data.message || 'Request failed');
+    return data;
+  };
+
   const handleProfileUpdate = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
+      const updatedData = await safeFetch(`/api/users/${user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -38,11 +49,10 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
         body: JSON.stringify({ name, surname, email }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Update failed');
-
       toast.success('Profile updated successfully!');
-      onUpdateUser(data);
+
+      // Preserve token so auth doesn't break
+      onUpdateUser({ ...updatedData, token: user.token });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Profile update failed');
@@ -53,6 +63,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
   const handlePasswordUpdate = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) return;
+
     if (newPassword !== confirmPassword) {
       toast.error('New password and confirm password do not match');
       return;
@@ -60,7 +71,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${user.id}/password`, {
+      await safeFetch(`/api/users/${user.id}/password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -68,9 +79,6 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
         },
         body: JSON.stringify({ oldPassword, newPassword }),
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Password update failed');
 
       toast.success('Password updated successfully!');
       setOldPassword('');
@@ -86,11 +94,10 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleProfileUpdate();
+    await handleProfileUpdate(); // always update profile
     if (oldPassword || newPassword || confirmPassword) {
-      await handlePasswordUpdate();
+      await handlePasswordUpdate(); // only update password if fields filled
     }
-    setTimeout(() => navigate('/landing'), 1500);
   };
 
   return (
@@ -122,7 +129,9 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
           className="p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
           required
         />
+
         <hr className="border-gray-600 my-2" />
+
         <input
           type="password"
           value={oldPassword}
@@ -144,6 +153,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
           placeholder="Confirm New Password"
           className="p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
+
         <button
           type="submit"
           disabled={loading}
