@@ -6,6 +6,7 @@ import za.co.taxipoint.security.JwtUtil;
 import za.co.taxipoint.dto.UserDTO;
 import za.co.taxipoint.dto.UserLoginDTO;
 import za.co.taxipoint.dto.UserRegisterDTO;
+import za.co.taxipoint.dto.UserUpdateDTO;
 import za.co.taxipoint.model.User;
 import za.co.taxipoint.repository.UserRepository;
 
@@ -47,6 +48,40 @@ public class UserService {
         User savedUser = userRepository.save(user);
         return toDTO(savedUser);
     }
+    public UserDTO updateUser(Long id, UserUpdateDTO dto) {
+    User user = userRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+    if (dto.getName() != null) user.setName(dto.getName());
+    if (dto.getSurname() != null) user.setSurname(dto.getSurname());
+    
+    if (dto.getEmail() != null && !dto.getEmail().equals(user.getEmail())) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+        user.setEmail(dto.getEmail());
+    }
+
+    if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+        user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+    }
+
+    User saved = userRepository.save(user);
+    return toDTO(saved);
+}
+
+public void updatePassword(Long id, String oldPassword, String newPassword) {
+    User user = userRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+    if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+        throw new IllegalArgumentException("Old password is incorrect");
+    }
+
+    user.setPasswordHash(passwordEncoder.encode(newPassword));
+    userRepository.save(user);
+}
+
 
     public UserDTO loginUser(UserLoginDTO dto) {
         System.out.println("Attempting login for: " + dto.getEmail());

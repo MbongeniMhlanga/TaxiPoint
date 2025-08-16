@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 // Assuming these files exist in your project
 import Login from "./screens/users/Login";
 import Register from "./screens/users/Register";
-
+import UserSettings from "./screens/UserSettings";
 import Landing from "./screens/Landing";
 import AdminPage from "./screens/AdminPage";
 
@@ -113,6 +113,15 @@ const MainApp: React.FC = () => {
             </ProtectedRoute>
           }
         />
+         <Route
+        path="/settings"
+        element={
+          <ProtectedRoute user={user}>
+            {user && <UserSettings user={user} onUpdateUser={setUser} />}
+          </ProtectedRoute>
+        }
+      />
+        
 
         <Route
           path="/"
@@ -127,6 +136,7 @@ const MainApp: React.FC = () => {
 
         {/* Catch-all route to redirect to the correct home page */}
         <Route path="*" element={<Navigate to="/" replace />} />
+        
       </Routes>
     </>
   );

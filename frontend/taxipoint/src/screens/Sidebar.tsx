@@ -1,7 +1,7 @@
 import React from "react";
 import type { User } from "../App"; // adjust path if needed
-  // adjust path if needed
 import { LogOut, Settings, Info, HelpCircle, User as UserIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   user: User;
@@ -9,6 +9,8 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="h-screen w-64 bg-gray-900 text-white flex flex-col p-4">
       {/* Profile section */}
@@ -24,7 +26,10 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
       {/* Menu items */}
       <nav className="flex-1 space-y-3">
-        <button className="flex items-center space-x-2 hover:text-gray-300 w-full">
+        <button
+          onClick={() => navigate("/settings")}
+          className="flex items-center space-x-2 hover:text-gray-300 w-full"
+        >
           <Settings size={18} />
           <span>Settings</span>
         </button>

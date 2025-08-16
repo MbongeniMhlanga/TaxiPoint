@@ -4,6 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Menu } from 'lucide-react'; // Import the Menu icon from lucide-react
+import Sidebar from './Sidebar'; // Ensure this path is correct
 
 interface User {
   email: string;
@@ -48,7 +50,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [incidentDescription, setIncidentDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Sidebar toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State to manage sidebar visibility
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -221,6 +223,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     );
   };
 
+  // --- Group incidents by location ---
   const groupIncidentsByLocation = (incidents: Incident[]) => {
     const groups: Record<string, Incident[]> = {};
     const precision = 4;
@@ -257,8 +260,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     fetchIncidents();
   }, []);
 
-  const handleLogout = () => onLogout();
-
   const renderHours = (hours: Record<string, string>) => (
     <ul className="list-disc list-inside">
       {Object.entries(hours).map(([day, time]) => (
@@ -276,134 +277,148 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 relative">
       <ToastContainer position="top-center" theme="dark" />
 
-      {/* Sidebar */}
+      {/* Sidebar: Now controlled by isSidebarOpen on all screen sizes */}
       <div
-        className={`bg-gray-900 text-white w-64 p-4 flex-shrink-0 transition-all ${
-          sidebarOpen ? 'block' : 'hidden'
+        className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out bg-gray-900 text-white shadow-xl ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="mb-4 px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
-        >
-          {sidebarOpen ? 'Close' : 'Open'}
-        </button>
-        {sidebarOpen && (
-          <ul className="space-y-3 mt-4">
-            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Dashboard</li>
-            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Taxi Ranks</li>
-            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer">Incidents</li>
-            <li className="hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={handleLogout}>
-              Logout
-            </li>
-          </ul>
-        )}
+        <Sidebar user={user} onLogout={onLogout} />
       </div>
 
+      {/* Dark overlay for all screen sizes */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black opacity-50 z-40"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center w-full max-w-6xl bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl ml-4">
-        <div className="flex justify-between items-center mb-6 w-full">
-          <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
-        </div>
-
-        {/* Search Input */}
-        <div className="mb-4 w-full">
-          <input
-            type="text"
-            placeholder="Search taxi ranks by name, district, or routes..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (searchTimeout) clearTimeout(searchTimeout);
-              const timeout = setTimeout(() => {
-                searchTaxiRanks(e.target.value);
-              }, 300);
-              setSearchTimeout(timeout);
-            }}
-            className="w-full p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
-
-        {/* Map */}
-        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6 w-full">
-          <MapContainer
-            center={[-26.2044, 28.0473]}
-            zoom={14}
-            style={{ height: '500px', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {taxiRanks.map((rank) => (
-              <Marker
-                key={`taxi-${rank.id}`}
-                position={[rank.latitude, rank.longitude]}
-                icon={taxiIcon}
-              >
-                <Popup>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-lg">🚖 {rank.name}</h3>
-                    {rank.description && <p><b>Description:</b> {rank.description}</p>}
-                    <p><b>Address:</b> {rank.address}</p>
-                    <p><b>District:</b> {rank.district}</p>
-                    {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
-                    {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
-                    {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
-                    {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
-                    {rank.distanceMeters !== undefined && (
-                      <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {groupIncidentsByLocation(incidents).map((group, idx) => (
-              <Marker
-                key={`group-${idx}`}
-                position={[group.latitude, group.longitude]}
-                icon={createIncidentDivIcon(group.incidents.length)}
-              >
-                <Popup>
-                  {group.incidents.map((incident) => (
-                    <div key={incident.id} className="mb-2">
-                      🚨 <b>{incident.reporter}</b>: {incident.description}
-                      <br />
-                      📍 <b>Location:</b> {incident.formattedAddress}
-                      <br />
-                      <small>{new Date(incident.createdAt).toLocaleString()}</small>
-                    </div>
-                  ))}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
-
-        {/* Incident Reporting Form */}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 w-full">
-          <h2 className="text-xl font-bold text-blue-400 mb-4">Report an Incident</h2>
-          <form onSubmit={submitIncident} className="flex flex-col md:flex-row gap-4">
+      <div 
+        className={`flex-1 flex flex-col p-6 gap-6 w-full transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? 'ml-64' : 'ml-0'
+        }`}
+      >
+        <div className="w-full max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
+          {/* Header with hamburger menu */}
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
+            >
+              <Menu size={24} />
+            </button>
+            <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition ml-auto"
+            >
+              Logout
+            </button>
+          </div>
+          
+          {/* Search Input */}
+          <div className="mb-4">
             <input
               type="text"
-              placeholder="Describe the incident..."
-              value={incidentDescription}
-              onChange={(e) => setIncidentDescription(e.target.value)}
-              className="flex-1 p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              required
+              placeholder="Search taxi ranks by name, district, or routes..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (searchTimeout) clearTimeout(searchTimeout);
+                const timeout = setTimeout(() => {
+                  searchTaxiRanks(e.target.value);
+                }, 300);
+                setSearchTimeout(timeout);
+              }}
+              className="w-full p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <button
-              type="submit"
-              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+          </div>
+
+          {/* Map */}
+          <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6">
+            <MapContainer
+              center={[-26.2044, 28.0473]}
+              zoom={14}
+              style={{ height: '500px', width: '100%' }}
             >
-              Report
-            </button>
-          </form>
+              <TileLayer
+                attribution='&copy; OpenStreetMap contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+
+              {/* Taxi Ranks */}
+              {taxiRanks.map((rank) => (
+                <Marker
+                  key={`taxi-${rank.id}`}
+                  position={[rank.latitude, rank.longitude]}
+                  icon={taxiIcon}
+                >
+                  <Popup>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-lg">🚖 {rank.name}</h3>
+                      {rank.description && <p><b>Description:</b> {rank.description}</p>}
+                      <p><b>Address:</b> {rank.address}</p>
+                      <p><b>District:</b> {rank.district}</p>
+                      {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
+                      {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
+                      {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
+                      {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
+                      {rank.distanceMeters !== undefined && (
+                        <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+
+              {/* Incident Groups */}
+              {groupIncidentsByLocation(incidents).map((group, idx) => (
+                <Marker
+                  key={`group-${idx}`}
+                  position={[group.latitude, group.longitude]}
+                  icon={createIncidentDivIcon(group.incidents.length)}
+                >
+                  <Popup>
+                    {group.incidents.map((incident) => (
+                      <div key={incident.id} className="mb-2">
+                        🚨 <b>{incident.reporter}</b>: {incident.description}
+                        <br />
+                        📍 <b>Location:</b> {incident.formattedAddress}
+                        <br />
+                        <small>{new Date(incident.createdAt).toLocaleString()}</small>
+                      </div>
+                    ))}
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+
+          {/* Incident Reporting Form */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+            <h2 className="text-xl font-bold text-blue-400 mb-4">Report an Incident</h2>
+            <form onSubmit={submitIncident} className="flex flex-col md:flex-row gap-4">
+              <input
+                type="text"
+                placeholder="Describe the incident..."
+                value={incidentDescription}
+                onChange={(e) => setIncidentDescription(e.target.value)}
+                className="flex-1 p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                required
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+              >
+                Report
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

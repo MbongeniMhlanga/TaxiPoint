@@ -5,9 +5,11 @@ import org.springframework.web.bind.annotation.*;
 import za.co.taxipoint.dto.UserDTO;
 import za.co.taxipoint.dto.UserLoginDTO;
 import za.co.taxipoint.dto.UserRegisterDTO;
+import za.co.taxipoint.dto.UserUpdateDTO;
 import za.co.taxipoint.service.UserService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
@@ -48,6 +50,36 @@ public class UserController {
     public ResponseEntity<List<UserDTO>> listUsers() {
         return ResponseEntity.ok(userService.listUsers());
     }
+
+    @PatchMapping("/{id}")
+public ResponseEntity<?> updateUser(
+        @PathVariable Long id,
+        @RequestBody UserUpdateDTO dto
+) {
+    try {
+        UserDTO updatedUser = userService.updateUser(id, dto);
+        return ResponseEntity.ok(updatedUser);
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    } catch (Exception e) {
+        return ResponseEntity.status(500).body("Update failed: " + e.getMessage());
+    }
+}
+@PatchMapping("/{id}/password")
+public ResponseEntity<?> updatePassword(
+        @PathVariable Long id,
+        @RequestBody Map<String, String> body
+) {
+    try {
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        userService.updatePassword(id, oldPassword, newPassword);
+        return ResponseEntity.ok("Password updated successfully");
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}
+
 
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUser(@PathVariable Long id) {
