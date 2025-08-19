@@ -89,51 +89,62 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleFacebookLogin = () => toast.info("Facebook login coming soon!");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
-      <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
-        <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
+   <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800">
+  {/* Left Side - Logo & Slogan */}
+  <div className="flex flex-col justify-center items-start p-16 w-1/3">
+    <img src="/favicon.ico" alt="TaxiPoint Logo" className="w-32 h-32 mb-4" />
+    <h1 className="text-white text-5xl font-bold mb-2">TaxiPoint</h1>
+    <p className="text-gray-300 text-lg">Your ride, your way</p>
+  </div>
 
-        <div className="space-y-3 mb-6">
-          <button onClick={handleGoogleLogin} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-white text-gray-800 font-semibold shadow-md hover:bg-gray-100 transition">
-            <GoogleIcon /> Login with Google
-          </button>
-          <button onClick={handleFacebookLogin} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition">
-            <FacebookIcon /> Login with Facebook
-          </button>
-        </div>
+  {/* Right Side - Login Card */}
+  <div className="flex justify-center items-center w-2/3 p-16">
+    <div className="bg-white/10 backdrop-blur-lg p-12 rounded-3xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
+      <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
 
-        <div className="flex items-center mb-6">
-          <hr className="flex-1 border-gray-500" />
-          <span className="px-3 text-gray-400 text-sm">or</span>
-          <hr className="flex-1 border-gray-500" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required
-            className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" disabled={isLoading} />
-          <div className="relative">
-            <input type={showPassword ? "text" : "password"} name="password" placeholder="Password" value={form.password} onChange={handleChange} required
-              className="w-full p-3 pr-10 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" disabled={isLoading} />
-            <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-              {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
-            </button>
-          </div>
-
-          <div className="flex justify-end">
-            <button type="button" onClick={() => navigate("/forgot-password")} className="text-sm text-blue-400 hover:underline">Forgot Password?</button>
-          </div>
-
-          <button type="submit" className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-gray-300">
-          Don't have an account?{" "}
-          <button onClick={() => navigate("/register")} className="text-blue-400 hover:underline">Register</button>
-        </p>
+      <div className="space-y-3 mb-6">
+        <button onClick={() => toast.info("Google login coming soon!")} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-white text-gray-800 font-semibold shadow-md hover:bg-gray-100 transition">
+          <GoogleIcon /> Login with Google
+        </button>
+        <button onClick={() => toast.info("Facebook login coming soon!")} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition">
+          <FacebookIcon /> Login with Facebook
+        </button>
       </div>
+
+      <div className="flex items-center mb-6">
+        <hr className="flex-1 border-gray-500" />
+        <span className="px-3 text-gray-400 text-sm">or</span>
+        <hr className="flex-1 border-gray-500" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" disabled={isLoading} />
+        <div className="relative">
+          <input type={showPassword ? "text" : "password"} name="password" placeholder="Password" value={form.password} onChange={handleChange} required
+            className="w-full p-3 pr-10 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" disabled={isLoading} />
+          <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+            {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+          </button>
+        </div>
+
+        <div className="flex justify-end">
+          <button type="button" onClick={() => navigate("/forgot-password")} className="text-sm text-blue-400 hover:underline">Forgot Password?</button>
+        </div>
+
+        <button type="submit" className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition" disabled={isLoading}>
+          {isLoading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-center text-gray-300">
+        Don't have an account?{" "}
+        <button onClick={() => navigate("/register")} className="text-blue-400 hover:underline">Register</button>
+      </p>
     </div>
+  </div>
+</div>
+
   );
 };
 
