@@ -47,7 +47,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 const handleProfileUpdate = async () => {
   setLoading(true);
   try {
-    const updatedData = await safeFetch(`/api/users/${user.id}`, {
+    const updatedData = await safeFetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
