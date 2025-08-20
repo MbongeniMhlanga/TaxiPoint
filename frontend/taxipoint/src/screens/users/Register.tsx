@@ -31,7 +31,7 @@ const Register: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const res = await fetch("/api/users/register", {
+            const res = await fetch("https://taxipoint-backend.onrender.com/api/users/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),

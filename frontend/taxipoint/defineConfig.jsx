@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173, // your frontend port
     proxy: {
       '/api': {
-        target: 'http://localhost:8080', // your backend port
+        target: 'https://taxipoint-backend.onrender.com', // your backend port
         changeOrigin: true,
         secure: false,
       },

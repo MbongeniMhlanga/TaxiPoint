@@ -91,7 +91,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const fetchNearbyTaxiRanks = async (lat: number, lng: number, radius: number = 5000) => {
     try {
       const res = await fetch(
-        `/api/taxi-ranks/nearby?lat=${lat}&lng=${lng}&radius_m=${radius}`,
+        `https://taxipoint-backend.onrender.com/api/taxi-ranks/nearby?lat=${lat}&lng=${lng}&radius_m=${radius}`,
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
       if (!res.ok) throw new Error('Failed to fetch nearby taxi ranks');
@@ -106,7 +106,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   // --- Fallback: All Taxi Ranks ---
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch('/api/taxi-ranks?page=0&size=1000', {
+      const res = await fetch('https://taxipoint-backend.onrender.com/api/taxi-ranks?page=0&size=1000', {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
       return;
     }
     try {
-      const res = await fetch(`/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
+      const res = await fetch(`https://taxipoint-backend.onrender.com/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       const data = await res.json();
@@ -153,7 +153,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
 
   const fetchIncidents = async () => {
     try {
-      const res = await fetch('/api/incidents', {
+      const res = await fetch('https://taxipoint-backend.onrender.com/api/incidents', {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       const data = await res.json();
@@ -190,7 +190,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await fetch('/api/incidents', {
+          const res = await fetch('https://taxipoint-backend.onrender.com/api/incidents', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   };
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8080/ws/incidents');
+    const ws = new WebSocket('ws:https://taxipoint-backend.onrender.com/ws/incidents');
     ws.onmessage = (event) => {
       const incident: Incident = mapIncident(JSON.parse(event.data));
       setIncidents((prev) => [...prev, incident]);

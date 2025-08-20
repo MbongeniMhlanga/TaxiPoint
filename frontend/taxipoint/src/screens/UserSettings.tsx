@@ -85,7 +85,7 @@ const handleProfileUpdate = async () => {
 
     setLoading(true);
     try {
-      await safeFetch(`/api/users/${user.id}/password`, {
+      await safeFetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}/password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
