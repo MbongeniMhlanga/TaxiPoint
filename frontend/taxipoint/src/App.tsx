@@ -117,8 +117,17 @@ const MainApp: React.FC = () => {
           }
         />
 
-        <Route path="/about" element={<About />} />
-        <Route path="/support" element={<Support />} />
+      <Route path="/about" element={
+            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <About />
+            </MainLayout>
+        } />
+        
+        <Route path="/support" element={
+            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <Support />
+            </MainLayout>
+        } />
 
         <Route
           path="/landing"
