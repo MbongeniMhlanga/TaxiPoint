@@ -1,6 +1,6 @@
 import React from "react";
 import type { User } from "../App"; // adjust path if needed
-import { LogOut, Settings, Info, HelpCircle, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, Info, HelpCircle, User as UserIcon, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 
@@ -27,6 +27,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
       {/* Menu items */}
       <nav className="flex-1 space-y-3">
+
+           <button
+          onClick={() => navigate("/landing")}
+          className="flex items-center space-x-2 hover:text-gray-300 w-full"
+        >
+          <Home size={18} />
+          <span>Home</span>
+        </button>
+
+
         <button
           onClick={() => navigate("/settings")}
           className="flex items-center space-x-2 hover:text-gray-300 w-full"
