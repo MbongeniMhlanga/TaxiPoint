@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "https://taxi-point.vercel.app")
 @RequestMapping("/api")
 public class TaxiRankController {
 

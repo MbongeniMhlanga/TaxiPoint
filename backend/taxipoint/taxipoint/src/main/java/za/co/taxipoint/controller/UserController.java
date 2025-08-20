@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "https://taxi-point.vercel.app")
 @RequestMapping("/api/users")
 public class UserController {
 
