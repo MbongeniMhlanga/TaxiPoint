@@ -1,6 +1,6 @@
 # Stage 1: Build the application
 # Use a Maven image with JDK 21 to build the application
-FROM maven:3.8.7-openjdk-21 AS build
+FROM maven:3.9.4-eclipse-temurin-21 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -13,7 +13,7 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Create the final production image
 # Use a lightweight OpenJDK 21 JRE image to run the application
-FROM openjdk:21-slim-jre
+FROM eclipse-temurin:21-jre AS runtime
 
 # Set the working directory for the application
 WORKDIR /app
