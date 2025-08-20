@@ -13,7 +13,7 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Create the final production image
 # Use a lightweight OpenJDK 21 JRE image to run the application
-FROM openjdk:21-jre-slim
+FROM openjdk:21-slim-jre
 
 # Set the working directory for the application
 WORKDIR /app
