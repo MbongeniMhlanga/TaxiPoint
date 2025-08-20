@@ -1,35 +1,21 @@
+# docker-compose.yml
 #version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: demobase
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
   backend:
-    build: ./backend-java
+    build: ./backend/taxipoint/taxipoint
     ports:
       - '8080:8080'
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/demobase
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: admin
-    depends_on:
-      - postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-small-wildflower-add11zrs-pooler.c-2.us-east-1.aws.neon.tech/taxipoint_db?sslmode=require&channel_binding=require
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: npg_X6dcTxrg4Uwy
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on: []
 
   frontend:
-    build: ./frontend
+    build: ./frontend/taxipoint
     ports:
-      - '3000:80'  # nginx default port
+      - '5173:80'  # nginx default port
     depends_on:
-      - backend
-
-volumes:
-  pgdata:
+       - backend
