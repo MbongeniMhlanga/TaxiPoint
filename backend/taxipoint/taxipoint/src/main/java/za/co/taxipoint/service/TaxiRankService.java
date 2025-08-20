@@ -91,6 +91,7 @@ public class TaxiRankService {
     // Convert Entity to DTO
     public TaxiRankDTO toDTO(TaxiRank rank) {
         TaxiRankDTO dto = new TaxiRankDTO();
+        dto.setId(rank.getId().toString()); // <-- This is the key line added to your code
         dto.setName(rank.getName());
         dto.setDescription(rank.getDescription());
         dto.setAddress(rank.getAddress());
