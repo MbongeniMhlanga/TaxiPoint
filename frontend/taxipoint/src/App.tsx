@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// Import your MainLayout component
+import MainLayout from "./screens/MainLayout";
+
 // Screens
 import Login from "./screens/users/Login";
 import Register from "./screens/users/Register";
@@ -40,7 +43,6 @@ const ProtectedRoute: React.FC<{
 
   if (requiredRole && user?.role !== requiredRole) {
     toast.warning("You do not have access to this page!");
-    // Add null check here to fix the TypeScript error
     return <Navigate to={user?.role === "ROLE_ADMIN" ? "/admin" : "/landing"} replace />;
   }
 
@@ -51,6 +53,7 @@ const ProtectedRoute: React.FC<{
 const MainApp: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,7 +69,6 @@ const MainApp: React.FC = () => {
   }, []);
 
   const handleLogin = (userData: any) => {
-    // Map UserResponse to User
     const fullUser: User = {
       id: userData.id ?? 0,
       surname: userData.surname ?? "",
@@ -103,11 +105,14 @@ const MainApp: React.FC = () => {
         />
         <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
 
+        {/* Use MainLayout to wrap protected routes that need the layout */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute user={user} requiredRole="ROLE_ADMIN">
-              {user ? <AdminPage user={user} onLogout={handleLogout} /> : null}
+              <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <AdminPage user={user as User} onLogout={handleLogout} />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -119,7 +124,9 @@ const MainApp: React.FC = () => {
           path="/landing"
           element={
             <ProtectedRoute user={user}>
-              {user ? <Landing user={user} onLogout={handleLogout} /> : null}
+              <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <Landing user={user as User} onLogout={handleLogout} />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -128,7 +135,9 @@ const MainApp: React.FC = () => {
           path="/settings"
           element={
             <ProtectedRoute user={user}>
-              {user ? <UserSettings user={user} onUpdateUser={setUser} /> : null}
+              <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <UserSettings user={user as User} onUpdateUser={setUser} />
+              </MainLayout>
             </ProtectedRoute>
           }
         />

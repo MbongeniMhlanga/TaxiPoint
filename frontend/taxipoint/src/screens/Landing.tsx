@@ -4,8 +4,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Menu } from 'lucide-react'; // Import the Menu icon from lucide-react
-import Sidebar from './Sidebar'; // Ensure this path is correct
 
 interface User {
   id: number;
@@ -46,13 +44,12 @@ interface Incident {
   formattedAddress: string;
 }
 
-const Landing = ({ user, onLogout }: LandingProps) => {
+const Landing = ({ user }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State to manage sidebar visibility
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -282,38 +279,13 @@ const Landing = ({ user, onLogout }: LandingProps) => {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 relative">
       <ToastContainer position="top-center" theme="dark" />
 
-      {/* Sidebar: Now controlled by isSidebarOpen on all screen sizes */}
-      <div
-        className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out bg-gray-900 text-white shadow-xl ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <Sidebar user={user} onLogout={onLogout} />
-      </div>
-
-      {/* Dark overlay for all screen sizes */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black opacity-50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
-        ></div>
-      )}
-
       {/* Main Content */}
       <div 
-        className={`flex-1 flex flex-col p-6 gap-6 w-full transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'ml-64' : 'ml-0'
-        }`}
+        className="flex-1 flex flex-col p-6 gap-6 w-full"
       >
         <div className="w-full max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
-          {/* Header with hamburger menu */}
+          {/* Header with welcome message */}
           <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
-            >
-              <Menu size={24} />
-            </button>
             <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
           </div>
           
