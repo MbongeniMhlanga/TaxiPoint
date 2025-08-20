@@ -315,12 +315,6 @@ const Landing = ({ user, onLogout }: LandingProps) => {
               <Menu size={24} />
             </button>
             <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition ml-auto"
-            >
-              Logout
-            </button>
           </div>
           
           {/* Search Input */}
