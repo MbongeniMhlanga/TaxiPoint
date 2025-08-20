@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import type { ReactElement } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Assuming these files exist in your project
+// Screens
 import Login from "./screens/users/Login";
 import Register from "./screens/users/Register";
 import UserSettings from "./screens/UserSettings";
@@ -12,39 +13,45 @@ import AdminPage from "./screens/AdminPage";
 import About from "./screens/About";
 import Support from "./screens/Support";
 
+// User interface
 export interface User {
-  email: string;
+  id: number;
   name: string;
+  surname: string;
+  email: string;
   role: string;
   token: string;
 }
 
+// Auth helper
 const isAuthenticated = (user: User | null) => !!(user && user.token);
 
-const ProtectedRoute: React.FC<{ user: User | null; children: JSX.Element; requiredRole?: string }> = ({ user, children, requiredRole }) => {
+// ProtectedRoute component
+const ProtectedRoute: React.FC<{
+  user: User | null;
+  children: ReactElement | null;
+  requiredRole?: string;
+}> = ({ user, children, requiredRole }) => {
   const location = useLocation();
 
   if (!isAuthenticated(user)) {
-    console.log("ProtectedRoute: user not authenticated, redirecting to login");
-    // Removed the toast message from here. The logout function now handles toast messages.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {
-    console.log(`ProtectedRoute: user role ${user.role} does not match required ${requiredRole}`);
     toast.warning("You do not have access to this page!");
-    return <Navigate to={user.role === "ROLE_ADMIN" ? "/admin" : "/landing"} replace />;
+    // Add null check here to fix the TypeScript error
+    return <Navigate to={user?.role === "ROLE_ADMIN" ? "/admin" : "/landing"} replace />;
   }
 
   return children;
 };
 
-// We will now create a new component to hold all the logic.
-// This component will be rendered inside the Router.
+// MainApp component
 const MainApp: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // This hook is now called correctly inside a component that is a child of Router
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -58,10 +65,18 @@ const MainApp: React.FC = () => {
     setLoading(false);
   }, []);
 
-  const handleLogin = (userData: User) => {
-    console.log("App handleLogin userData:", userData);
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  const handleLogin = (userData: any) => {
+    // Map UserResponse to User
+    const fullUser: User = {
+      id: userData.id ?? 0,
+      surname: userData.surname ?? "",
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      token: userData.token,
+    };
+    setUser(fullUser);
+    localStorage.setItem("user", JSON.stringify(fullUser));
   };
 
   const handleLogout = () => {
@@ -84,49 +99,39 @@ const MainApp: React.FC = () => {
       <Routes>
         <Route
           path="/login"
-          element={
-            user ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login onLogin={handleLogin} />
-            )
-          }
+          element={user ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />}
         />
-        <Route
-  path="/register"
-  element={user ? <Navigate to="/" replace /> : <Register />}
-/>
-
+        <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
 
         <Route
           path="/admin"
           element={
             <ProtectedRoute user={user} requiredRole="ROLE_ADMIN">
-              {user && <AdminPage user={user} onLogout={handleLogout} />}
+              {user ? <AdminPage user={user} onLogout={handleLogout} /> : null}
             </ProtectedRoute>
           }
         />
-          {/* Public Pages */}
-  <Route path="/about" element={<About />} />
-  <Route path="/support" element={<Support />} />
+
+        <Route path="/about" element={<About />} />
+        <Route path="/support" element={<Support />} />
 
         <Route
           path="/landing"
           element={
             <ProtectedRoute user={user}>
-              {user && <Landing user={user} onLogout={handleLogout} />}
+              {user ? <Landing user={user} onLogout={handleLogout} /> : null}
             </ProtectedRoute>
           }
         />
-         <Route
-        path="/settings"
-        element={
-          <ProtectedRoute user={user}>
-            {user && <UserSettings user={user} onUpdateUser={setUser} />}
-          </ProtectedRoute>
-        }
-      />
-        
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute user={user}>
+              {user ? <UserSettings user={user} onUpdateUser={setUser} /> : null}
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/"
@@ -139,16 +144,13 @@ const MainApp: React.FC = () => {
           }
         />
 
-        {/* Catch-all route to redirect to the correct home page */}
         <Route path="*" element={<Navigate to="/" replace />} />
-        
       </Routes>
     </>
   );
 };
 
-
-// The main App component now just provides the Router
+// Main App
 const App: React.FC = () => (
   <Router>
     <ToastContainer />

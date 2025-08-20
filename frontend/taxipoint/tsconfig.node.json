@@ -19,7 +19,8 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,   "jsx": "react-jsx",
+    "types": ["react", "react-dom"],   // ✅ Added for JSX namespace
   },
   "include": ["vite.config.ts"]
 }

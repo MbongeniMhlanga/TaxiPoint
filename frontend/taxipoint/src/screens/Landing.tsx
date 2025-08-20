@@ -8,8 +8,10 @@ import { Menu } from 'lucide-react'; // Import the Menu icon from lucide-react
 import Sidebar from './Sidebar'; // Ensure this path is correct
 
 interface User {
+  id: number;
   email: string;
   name: string;
+  surname: string;
   role: string;
   token: string;
 }
@@ -49,7 +51,7 @@ const Landing = ({ user, onLogout }: LandingProps) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State to manage sidebar visibility
 
   // Leaflet default icon fix

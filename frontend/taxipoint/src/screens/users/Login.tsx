@@ -1,4 +1,5 @@
-import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
+import React, { useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -49,8 +50,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-
-
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -85,8 +84,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
-  const handleGoogleLogin = () => toast.info("Google login coming soon!");
-  const handleFacebookLogin = () => toast.info("Facebook login coming soon!");
 
   return (
    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800">

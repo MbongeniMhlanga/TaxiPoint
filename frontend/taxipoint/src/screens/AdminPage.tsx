@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-// Use inline SVGs for icons to avoid import issues
-const MdEdit = (props) => (
+
+// Use inline SVGs for icons with proper TypeScript types
+const MdEdit: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -21,7 +22,7 @@ const MdEdit = (props) => (
   </svg>
 );
 
-const MdDelete = (props) => (
+const MdDelete: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -42,7 +43,7 @@ const MdDelete = (props) => (
   </svg>
 );
 
-const FaSpinner = (props) => (
+const FaSpinner: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -426,7 +427,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button onClick={() => handleEdit(rank)} className="text-indigo-400 mx-2 hover:text-indigo-600 transition-colors">
-                    <MdEdit size={20} />
+                    <MdEdit width={20} height={20} />
                   </button>
                   <button
                     onClick={() => {
@@ -435,7 +436,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                     }}
                     className="text-red-400 mx-2 hover:text-red-600 transition-colors"
                   >
-                    <MdDelete size={20} />
+                    <MdDelete width={20} height={20} />
                   </button>
                 </td>
               </tr>
