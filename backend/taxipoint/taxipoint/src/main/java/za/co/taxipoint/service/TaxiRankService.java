@@ -50,22 +50,40 @@ public class TaxiRankService {
         return taxiRankRepository.save(taxiRank);
     }
 
-   public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
+public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
     return taxiRankRepository.findById(id).map(rank -> {
-        TaxiRank updatedRank = fromDTO(dto);
-        rank.setName(updatedRank.getName());
-        rank.setAddress(updatedRank.getAddress());
-        rank.setDescription(updatedRank.getDescription());
-        rank.setLocation(updatedRank.getLocation());
-        rank.setDistrict(updatedRank.getDistrict());
-        rank.setRoutesServed(updatedRank.getRoutesServed());
-        rank.setHours(updatedRank.getHours());
-        rank.setPhone(updatedRank.getPhone());
-        rank.setFacilities(updatedRank.getFacilities());
+        rank.setName(dto.getName());
+        rank.setAddress(dto.getAddress());
+        rank.setDescription(dto.getDescription());
+        rank.setDistrict(dto.getDistrict());
+        rank.setPhone(dto.getPhone());
+
+        // Update routesServed safely
+        if (dto.getRoutesServed() != null) {
+            rank.setRoutesServed(dto.getRoutesServed());
+        }
+
+        // Update hours safely
+        if (dto.getHours() != null) {
+            rank.setHours(dto.getHours());
+        }
+
+        // Update facilities safely
+        if (dto.getFacilities() != null) {
+            rank.setFacilities(dto.getFacilities());
+        }
+
+        // Update location if latitude & longitude are provided
+        if (dto.getLatitude() != null && dto.getLongitude() != null) {
+            Point location = geometryFactory.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
+            location.setSRID(4326);
+            rank.setLocation(location);
+        }
+
         return taxiRankRepository.save(rank);
     }).orElseThrow(() -> new RuntimeException("TaxiRank not found"));
 }
-     
+  
 
     // Convert DTO to Entity
     public TaxiRank fromDTO(TaxiRankDTO dto) {
