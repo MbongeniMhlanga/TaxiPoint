@@ -162,7 +162,7 @@ const Landing = ({ user }: LandingProps) => {
       setTaxiRanks(data.content || []);
     } catch (err: any) {
       console.error(err);
-      toast.error('Failed to fetch taxi ranks');
+      //toast.error('Failed to fetch taxi ranks');
     }
   };
 
