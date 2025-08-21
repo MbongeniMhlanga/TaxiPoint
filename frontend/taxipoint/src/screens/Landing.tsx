@@ -491,11 +491,12 @@ const Landing = ({ user }: LandingProps) => {
           {showSuggestions && filteredSuggestions.length > 0 && (
             <div className="border-t border-gray-200 max-h-60 overflow-y-auto">
               {filteredSuggestions.map((rank) => (
-                <button
-                  key={rank.id}
-                  onClick={() => handleSuggestionClick(rank)}
-                  className="w-full text-left p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-                >
+               <button
+  key={rank.id}
+  onClick={() => handleSuggestionClick(rank)}
+  onMouseDown={(e) => e.preventDefault()} // <-- Add this line
+  className="w-full text-left p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+>
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
