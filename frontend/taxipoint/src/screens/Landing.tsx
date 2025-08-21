@@ -52,7 +52,7 @@ const ZoomControls = () => {
     <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
       <button
         onClick={() => map.zoomIn()}
-        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
       >
         <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -60,7 +60,7 @@ const ZoomControls = () => {
       </button>
       <button
         onClick={() => map.zoomOut()}
-        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
       >
         <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
@@ -69,6 +69,8 @@ const ZoomControls = () => {
     </div>
   );
 };
+
+export default ZoomControls;
 
 const Landing = ({ user }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
