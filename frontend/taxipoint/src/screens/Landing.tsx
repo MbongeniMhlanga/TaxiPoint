@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
@@ -43,6 +43,32 @@ interface Incident {
   createdAt: string;
   formattedAddress: string;
 }
+
+// New component for the custom zoom controls
+const ZoomControls = () => {
+  const map = useMap();
+
+  return (
+    <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
+      <button
+        onClick={() => map.zoomIn()}
+        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </button>
+      <button
+        onClick={() => map.zoomOut()}
+        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+        </svg>
+      </button>
+    </div>
+  );
+};
 
 const Landing = ({ user }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
@@ -293,6 +319,9 @@ const Landing = ({ user }: LandingProps) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {/* This is where the new ZoomControls component needs to be rendered */}
+        <ZoomControls />
+
         {/* Taxi Ranks */}
         {taxiRanks.map((rank) => (
           <Marker
@@ -358,20 +387,6 @@ const Landing = ({ user }: LandingProps) => {
             className="w-full p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-      </div>
-
-      {/* Zoom Controls - Right Side */}
-      <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
-        <button className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition">
-          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-        </button>
-        <button className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition">
-          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
-          </svg>
-        </button>
       </div>
 
       {/* Report Incident Button - Bottom Right */}
