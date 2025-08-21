@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -200,8 +200,7 @@ const Landing = ({ user }: LandingProps) => {
     }
   };
 
-  const submitIncident = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitIncident = async () => {
     if (!incidentDescription.trim()) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -398,7 +397,7 @@ const Landing = ({ user }: LandingProps) => {
       </MapContainer>
 
       {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-24 left-4 right-20'} z-[1001] transition-all duration-300 ease-in-out`}>
+      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-32 left-4 right-4'} z-[1001] transition-all duration-300 ease-in-out`}>
         <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
           <div className="relative p-4">
             <svg 
@@ -512,7 +511,7 @@ const Landing = ({ user }: LandingProps) => {
                 </svg>
               </button>
             </div>
-            <form onSubmit={submitIncident} className="flex flex-col space-y-4">
+            <div className="flex flex-col space-y-4">
               <input
                 type="text"
                 placeholder="Describe the incident..."
@@ -522,12 +521,12 @@ const Landing = ({ user }: LandingProps) => {
                 required
               />
               <button
-                type="submit"
+                onClick={submitIncident}
                 className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
               >
                 Report Incident
               </button>
-            </form>
+            </div>
           </div>
         </div>
       )}
