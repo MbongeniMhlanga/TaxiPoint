@@ -397,7 +397,7 @@ const Landing = ({ user }: LandingProps) => {
       </MapContainer>
 
       {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-20 left-4 right-4'} z-[1001] transition-all duration-300 ease-in-out`}>
+      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-0 left-0 right-0'} z-[1001] transition-all duration-300 ease-in-out`}>
         <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
           <div className="relative p-4">
             <svg 
