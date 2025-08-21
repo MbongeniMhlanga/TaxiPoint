@@ -79,6 +79,8 @@ const Landing = ({ user }: LandingProps) => {
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -147,6 +149,8 @@ const Landing = ({ user }: LandingProps) => {
 
   const searchTaxiRanks = async (query: string) => {
     if (!query.trim()) {
+      setFilteredSuggestions([]);
+      setShowSuggestions(false);
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude),
@@ -163,9 +167,13 @@ const Landing = ({ user }: LandingProps) => {
       });
       const data = await res.json();
       setTaxiRanks(data);
+      // Show top 5 suggestions for the dropdown
+      setFilteredSuggestions(data.slice(0, 5));
+      setShowSuggestions(true);
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to search taxi ranks');
+      setShowSuggestions(false);
     }
   };
 
@@ -250,6 +258,24 @@ const Landing = ({ user }: LandingProps) => {
         toast.error('Could not get your location.');
       }
     );
+  };
+
+  const handleSuggestionClick = (rank: TaxiRank) => {
+    setSearchQuery(rank.name);
+    setIsSearchFocused(false);
+    setShowSuggestions(false);
+    // Focus on the selected taxi rank on the map
+    // You could add map.flyTo functionality here if you have map ref
+  };
+
+  const handleSearchBlur = () => {
+    // Delay to allow suggestion clicks to register
+    setTimeout(() => {
+      if (!searchQuery.trim()) {
+        setIsSearchFocused(false);
+      }
+      setShowSuggestions(false);
+    }, 200);
   };
 
   // --- Group incidents by location ---
@@ -372,11 +398,11 @@ const Landing = ({ user }: LandingProps) => {
       </MapContainer>
 
       {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-24 left-4 right-4'} z-[1000] transition-all duration-300 ease-in-out`}>
-        <div className="bg-white/95 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-white/20">
-          <div className="relative">
+      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-24 left-4 right-20'} z-[1001] transition-all duration-300 ease-in-out`}>
+        <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
+          <div className="relative p-4">
             <svg 
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+              className="absolute left-7 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -387,15 +413,13 @@ const Landing = ({ user }: LandingProps) => {
               type="text"
               placeholder="Search taxi ranks by name, district, or routes..."
               value={searchQuery}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => {
-                // Delay the blur to allow for potential interactions
-                setTimeout(() => {
-                  if (!searchQuery.trim()) {
-                    setIsSearchFocused(false);
-                  }
-                }, 150);
+              onFocus={() => {
+                setIsSearchFocused(true);
+                if (searchQuery.trim()) {
+                  setShowSuggestions(true);
+                }
               }}
+              onBlur={handleSearchBlur}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 if (searchTimeout) clearTimeout(searchTimeout);
@@ -404,7 +428,7 @@ const Landing = ({ user }: LandingProps) => {
                 }, 300);
                 setSearchTimeout(timeout);
               }}
-              className="w-full pl-10 pr-4 p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full pl-10 pr-10 p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             {/* Clear button when there's text */}
             {searchQuery && (
@@ -412,9 +436,10 @@ const Landing = ({ user }: LandingProps) => {
                 onClick={() => {
                   setSearchQuery('');
                   setIsSearchFocused(false);
+                  setShowSuggestions(false);
                   searchTaxiRanks('');
                 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-7 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -422,6 +447,41 @@ const Landing = ({ user }: LandingProps) => {
               </button>
             )}
           </div>
+          
+          {/* Search Suggestions Dropdown */}
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <div className="border-t border-gray-200 max-h-60 overflow-y-auto">
+              {filteredSuggestions.map((rank, index) => (
+                <button
+                  key={rank.id}
+                  onClick={() => handleSuggestionClick(rank)}
+                  className="w-full text-left p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {rank.name}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {rank.address}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {rank.district}
+                        {rank.distanceMeters && (
+                          <span className="ml-2">• {(rank.distanceMeters / 1000).toFixed(1)}km away</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
