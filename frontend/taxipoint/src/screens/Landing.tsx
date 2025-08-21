@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import  { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -397,7 +397,7 @@ const Landing = ({ user }: LandingProps) => {
       </MapContainer>
 
       {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-32 left-4 right-4'} z-[1001] transition-all duration-300 ease-in-out`}>
+      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-20 left-4 right-4'} z-[1001] transition-all duration-300 ease-in-out`}>
         <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
           <div className="relative p-4">
             <svg 
