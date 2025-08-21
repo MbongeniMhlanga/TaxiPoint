@@ -485,7 +485,7 @@ const Landing = ({ user }: LandingProps) => {
       </div>
 
       {/* Report Incident Button - Bottom Right */}
-      <div className="absolute bottom-6 right-4 z-[1000]">
+      <div className="absolute bottom-28 right-4 z-[1000]">
         <button
           onClick={() => setShowIncidentForm(!showIncidentForm)}
           className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105"
