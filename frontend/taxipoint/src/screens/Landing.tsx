@@ -50,6 +50,7 @@ const Landing = ({ user }: LandingProps) => {
   const [incidentDescription, setIncidentDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [showIncidentForm, setShowIncidentForm] = useState(false);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -180,6 +181,7 @@ const Landing = ({ user }: LandingProps) => {
 
     setIncidents((prev) => [...prev, tempIncident]);
     setIncidentDescription('');
+    setShowIncidentForm(false);
 
     if (!navigator.geolocation) {
       toast.error('Geolocation not supported');
@@ -276,117 +278,153 @@ const Landing = ({ user }: LandingProps) => {
   );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 relative">
+    <div className="relative w-full h-screen overflow-hidden">
       <ToastContainer position="top-center" theme="dark" />
 
-      {/* Main Content */}
-      <div 
-        className="flex-1 flex flex-col p-6 gap-6 w-full"
+      {/* Full Screen Map */}
+      <MapContainer
+        center={[-26.2044, 28.0473]}
+        zoom={14}
+        style={{ height: '100vh', width: '100vw' }}
+        zoomControl={false}
       >
-        <div className="w-full max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-xl">
-          {/* Header with welcome message */}
-          <div className="flex items-center gap-4 mb-6">
-            <h1 className="text-2xl font-bold text-white">Welcome to TaxiPoint, {user.name}!</h1>
-          </div>
-          
-          {/* Search Input */}
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search taxi ranks by name, district, or routes..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (searchTimeout) clearTimeout(searchTimeout);
-                const timeout = setTimeout(() => {
-                  searchTaxiRanks(e.target.value);
-                }, 300);
-                setSearchTimeout(timeout);
-              }}
-              className="w-full p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-          {/* Map */}
-          <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg mb-6">
-            <MapContainer
-              center={[-26.2044, 28.0473]}
-              zoom={14}
-              style={{ height: '500px', width: '100%' }}
-            >
-              <TileLayer
-                attribution='&copy; OpenStreetMap contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+        {/* Taxi Ranks */}
+        {taxiRanks.map((rank) => (
+          <Marker
+            key={`taxi-${rank.id}`}
+            position={[rank.latitude, rank.longitude]}
+            icon={taxiIcon}
+          >
+            <Popup>
+              <div className="space-y-1">
+                <h3 className="font-bold text-lg">🚖 {rank.name}</h3>
+                {rank.description && <p><b>Description:</b> {rank.description}</p>}
+                <p><b>Address:</b> {rank.address}</p>
+                <p><b>District:</b> {rank.district}</p>
+                {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
+                {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
+                {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
+                {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
+                {rank.distanceMeters !== undefined && (
+                  <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
 
-              {/* Taxi Ranks */}
-              {taxiRanks.map((rank) => (
-                <Marker
-                  key={`taxi-${rank.id}`}
-                  position={[rank.latitude, rank.longitude]}
-                  icon={taxiIcon}
-                >
-                  <Popup>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-lg">🚖 {rank.name}</h3>
-                      {rank.description && <p><b>Description:</b> {rank.description}</p>}
-                      <p><b>Address:</b> {rank.address}</p>
-                      <p><b>District:</b> {rank.district}</p>
-                      {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
-                      {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
-                      {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
-                      {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
-                      {rank.distanceMeters !== undefined && (
-                        <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
+        {/* Incident Groups */}
+        {groupIncidentsByLocation(incidents).map((group, idx) => (
+          <Marker
+            key={`group-${idx}`}
+            position={[group.latitude, group.longitude]}
+            icon={createIncidentDivIcon(group.incidents.length)}
+          >
+            <Popup>
+              {group.incidents.map((incident) => (
+                <div key={incident.id} className="mb-2">
+                  🚨 <b>{incident.reporter}</b>: {incident.description}
+                  <br />
+                  📍 <b>Location:</b> {incident.formattedAddress}
+                  <br />
+                  <small>{new Date(incident.createdAt).toLocaleString()}</small>
+                </div>
               ))}
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
 
-              {/* Incident Groups */}
-              {groupIncidentsByLocation(incidents).map((group, idx) => (
-                <Marker
-                  key={`group-${idx}`}
-                  position={[group.latitude, group.longitude]}
-                  icon={createIncidentDivIcon(group.incidents.length)}
-                >
-                  <Popup>
-                    {group.incidents.map((incident) => (
-                      <div key={incident.id} className="mb-2">
-                        🚨 <b>{incident.reporter}</b>: {incident.description}
-                        <br />
-                        📍 <b>Location:</b> {incident.formattedAddress}
-                        <br />
-                        <small>{new Date(incident.createdAt).toLocaleString()}</small>
-                      </div>
-                    ))}
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
+      {/* Search Bar - Top Overlay */}
+      <div className="absolute top-4 left-4 right-4 z-[1000]">
+        <div className="bg-white/95 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-white/20">
+          <input
+            type="text"
+            placeholder="Search taxi ranks by name, district, or routes..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (searchTimeout) clearTimeout(searchTimeout);
+              const timeout = setTimeout(() => {
+                searchTaxiRanks(e.target.value);
+              }, 300);
+              setSearchTimeout(timeout);
+            }}
+            className="w-full p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+      </div>
 
-          {/* Incident Reporting Form */}
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-            <h2 className="text-xl font-bold text-blue-400 mb-4">Report an Incident</h2>
-            <form onSubmit={submitIncident} className="flex flex-col md:flex-row gap-4">
+      {/* Zoom Controls - Right Side */}
+      <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
+        <button className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition">
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        </button>
+        <button className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition">
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Report Incident Button - Bottom Right */}
+      <div className="absolute bottom-6 right-4 z-[1000]">
+        <button
+          onClick={() => setShowIncidentForm(!showIncidentForm)}
+          className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Incident Reporting Form - Bottom Overlay */}
+      {showIncidentForm && (
+        <div className="absolute bottom-20 left-4 right-4 z-[1000]">
+          <div className="bg-white/95 backdrop-blur-lg rounded-xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-red-600">Report an Incident</h2>
+              <button
+                onClick={() => setShowIncidentForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={submitIncident} className="flex flex-col space-y-4">
               <input
                 type="text"
                 placeholder="Describe the incident..."
                 value={incidentDescription}
                 onChange={(e) => setIncidentDescription(e.target.value)}
-                className="flex-1 p-3 rounded-lg bg-gray-900 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400"
                 required
               />
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+                className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
               >
-                Report
+                Report Incident
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Welcome Message - Top Left */}
+      <div className="absolute top-4 left-4 right-4 z-[999] pointer-events-none">
+        <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
+          Welcome to TaxiPoint, {user.name}!
         </div>
       </div>
     </div>
