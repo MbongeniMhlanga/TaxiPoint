@@ -239,7 +239,7 @@ const Landing = ({ user }: LandingProps) => {
   };
 
   useEffect(() => {
-    const ws = new WebSocket('ws:https://taxipoint-backend.onrender.com/ws/incidents');
+    const ws = new WebSocket('wss:https://taxipoint-backend.onrender.com/ws/incidents');
     ws.onmessage = (event) => {
       const incident: Incident = mapIncident(JSON.parse(event.data));
       setIncidents((prev) => [...prev, incident]);
