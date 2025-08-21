@@ -162,19 +162,26 @@ const Landing = ({ user }: LandingProps) => {
       return;
     }
     try {
-      const res = await fetch(`https://taxipoint-backend.onrender.com/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
-      const data = await res.json();
-      setTaxiRanks(data);
-      // Show top 5 suggestions for the dropdown
-      setFilteredSuggestions(data.slice(0, 5));
-      setShowSuggestions(true);
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Failed to search taxi ranks');
-      setShowSuggestions(false);
-    }
+  const res = await fetch(`https://taxipoint-backend.onrender.com/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
+    headers: { Authorization: `Bearer ${user.token}` },
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text(); // log the actual backend error
+    throw new Error(`HTTP ${res.status}: ${errorText}`);
+  }
+
+  const data = await res.json();
+  setTaxiRanks(data);
+  setFilteredSuggestions(data.slice(0, 5));
+  setShowSuggestions(true);
+
+} catch (err: any) {
+  console.error("Search API error:", err);
+  toast.error("Failed to search taxi ranks");
+  setShowSuggestions(false);
+}
+
   };
 
   const mapIncident = (incident: any): Incident => ({
