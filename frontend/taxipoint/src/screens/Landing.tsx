@@ -52,7 +52,7 @@ const ZoomControls = () => {
     <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
       <button
         onClick={() => map.zoomIn()}
-        className="bg-white/95 p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
       >
         <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -60,7 +60,7 @@ const ZoomControls = () => {
       </button>
       <button
         onClick={() => map.zoomOut()}
-        className="bg-white/95 p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
       >
         <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
@@ -320,9 +320,6 @@ const Landing = ({ user }: LandingProps) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* This is where the new ZoomControls component needs to be rendered */}
-        <ZoomControls />
-
         {/* Taxi Ranks */}
         {taxiRanks.map((rank) => (
           <Marker
@@ -369,6 +366,9 @@ const Landing = ({ user }: LandingProps) => {
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Place the ZoomControls component here, as a sibling of MapContainer */}
+      <ZoomControls />
 
       {/* Search Bar - Top Overlay */}
       <div className="absolute top-4 left-4 right-4 z-[1000]">
@@ -437,8 +437,8 @@ const Landing = ({ user }: LandingProps) => {
         </div>
       )}
 
-      {/* Welcome Message - Top Left */}
-      <div className="absolute top-4 left-4 right-4 z-[999] pointer-events-none">
+       {/* Welcome Message - Top Left */}
+      <div className="absolute top-4 left-4 right-4 z-[999]"> 
         <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
           Welcome to TaxiPoint, {user.name}!
         </div>
