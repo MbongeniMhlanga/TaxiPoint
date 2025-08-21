@@ -451,7 +451,7 @@ const Landing = ({ user }: LandingProps) => {
           {/* Search Suggestions Dropdown */}
           {showSuggestions && filteredSuggestions.length > 0 && (
             <div className="border-t border-gray-200 max-h-60 overflow-y-auto">
-              {filteredSuggestions.map((rank, index) => (
+              {filteredSuggestions.map((rank) => (
                 <button
                   key={rank.id}
                   onClick={() => handleSuggestionClick(rank)}
