@@ -1,5 +1,5 @@
 /* eslint-disable no-irregular-whitespace */
-import  { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -51,6 +51,9 @@ const MapController = ({ selectedLocation }: { selectedLocation: { lat: number; 
   
   useEffect(() => {
     if (selectedLocation) {
+
+       console.log('MapController received new location:', selectedLocation);
+
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 16, {
         duration: 1.5 // Animation duration in seconds
       });
@@ -292,7 +295,8 @@ const Landing = ({ user }: LandingProps) => {
     setSearchQuery(rank.name);
     setIsSearchFocused(false);
     setShowSuggestions(false);
-    
+      
+  console.log('Attempting to navigate to:', { lat: rank.latitude, lng: rank.longitude });
     // Navigate to the selected taxi rank location
     setSelectedLocation({
       lat: rank.latitude,
