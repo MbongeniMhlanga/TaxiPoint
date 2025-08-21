@@ -70,7 +70,6 @@ const ZoomControls = () => {
   );
 };
 
-
 const Landing = ({ user }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -397,14 +396,26 @@ const Landing = ({ user }: LandingProps) => {
         ))}
       </MapContainer>
 
-      {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-24 left-4 right-20'} z-[999] transition-all duration-300 ease-in-out`}>
+      {/* Report Incident Button - Bottom Right */}
+      <div className="absolute bottom-6 right-4 z-[1000]">
+        <button
+          onClick={() => setShowIncidentForm(!showIncidentForm)}
+          className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Search Bar - Below Report Button */}
+      <div className={`absolute bottom-6 left-4 right-20 z-[999] transition-all duration-300 ease-in-out ${isSearchFocused ? 'right-4' : ''}`}>
         <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
           <div className="relative p-4">
-            <svg 
-              className="absolute left-7 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="absolute left-7 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -447,7 +458,7 @@ const Landing = ({ user }: LandingProps) => {
               </button>
             )}
           </div>
-          
+
           {/* Search Suggestions Dropdown */}
           {showSuggestions && filteredSuggestions.length > 0 && (
             <div className="border-t border-gray-200 max-h-60 overflow-y-auto">
@@ -483,18 +494,6 @@ const Landing = ({ user }: LandingProps) => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Report Incident Button - Bottom Right */}
-      <div className="absolute bottom-6 right-4 z-[1000]">
-        <button
-          onClick={() => setShowIncidentForm(!showIncidentForm)}
-          className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
       </div>
 
       {/* Incident Reporting Form - Bottom Overlay */}
