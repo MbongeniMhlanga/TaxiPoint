@@ -47,24 +47,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         ></div>
       )}
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col p-6 gap-6 w-full transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? "ml-64" : "ml-0"
-        }`}
-      >
-        {/* Header with hamburger menu */}
-        <div className="w-full max-w-6xl mx-auto flex items-center gap-4">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
-          >
-            <Menu size={24} />
-          </button>
-          <h1 className="text-2xl font-bold text-white">TaxiPoint Dashboard</h1>
-        </div>
-        {children}
-      </div>
+     {/* Main Content */}
+<div
+  className={`flex-1 flex flex-col p-6 gap-6 w-full transition-all duration-300 ease-in-out ${
+    isSidebarOpen ? "ml-64" : "ml-0"
+  }`}
+>
+  {/* Sidebar Toggle Button in the Top-Left */}
+  <button
+    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+    className="absolute top-4 left-4 z-50 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
+  >
+    <Menu size={24} />
+  </button>
+
+  {/* Header (without the icon now) */}
+  <div className="w-full max-w-6xl mx-auto flex items-center gap-4">
+    <h1 className="text-2xl font-bold text-white">TaxiPoint Dashboard</h1>
+  </div>
+
+  {children}
+</div>
+
     </div>
   );
 };
