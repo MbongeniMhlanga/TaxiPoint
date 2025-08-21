@@ -53,17 +53,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     isSidebarOpen ? "ml-64" : "ml-0"
   }`}
 >
-  {/* Sidebar Toggle Button in the Top-Left */}
+{/* Sidebar Toggle Button in the Top-Left */}
+{!isSidebarOpen && (
   <button
-    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+    onClick={() => setIsSidebarOpen(true)}
     className="absolute top-4 left-4 z-50 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
   >
     <Menu size={24} />
   </button>
+)}
+
 
   {/* Header (without the icon now) */}
   <div className="w-full max-w-6xl mx-auto flex items-center gap-4">
-    <h1 className="text-2xl font-bold text-white">TaxiPoint Dashboard</h1>
+     {/* <h1 className="text-2xl font-bold text-white">TaxiPoint </h1> */}
   </div>
 
   {children}
