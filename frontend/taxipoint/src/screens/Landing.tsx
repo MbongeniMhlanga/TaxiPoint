@@ -70,7 +70,6 @@ const ZoomControls = () => {
   );
 };
 
-export default ZoomControls;
 
 const Landing = ({ user }: LandingProps) => {
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
