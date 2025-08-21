@@ -320,6 +320,9 @@ const Landing = ({ user }: LandingProps) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {/* Place the ZoomControls component here, back inside the MapContainer */}
+        <ZoomControls />
+
         {/* Taxi Ranks */}
         {taxiRanks.map((rank) => (
           <Marker
@@ -366,9 +369,6 @@ const Landing = ({ user }: LandingProps) => {
           </Marker>
         ))}
       </MapContainer>
-
-      {/* Place the ZoomControls component here, as a sibling of MapContainer */}
-      <ZoomControls />
 
       {/* Search Bar - Top Overlay */}
       <div className="absolute top-4 left-4 right-4 z-[1000]">
@@ -437,7 +437,7 @@ const Landing = ({ user }: LandingProps) => {
         </div>
       )}
 
-       {/* Welcome Message - Top Left */}
+      {/* Welcome Message - Top Left */}
       <div className="absolute top-4 left-4 right-4 z-[999]"> 
         <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
           Welcome to TaxiPoint, {user.name}!
