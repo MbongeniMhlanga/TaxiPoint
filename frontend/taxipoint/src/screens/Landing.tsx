@@ -78,6 +78,7 @@ const Landing = ({ user }: LandingProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -370,23 +371,57 @@ const Landing = ({ user }: LandingProps) => {
         ))}
       </MapContainer>
 
-      {/* Search Bar - Top Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-[1000]">
+      {/* Search Bar - Dynamic Position */}
+      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-24 left-4 right-4'} z-[1000] transition-all duration-300 ease-in-out`}>
         <div className="bg-white/95 backdrop-blur-lg rounded-xl p-4 shadow-lg border border-white/20">
-          <input
-            type="text"
-            placeholder="Search taxi ranks by name, district, or routes..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (searchTimeout) clearTimeout(searchTimeout);
-              const timeout = setTimeout(() => {
-                searchTaxiRanks(e.target.value);
-              }, 300);
-              setSearchTimeout(timeout);
-            }}
-            className="w-full p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <div className="relative">
+            <svg 
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search taxi ranks by name, district, or routes..."
+              value={searchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => {
+                // Delay the blur to allow for potential interactions
+                setTimeout(() => {
+                  if (!searchQuery.trim()) {
+                    setIsSearchFocused(false);
+                  }
+                }, 150);
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (searchTimeout) clearTimeout(searchTimeout);
+                const timeout = setTimeout(() => {
+                  searchTaxiRanks(e.target.value);
+                }, 300);
+                setSearchTimeout(timeout);
+              }}
+              className="w-full pl-10 pr-4 p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            {/* Clear button when there's text */}
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setIsSearchFocused(false);
+                  searchTaxiRanks('');
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -438,7 +473,7 @@ const Landing = ({ user }: LandingProps) => {
       )}
 
       {/* Welcome Message - Top Left */}
-      <div className="absolute top-4 left-4 right-4 z-[999]"> 
+      <div className={`absolute top-4 left-4 z-[999] transition-all duration-300 ${isSearchFocused ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
           Welcome to TaxiPoint, {user.name}!
         </div>
