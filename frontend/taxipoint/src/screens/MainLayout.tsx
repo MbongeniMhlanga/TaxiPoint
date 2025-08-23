@@ -42,7 +42,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Dark overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-2001"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

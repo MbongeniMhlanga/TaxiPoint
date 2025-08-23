@@ -572,12 +572,12 @@ const Landing = ({ user }: LandingProps) => {
         </div>
       )}
 
-      {/* Welcome Message - Top Left */}
+      {/* Welcome Message - Top Left
       <div className={`absolute top-4 left-4 z-[999] transition-all duration-300 ${isSearchFocused ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
           Welcome to TaxiPoint, {user.name}!
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
