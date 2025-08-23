@@ -375,7 +375,7 @@ const Landing = ({ user }: LandingProps) => {
       <MapContainer
         center={[-26.2044, 28.0473]}
         zoom={14}
-        style={{ height: '100vh', width: '100vw' }}
+       style={{ height: '100vh', width: '100%' }}
         zoomControl={false}
       >
         <TileLayer
