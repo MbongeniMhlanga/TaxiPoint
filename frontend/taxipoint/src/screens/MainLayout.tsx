@@ -29,7 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   setIsSidebarOpen,
 }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out bg-gray-900 text-white shadow-xl ${
@@ -39,28 +39,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         <Sidebar user={user} onLogout={onLogout} />
       </div>
 
-      {/* Dark overlay - only on mobile when sidebar is open */}
+      {/* Dark overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Main Content - NO margin classes, NO padding */}
-      <div className="relative w-full h-screen">
-        {/* Sidebar Toggle Button */}
+      {/* Main Content */}
+      <div className="relative h-full w-full">
+        {/* Sidebar Toggle Button (only when closed) */}
         {!isSidebarOpen && (
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="fixed top-4 left-4 z-40 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition shadow-lg"
+            className="absolute top-4 left-4 z-50 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
           >
             <Menu size={24} />
           </button>
         )}
 
-        {/* Your page content (Landing component) renders here */}
-        {children}
+        {/* Page Content */}
+        <div className="h-full w-full">{children}</div>
       </div>
     </div>
   );
