@@ -1,8 +1,9 @@
 import React from "react";
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 import { Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
 
+// User interface
 interface User {
   id: number;
   name: string;
@@ -28,7 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   setIsSidebarOpen,
 }) => {
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 to-gray-800 relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out bg-gray-900 text-white shadow-xl ${
@@ -38,35 +39,27 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         <Sidebar user={user} onLogout={onLogout} />
       </div>
 
-      {/* Dark overlay */}
+      {/* Dark overlay - only on mobile when sidebar is open */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 z-40"
+          className="fixed inset-0 bg-black opacity-50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
-        ></div>
+        />
       )}
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col p-6 gap-6 w-full transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? "ml-64" : "ml-0"
-        }`}
-      >
-        {/* Sidebar Toggle */}
+      {/* Main Content - NO margin classes, NO padding */}
+      <div className="relative w-full h-screen">
+        {/* Sidebar Toggle Button */}
         {!isSidebarOpen && (
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-50 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
+            className="fixed top-4 left-4 z-30 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition shadow-lg"
           >
             <Menu size={24} />
           </button>
         )}
 
-        {/* Header (optional) */}
-        <div className="w-full max-w-6xl mx-auto flex items-center gap-4">
-          {/* <h1 className="text-2xl font-bold text-white">TaxiPoint</h1> */}
-        </div>
-
+        {/* Your page content (Landing component) renders here */}
         {children}
       </div>
     </div>
