@@ -53,7 +53,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         {!isSidebarOpen && (
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="fixed top-4 left-4 z-30 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition shadow-lg"
+            className="fixed top-4 left-4 z-40 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition shadow-lg"
           >
             <Menu size={24} />
           </button>
