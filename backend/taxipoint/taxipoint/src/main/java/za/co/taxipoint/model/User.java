@@ -44,6 +44,11 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    private Boolean notifications = true; // default
-    private Boolean darkMode = false;     // default
+
+    @Column
+private Boolean notifications = true;
+
+@Column
+private Boolean darkMode = false;
+
 }
