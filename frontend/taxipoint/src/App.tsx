@@ -12,6 +12,7 @@ import Login from "./screens/users/Login";
 import Register from "./screens/users/Register";
 import UserSettings from "./screens/UserSettings";
 import Landing from "./screens/Landing";
+import UserProfile from "./screens/users/UserProfile";
 import AdminPage from "./screens/AdminPage";
 import About from "./screens/About";
 import Support from "./screens/Support";
@@ -146,6 +147,18 @@ const MainApp: React.FC = () => {
             <ProtectedRoute user={user}>
               <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
                 <UserSettings user={user as User} onUpdateUser={setUser} />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute user={user}>
+              <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+                <UserProfile user={user as User} onUpdateUser={setUser} />
               </MainLayout>
             </ProtectedRoute>
           }
