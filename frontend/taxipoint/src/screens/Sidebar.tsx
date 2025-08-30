@@ -14,8 +14,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
   return (
     <div className="h-screen w-64 bg-gray-900 text-white flex flex-col p-4">
-      {/* Profile section */}
-      <div className="flex items-center space-x-3 mb-6">
+    {/* Profile section - clickable */}
+      <div
+        onClick={() => navigate("/profile")}
+        className="flex items-center space-x-3 mb-6 cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition"
+      >
         <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
           <UserIcon size={24} />
         </div>
