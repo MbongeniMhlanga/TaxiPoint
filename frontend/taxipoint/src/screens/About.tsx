@@ -2,7 +2,10 @@ import React from "react";
 
 const About: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center justify-start p-6">
+    <div
+      className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center justify-start p-6 overflow-y-auto"
+      style={{ WebkitOverflowScrolling: "touch" }} // smooth scrolling for iOS
+    >
       <div className="max-w-5xl w-full text-center mt-16">
         <h1 className="text-5xl font-bold text-blue-400 mb-6">About Taxipoint</h1>
         <p className="text-gray-300 text-lg mb-6">
