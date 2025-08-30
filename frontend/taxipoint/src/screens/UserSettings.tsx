@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import React, { useState } from "react";
+import type { Dispatch, SetStateAction, FC } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -21,57 +21,54 @@ interface UserSettingsProps {
   onUpdateUser: Dispatch<SetStateAction<User | null>>;
 }
 
-const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
+const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
+  // Initialize state with the user's existing preferences.
   const [notifications, setNotifications] = useState(user.notifications ?? true);
   const [darkMode, setDarkMode] = useState(user.darkMode ?? false);
   const [loading, setLoading] = useState(false);
 
-  // Sync state with parent
-  useEffect(() => {
-    setNotifications(user.notifications ?? true);
-    setDarkMode(user.darkMode ?? false);
-  }, [user]);
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Build the payload for the backend
+      const payload = {
+        notifications,
+        darkMode,
+      };
 
- const handleSave = async () => {
-  setLoading(true);
-  try {
-    // Send all fields expected by UserUpdateDTO
-    const payload = {
-      name: user.name,        // keep current value if not editable
-      surname: user.surname,  // keep current value if not editable
-      email: user.email,      // keep current value if not editable
-      notifications,
-      darkMode,
-    };
+      // Call your backend API to update user settings
+      const response = await fetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    const response = await fetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user.token}`,
-      },
-      body: JSON.stringify(payload),
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update settings");
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update settings");
+      // Instead of using the response from the backend, we optimistically update
+      // the parent state with the current local state.
+      const updatedUser = {
+        ...user,
+        notifications,
+        darkMode,
+      };
+      
+      onUpdateUser(updatedUser);
+
+      toast.success("Settings saved successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Settings update failed");
+    } finally {
+      setLoading(false);
     }
-
-    const updatedUser = await response.json();
-
-    // Update parent state so the UI reflects saved values
-    onUpdateUser({ ...updatedUser, token: user.token });
-
-    toast.success("Settings saved successfully!");
-  } catch (err: any) {
-    console.error(err);
-    toast.error(err.message || "Settings update failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
