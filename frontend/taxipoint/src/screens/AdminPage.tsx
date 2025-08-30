@@ -275,7 +275,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center font-sans text-gray-200">
+    <div
+    className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center font-sans text-gray-200 overflow-y-auto"
+    style={{ WebkitOverflowScrolling: "touch" }} // <-- smooth scrolling for iOS
+  >
       <ToastContainer position="top-center" theme="dark" />
 
       <div className="max-w-7xl w-full">
