@@ -32,43 +32,46 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
     setDarkMode(user.darkMode ?? false);
   }, [user]);
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      // Build the payload for the backend
-      const payload = {
-        notifications,
-        darkMode,
-      };
+ const handleSave = async () => {
+  setLoading(true);
+  try {
+    // Send all fields expected by UserUpdateDTO
+    const payload = {
+      name: user.name,        // keep current value if not editable
+      surname: user.surname,  // keep current value if not editable
+      email: user.email,      // keep current value if not editable
+      notifications,
+      darkMode,
+    };
 
-      // Call your backend API to update user settings
-      const response = await fetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update settings");
-      }
-
-      const updatedUser = await response.json();
-
-      // Update parent state
-      onUpdateUser({ ...updatedUser, token: user.token });
-
-      toast.success("Settings saved successfully!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Settings update failed");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update settings");
     }
-  };
+
+    const updatedUser = await response.json();
+
+    // Update parent state so the UI reflects saved values
+    onUpdateUser({ ...updatedUser, token: user.token });
+
+    toast.success("Settings saved successfully!");
+  } catch (err: any) {
+    console.error(err);
+    toast.error(err.message || "Settings update failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
