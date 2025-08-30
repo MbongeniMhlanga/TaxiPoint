@@ -3,7 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 
-// Icons as inline SVGs
+// Use inline SVGs for icons with proper TypeScript types
 const MdEdit: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -12,7 +12,7 @@ const MdEdit: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     {...props}
@@ -30,7 +30,7 @@ const MdDelete: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     {...props}
@@ -51,7 +51,7 @@ const FaSpinner: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     className="animate-spin"
@@ -115,12 +115,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
   const navigate = useNavigate();
 
-  // Fetch taxi ranks
+  // Fetch all taxi ranks
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch(
-        "https://taxipoint-backend.onrender.com/api/taxi-ranks?page=0&size=1000"
-      );
+      const res = await fetch("https://taxipoint-backend.onrender.com/api/taxi-ranks?page=0&size=1000");
       if (!res.ok) throw new Error("Failed to fetch taxi ranks");
       const data = await res.json();
       setTaxiRanks(data.content || []);
@@ -150,7 +148,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       latitude: rank.latitude,
       longitude: rank.longitude,
       district: rank.district,
-      routesServed: rank.routesServed.join(", "),
+      routesServed: Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : "",
       hours: JSON.stringify(rank.hours),
       phone: rank.phone,
       facilities: JSON.stringify(rank.facilities),
@@ -173,38 +171,44 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       facilities: "{}",
     });
   };
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!user.token) {
-      toast.error("Authentication token missing. Log in again.");
-      setIsLoading(false);
-      return;
-    }
-
-    if (isEditing && !currentRankId) {
-      toast.error("Failed to get taxi rank ID for update. Please try again.");
-      setIsLoading(false);
-      return;
-    }
-
-    const payload = {
-      ...form,
-      latitude: Number(form.latitude),
-      longitude: Number(form.longitude),
-      routesServed: form.routesServed.split(",").map((r) => r.trim()),
-      hours: JSON.parse(form.hours),
-      facilities: JSON.parse(form.facilities),
-    };
-
-    const url = isEditing
-      ? `https://taxipoint-backend.onrender.com/api/taxi-ranks/${currentRankId}`
-      : "https://taxipoint-backend.onrender.com/api/taxi-ranks";
-    const method = isEditing ? "PUT" : "POST";
-
     try {
+      if (!user.token) {
+        toast.error("Authentication token missing. Log in again.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Add this guard clause to prevent the "undefined" error
+      if (isEditing && !currentRankId) {
+        toast.error("Failed to get taxi rank ID for update. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      const payload = {
+        name: form.name,
+        description: form.description,
+        address: form.address,
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        district: form.district,
+        routesServed: form.routesServed.split(",").map((r) => r.trim()),
+        hours: JSON.parse(form.hours),
+        facilities: JSON.parse(form.facilities),
+        phone: form.phone,
+      };
+
+      const url = isEditing
+        ? `https://taxipoint-backend.onrender.com/api/taxi-ranks/${currentRankId}`
+        : "https://taxipoint-backend.onrender.com/api/taxi-ranks";
+
+      const method = isEditing ? "PUT" : "POST";
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -225,7 +229,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
       toast.success(`Taxi rank ${isEditing ? "updated" : "added"} successfully!`);
       resetForm();
-      fetchTaxiRanks();
+      fetchTaxiRanks(); // Re-fetch data to be sure
     } catch (err: any) {
       console.error(err);
       toast.error("Error: Check Hours and Facilities JSON fields.");
@@ -233,7 +237,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       setIsLoading(false);
     }
   };
-
+  
   const handleDelete = async () => {
     if (!rankToDelete || !user.token) {
       toast.error("Authentication token or rank ID missing.");
@@ -243,21 +247,18 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     setShowDeleteModal(false);
 
     try {
-      const res = await fetch(
-        `https://taxipoint-backend.onrender.com/api/taxi-ranks/${rankToDelete}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        }
-      );
+      const res = await fetch(`https://taxipoint-backend.onrender.com/api/taxi-ranks/${rankToDelete}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
 
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-
+      
       setTaxiRanks((prev) => prev.filter((rank) => rank.id !== rankToDelete));
       toast.success("Taxi rank deleted successfully!");
     } catch (err: any) {
@@ -276,12 +277,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   return (
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center font-sans text-gray-200">
       <ToastContainer position="top-center" theme="dark" />
+
       <div className="max-w-7xl w-full">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-extrabold text-blue-400 drop-shadow-lg">
-            Admin Dashboard
-          </h1>
+          <h1 className="text-4xl font-extrabold text-blue-400 drop-shadow-lg">Admin Dashboard</h1>
           <button
             onClick={handleLogoutClick}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg transition transform hover:scale-105"
@@ -296,27 +296,64 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
             {isEditing ? "Edit Taxi Rank" : "Add New Taxi Rank"}
           </h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Inputs */}
-            {[
-              { name: "name", placeholder: "Name", type: "text", required: true },
-              { name: "address", placeholder: "Address", type: "text", required: true },
-              { name: "district", placeholder: "District", type: "text", required: true },
-              { name: "phone", placeholder: "Phone (optional)", type: "text", required: false },
-              { name: "latitude", placeholder: "Latitude", type: "number", required: true },
-              { name: "longitude", placeholder: "Longitude", type: "number", required: true },
-            ].map((field) => (
-              <input
-                key={field.name}
-                name={field.name}
-                type={field.type}
-                placeholder={field.placeholder}
-                value={(form as any)[field.name]}
-                onChange={handleChange}
-                required={field.required}
-                className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
-                disabled={isLoading}
-              />
-            ))}
+            {/** Inputs with futuristic focus glow */}
+            <input
+              name="name"
+              placeholder="Name"
+              value={form.name}
+              onChange={handleChange}
+              required
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
+            <input
+              name="address"
+              placeholder="Address"
+              value={form.address}
+              onChange={handleChange}
+              required
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
+            <input
+              name="district"
+              placeholder="District"
+              value={form.district}
+              onChange={handleChange}
+              required
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
+            <input
+              name="phone"
+              placeholder="Phone (optional)"
+              value={form.phone}
+              onChange={handleChange}
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
+            <input
+              name="latitude"
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              value={form.latitude}
+              onChange={handleChange}
+              required
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
+            <input
+              name="longitude"
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              value={form.longitude}
+              onChange={handleChange}
+              required
+              className="p-3 border border-gray-600 rounded-lg bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
+              disabled={isLoading}
+            />
             <textarea
               name="description"
               placeholder="Description"
@@ -354,12 +391,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                 type="submit"
                 disabled={isLoading}
                 className={`flex-1 py-3 text-white rounded-lg transition-transform transform hover:scale-105 ${
-                  isLoading
-                    ? "bg-blue-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-500 hover:to-blue-600"
+                  isLoading ? "bg-blue-300 cursor-not-allowed" : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-500 hover:to-blue-600"
                 }`}
               >
-                {isLoading && <FaSpinner className="animate-spin inline-block mr-2" />}
+                {isLoading ? <FaSpinner className="animate-spin inline-block mr-2" /> : null}
                 {isEditing ? "Update Rank" : "Add Rank"}
               </button>
               {isEditing && (
@@ -382,41 +417,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
             <table className="min-w-full divide-y divide-gray-700">
               <thead className="bg-gray-900">
                 <tr>
-                  {["Name", "Address", "District", "Routes", "Actions"].map((heading) => (
-                    <th
-                      key={heading}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider ${
-                        heading === "Actions" ? "text-right" : ""
-                      }`}
-                    >
-                      {heading}
-                    </th>
-                  ))}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">District</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Routes</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
                 {taxiRanks.map((rank) => (
-                  <tr
-                    key={rank.id}
-                    className="hover:bg-gray-700 transition-colors rounded-lg"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {rank.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {rank.address}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {rank.district}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {rank.routesServed.join(", ")}
-                    </td>
+                  <tr key={rank.id} className="hover:bg-gray-700 transition-colors rounded-lg">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{rank.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{rank.address}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{rank.district}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(rank)}
-                        className="text-indigo-400 mx-2 hover:text-indigo-600 transition-colors"
-                      >
+                      <button onClick={() => handleEdit(rank)} className="text-indigo-400 mx-2 hover:text-indigo-600 transition-colors">
                         <MdEdit width={20} height={20} />
                       </button>
                       <button
@@ -442,9 +458,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity">
           <div className="bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-sm transform scale-105 animate-fade-in">
             <h3 className="text-xl font-bold text-red-400 mb-4">Confirm Deletion</h3>
-            <p className="text-gray-200 mb-6">
-              Are you sure you want to delete this taxi rank?
-            </p>
+            <p className="text-gray-200 mb-6">Are you sure you want to delete this taxi rank?</p>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -467,3 +481,4 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 };
 
 export default AdminPage;
+///
