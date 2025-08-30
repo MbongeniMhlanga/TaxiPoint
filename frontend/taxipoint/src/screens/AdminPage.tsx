@@ -275,16 +275,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   };
 
   return (
-    <div
-    className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center font-sans text-gray-200 overflow-y-auto"
-    style={{ WebkitOverflowScrolling: "touch" }} // <-- smooth scrolling for iOS
-  >
+    <div className="min-h-screen p-4 sm:p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 font-sans text-gray-200">
       <ToastContainer position="top-center" theme="dark" />
 
-      <div className="max-w-7xl w-full">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-extrabold text-blue-400 drop-shadow-lg">Admin Dashboard</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-400 drop-shadow-lg">Admin Dashboard</h1>
           <button
             onClick={handleLogoutClick}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg transition transform hover:scale-105"
@@ -294,8 +291,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         </div>
 
         {/* Form */}
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl mb-8 w-full border border-gray-700">
-          <h2 className="text-2xl font-semibold text-blue-400 mb-6">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-2xl mb-8 border border-gray-700">
+          <h2 className="text-xl sm:text-2xl font-semibold text-blue-400 mb-6">
             {isEditing ? "Edit Taxi Rank" : "Add New Taxi Rank"}
           </h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -389,7 +386,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
               className="p-3 border border-gray-600 rounded-lg bg-gray-900 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-200"
               disabled={isLoading}
             />
-            <div className="flex gap-4 md:col-span-2">
+            <div className="flex flex-col sm:flex-row gap-4 md:col-span-2">
               <button
                 type="submit"
                 disabled={isLoading}
@@ -414,39 +411,41 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700 w-full">
-          <h2 className="text-2xl font-semibold text-blue-400 mb-4">Existing Taxi Ranks</h2>
-          <div className="overflow-x-auto rounded-lg">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-2xl border border-gray-700">
+          <h2 className="text-xl sm:text-2xl font-semibold text-blue-400 mb-4">Existing Taxi Ranks</h2>
+          <div className="overflow-x-auto overflow-y-auto max-h-96 rounded-lg">
             <table className="min-w-full divide-y divide-gray-700">
-              <thead className="bg-gray-900">
+              <thead className="bg-gray-900 sticky top-0">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">District</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Routes</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">District</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Routes</th>
+                  <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
                 {taxiRanks.map((rank) => (
-                  <tr key={rank.id} className="hover:bg-gray-700 transition-colors rounded-lg">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{rank.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{rank.address}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{rank.district}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => handleEdit(rank)} className="text-indigo-400 mx-2 hover:text-indigo-600 transition-colors">
-                        <MdEdit width={20} height={20} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setRankToDelete(rank.id);
-                          setShowDeleteModal(true);
-                        }}
-                        className="text-red-400 mx-2 hover:text-red-600 transition-colors"
-                      >
-                        <MdDelete width={20} height={20} />
-                      </button>
+                  <tr key={rank.id} className="hover:bg-gray-700 transition-colors">
+                    <td className="px-4 sm:px-6 py-4 text-sm font-medium break-words">{rank.name}</td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-300 break-words">{rank.address}</td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-300 break-words">{rank.district}</td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-300 break-words">{Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}</td>
+                    <td className="px-4 sm:px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleEdit(rank)} className="text-indigo-400 hover:text-indigo-600 transition-colors p-1">
+                          <MdEdit width={18} height={18} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRankToDelete(rank.id);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-red-400 hover:text-red-600 transition-colors p-1"
+                        >
+                          <MdDelete width={18} height={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -458,11 +457,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
       {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity">
-          <div className="bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-sm transform scale-105 animate-fade-in">
-            <h3 className="text-xl font-bold text-red-400 mb-4">Confirm Deletion</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm transform scale-105">
+            <h3 className="text-lg sm:text-xl font-bold text-red-400 mb-4">Confirm Deletion</h3>
             <p className="text-gray-200 mb-6">Are you sure you want to delete this taxi rank?</p>
-            <div className="flex justify-end space-x-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="py-2 px-4 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md transition"
