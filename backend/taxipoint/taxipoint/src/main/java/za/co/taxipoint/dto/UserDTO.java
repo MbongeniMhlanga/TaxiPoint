@@ -10,6 +10,8 @@ public class UserDTO {
     private String email;
     private String role;
     private String token;
+  private Boolean notifications; // add this
+    private Boolean darkMode; 
 
     
 }

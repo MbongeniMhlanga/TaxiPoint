@@ -125,6 +125,8 @@ public void updatePassword(Long id, String oldPassword, String newPassword) {
         dto.setSurname(user.getSurname());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
+         dto.setNotifications(user.getNotifications()); // include notifications
+    dto.setDarkMode(user.getDarkMode());           // include darkMode
         return dto;
     }
 }
