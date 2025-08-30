@@ -66,6 +66,10 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
     }
 
+       // New fields
+    if (dto.getNotifications() != null) user.setNotifications(dto.getNotifications());
+    if (dto.getDarkMode() != null) user.setDarkMode(dto.getDarkMode());
+
     User saved = userRepository.save(user);
     return toDTO(saved);
 }

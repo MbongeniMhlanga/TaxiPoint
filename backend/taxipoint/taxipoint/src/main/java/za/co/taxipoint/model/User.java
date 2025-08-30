@@ -43,4 +43,7 @@ public class User {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    private Boolean notifications = true; // default
+    private Boolean darkMode = false;     // default
 }
