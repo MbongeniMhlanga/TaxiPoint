@@ -275,10 +275,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center font-sans text-gray-200">
+ <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 font-sans text-gray-200 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
       <ToastContainer position="top-center" theme="dark" />
 
-      <div className="max-w-7xl w-full">
+      <div className="max-w-7xl w-full mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-4xl font-extrabold text-blue-400 drop-shadow-lg">Admin Dashboard</h1>
@@ -413,9 +413,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         {/* Table */}
         <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700 w-full">
           <h2 className="text-2xl font-semibold text-blue-400 mb-4">Existing Taxi Ranks</h2>
-          <div className="overflow-x-auto rounded-lg">
+          <div className="overflow-x-auto rounded-lg max-h-[60vh] overflow-y-auto">
             <table className="min-w-full divide-y divide-gray-700">
-              <thead className="bg-gray-900">
+              <thead className="bg-gray-900 sticky top-0">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Address</th>
