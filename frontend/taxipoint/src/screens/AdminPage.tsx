@@ -275,7 +275,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   };
 
   return (
- <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 font-sans text-gray-200 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+  <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 font-sans text-gray-200">
       <ToastContainer position="top-center" theme="dark" />
 
       <div className="max-w-7xl w-full mx-auto">
@@ -455,7 +455,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
       {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity z-50">
           <div className="bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-sm transform scale-105 animate-fade-in">
             <h3 className="text-xl font-bold text-red-400 mb-4">Confirm Deletion</h3>
             <p className="text-gray-200 mb-6">Are you sure you want to delete this taxi rank?</p>
