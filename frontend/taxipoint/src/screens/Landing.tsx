@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useTheme } from '../context/ThemeContext';
 
 interface User {
   id: number;
@@ -48,11 +49,11 @@ interface Incident {
 // New component to handle map navigation
 const MapController = ({ selectedLocation }: { selectedLocation: { lat: number; lng: number } | null }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (selectedLocation) {
 
-       console.log('MapController received new location:', selectedLocation);
+      console.log('MapController received new location:', selectedLocation);
 
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 16, {
         duration: 1.5 // Animation duration in seconds
@@ -71,17 +72,17 @@ const ZoomControls = () => {
     <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
       <button
         onClick={() => map.zoomIn()}
-        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 transition"
       >
-        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       </button>
       <button
         onClick={() => map.zoomOut()}
-        className="bg-white/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 hover:bg-white transition"
+        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 transition"
       >
-        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
         </svg>
       </button>
@@ -90,6 +91,7 @@ const ZoomControls = () => {
 };
 
 const Landing = ({ user }: LandingProps) => {
+  const { theme } = useTheme();
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
@@ -222,7 +224,7 @@ const Landing = ({ user }: LandingProps) => {
       }
       const data = await res.json();
       setIncidents(data.map(mapIncident));
-  
+
       if (data.length === 0) {
         toast.info('No incidents reported at this time.');
       }
@@ -295,8 +297,8 @@ const Landing = ({ user }: LandingProps) => {
     setSearchQuery(rank.name);
     setIsSearchFocused(false);
     setShowSuggestions(false);
-      
-  console.log('Attempting to navigate to:', { lat: rank.latitude, lng: rank.longitude });
+
+    console.log('Attempting to navigate to:', { lat: rank.latitude, lng: rank.longitude });
     // Navigate to the selected taxi rank location
     setSelectedLocation({
       lat: rank.latitude,
@@ -369,18 +371,20 @@ const Landing = ({ user }: LandingProps) => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <ToastContainer position="top-center" theme="dark" />
+      <ToastContainer position="top-center" theme={theme === 'dark' ? 'dark' : 'light'} />
 
       {/* Full Screen Map */}
       <MapContainer
         center={[-26.2044, 28.0473]}
         zoom={14}
-       style={{ height: '100vh', width: '100%' }}
+        style={{ height: '100vh', width: '100%' }}
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap contributors &copy; CartoDB'
+          url={theme === 'dark'
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
         />
 
         {/* Map Controller for Navigation */}
@@ -438,7 +442,7 @@ const Landing = ({ user }: LandingProps) => {
 
       {/* Search Bar - Dynamic Position */}
       <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-0 left-0 right-0'} z-[1001] transition-all duration-300 ease-in-out`}>
-        <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 dark:border-gray-700">
           <div className="relative p-4">
             <svg
               className="absolute left-7 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -467,7 +471,7 @@ const Landing = ({ user }: LandingProps) => {
                 }, 300);
                 setSearchTimeout(timeout);
               }}
-              className="w-full pl-10 pr-10 p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full pl-10 pr-10 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:placeholder-gray-400"
             />
             {/* Clear button when there's text */}
             {searchQuery && (
@@ -478,7 +482,7 @@ const Landing = ({ user }: LandingProps) => {
                   setShowSuggestions(false);
                   searchTaxiRanks('');
                 }}
-                className="absolute right-7 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-7 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -489,25 +493,25 @@ const Landing = ({ user }: LandingProps) => {
 
           {/* Search Suggestions Dropdown */}
           {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="border-t border-gray-200 max-h-60 overflow-y-auto">
+            <div className="border-t border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto">
               {filteredSuggestions.map((rank) => (
-               <button
-  key={rank.id}
-  onClick={() => handleSuggestionClick(rank)}
-  onMouseDown={(e) => e.preventDefault()} // <-- Add this line
-  className="w-full text-left p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
->
+                <button
+                  key={rank.id}
+                  onClick={() => handleSuggestionClick(rank)}
+                  onMouseDown={(e) => e.preventDefault()} // <-- Add this line
+                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                >
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {rank.name}
                       </div>
-                      <div className="text-sm text-gray-500 truncate">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {rank.address}
                       </div>
                       <div className="text-xs text-gray-400 mt-1">
@@ -540,12 +544,12 @@ const Landing = ({ user }: LandingProps) => {
       {/* Incident Reporting Form - Bottom Overlay */}
       {showIncidentForm && (
         <div className="absolute bottom-20 left-4 right-4 z-[1000]">
-          <div className="bg-white/95 backdrop-blur-lg rounded-xl p-6 shadow-lg border border-white/20">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-red-600">Report an Incident</h2>
+              <h2 className="text-lg font-bold text-red-600 dark:text-red-400">Report an Incident</h2>
               <button
                 onClick={() => setShowIncidentForm(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -558,7 +562,7 @@ const Landing = ({ user }: LandingProps) => {
                 placeholder="Describe the incident..."
                 value={incidentDescription}
                 onChange={(e) => setIncidentDescription(e.target.value)}
-                className="w-full p-3 rounded-lg bg-white text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-400 dark:placeholder-gray-400"
                 required
               />
               <button

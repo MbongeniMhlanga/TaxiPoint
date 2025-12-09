@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
+import ThemeToggle from "../../components/ThemeToggle";
 
 interface RegisterForm {
     name: string;
@@ -46,7 +47,7 @@ const Register: React.FC = () => {
             // Registration is successful. Now redirect all users to the login page.
             toast.success("Registration successful! Please log in.");
             navigate("/login");
-            
+
             setForm({ name: "", surname: "", email: "", password: "" });
         } catch (error: any) {
             toast.error(error.message);
@@ -56,29 +57,32 @@ const Register: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
-            <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20 animate-fadeIn">
-                <h2 className="text-3xl font-bold text-white mb-6 text-center">Register</h2>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300 p-6 relative">
+            <div className="absolute top-4 right-4 z-50">
+                <ThemeToggle />
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 animate-fadeIn transition-colors duration-300">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">Register</h2>
 
                 <div className="space-y-3 mb-6">
                     <button
                         onClick={() => toast.info("Google sign-up coming soon!")}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-white text-gray-800 font-semibold shadow-md hover:bg-gray-100 transition"
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
                     >
                         <FcGoogle size={22} /> Sign up with Google
                     </button>
                     <button
                         onClick={() => toast.info("Facebook sign-up coming soon!")}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition"
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2] text-white font-semibold shadow-md hover:bg-[#166fe5] transition"
                     >
                         <FaFacebook size={22} /> Sign up with Facebook
                     </button>
                 </div>
 
                 <div className="flex items-center mb-6">
-                    <hr className="flex-1 border-gray-500" />
-                    <span className="px-3 text-gray-400 text-sm">or</span>
-                    <hr className="flex-1 border-gray-500" />
+                    <hr className="flex-1 border-gray-300 dark:border-gray-600" />
+                    <span className="px-3 text-gray-500 dark:text-gray-400 text-sm">or</span>
+                    <hr className="flex-1 border-gray-300 dark:border-gray-600" />
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,7 +93,7 @@ const Register: React.FC = () => {
                         value={form.name}
                         onChange={handleChange}
                         required
-                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         disabled={isLoading}
                     />
                     <input
@@ -99,7 +103,7 @@ const Register: React.FC = () => {
                         value={form.surname}
                         onChange={handleChange}
                         required
-                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         disabled={isLoading}
                     />
                     <input
@@ -109,7 +113,7 @@ const Register: React.FC = () => {
                         value={form.email}
                         onChange={handleChange}
                         required
-                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         disabled={isLoading}
                     />
                     <input
@@ -119,23 +123,23 @@ const Register: React.FC = () => {
                         value={form.password}
                         onChange={handleChange}
                         required
-                        className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                         disabled={isLoading}
                     />
                     <button
                         type="submit"
-                        className="w-full py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-md transition"
+                        className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md transition"
                         disabled={isLoading}
                     >
                         {isLoading ? "Registering..." : "Register"}
                     </button>
                 </form>
 
-                <p className="mt-4 text-center text-gray-300">
+                <p className="mt-4 text-center text-gray-600 dark:text-gray-400">
                     Already have an account?{" "}
                     <button
                         onClick={() => navigate("/login")}
-                        className="text-blue-400 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
                         Login
                     </button>

@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Import your MainLayout component
 import MainLayout from "./screens/MainLayout";
+import { ThemeProvider } from "./context/ThemeContext";
 
 // Screens
 import Login from "./screens/users/Login";
@@ -118,16 +119,16 @@ const MainApp: React.FC = () => {
           }
         />
 
-      <Route path="/about" element={
-            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
-                <About />
-            </MainLayout>
+        <Route path="/about" element={
+          <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+            <About />
+          </MainLayout>
         } />
-        
+
         <Route path="/support" element={
-            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
-                <Support />
-            </MainLayout>
+          <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+            <Support />
+          </MainLayout>
         } />
 
         <Route
@@ -152,7 +153,7 @@ const MainApp: React.FC = () => {
           }
         />
 
-        
+
         <Route
           path="/profile"
           element={
@@ -183,10 +184,12 @@ const MainApp: React.FC = () => {
 
 // Main App
 const App: React.FC = () => (
-  <Router>
-    <ToastContainer />
-    <MainApp />
-  </Router>
+  <ThemeProvider>
+    <Router>
+      <ToastContainer />
+      <MainApp />
+    </Router>
+  </ThemeProvider>
 );
 
 export default App;

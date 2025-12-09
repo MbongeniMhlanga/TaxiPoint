@@ -1,9 +1,9 @@
-import React from "react";
+import React from 'react';
 import type { ReactNode } from 'react';
-import { Menu } from "lucide-react";
-import Sidebar from "./Sidebar";
+import { Menu } from 'lucide-react';
+import Sidebar from './Sidebar';
+import ThemeToggle from "../components/ThemeToggle";
 
-// User interface
 interface User {
   id: number;
   name: string;
@@ -29,13 +29,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   setIsSidebarOpen,
 }) => {
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-auto">
-      
+    <div className="relative h-screen w-screen overflow-hidden bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white pointer-events-auto transition-colors duration-300">
+
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 z-[9999] transform transition-transform duration-300 ease-in-out bg-gray-900 text-white shadow-xl ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-full w-64 z-[9999] transform transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-xl ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <Sidebar user={user} onLogout={onLogout} />
       </div>
@@ -43,7 +42,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Dark overlay (behind sidebar, above map) */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-[9998]"
+          className="fixed inset-0 bg-black/50 z-[9998]"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -54,14 +53,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         {!isSidebarOpen && (
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-[10000] p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
+            className="absolute top-4 left-4 z-[1000] p-2 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           >
             <Menu size={24} />
           </button>
         )}
 
+        {/* Theme Toggle Button - Absolute Top Right */}
+        <div className="absolute top-4 right-4 z-[1000]">
+          <ThemeToggle />
+        </div>
+
         {/* Page Content */}
-        <div className="h-full w-full">
+        <div className="h-full w-full overflow-auto">
           {children}
         </div>
       </div>

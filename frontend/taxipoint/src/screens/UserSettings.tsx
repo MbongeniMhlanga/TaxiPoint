@@ -1,4 +1,4 @@
-import  { useState } from "react";
+import { useState } from "react";
 import type { Dispatch, SetStateAction, FC } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -58,7 +58,7 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
         notifications,
         darkMode,
       };
-      
+
       onUpdateUser(updatedUser);
 
       toast.success("Settings saved successfully!");
@@ -71,35 +71,28 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-      <ToastContainer position="top-center" theme="dark" />
-      <h2 className="text-2xl font-bold text-blue-400 mb-6">User Settings</h2>
+    <div className="max-w-md mx-auto mt-8 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <ToastContainer position="top-center" theme="colored" />
+      <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-6">User Settings</h2>
 
       {/* Notifications toggle */}
-      <div className="flex items-center justify-between w-full p-4 bg-gray-900 rounded-lg border border-gray-600 mb-4">
-        <span className="text-gray-200">Enable Notifications</span>
+      <div className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-600 mb-4 transition-colors">
+        <span className="text-gray-900 dark:text-gray-200">Enable Notifications</span>
         <input
           type="checkbox"
           checked={notifications}
           onChange={() => setNotifications(!notifications)}
+          className="w-5 h-5 text-blue-600"
         />
       </div>
 
-      {/* Dark mode toggle */}
-      <div className="flex items-center justify-between w-full p-4 bg-gray-900 rounded-lg border border-gray-600 mb-4">
-        <span className="text-gray-200">Dark Mode</span>
-        <input
-          type="checkbox"
-          checked={darkMode}
-          onChange={() => setDarkMode(!darkMode)}
-        />
-      </div>
+      {/* Dark mode toggle - Removed as it's now handled globally by the ThemeToggle component */}
 
       {/* Save button */}
       <button
         onClick={handleSave}
         disabled={loading}
-        className="mt-6 w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+        className="mt-6 w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
       >
         {loading ? "Saving..." : "Save Settings"}
       </button>
