@@ -308,22 +308,42 @@ const Landing = ({ user }: LandingProps) => {
   };
 
   const handleVoiceSearch = () => {
-    // Mock voice search functionality for modern UI demo
-    if (!('webkitSpeechRecognition' in window)) {
+    // Check for browser support
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
       toast.info("Voice search is not supported in this browser.");
       return;
     }
 
-    setIsListening(true);
-    toast.info("Listening... Speak now.");
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
 
-    // In a real app we'd use the Web Speech API here
-    // For now we simulate it or just show the UI state
-    setTimeout(() => {
+    recognition.onstart = () => {
+      setIsListening(true);
+      toast.info("Listening... Speak now 🎙️");
+    };
+
+    recognition.onend = () => {
       setIsListening(false);
-      // Simulate receiving "Johannesburg"
-      // setSearchQuery("Johannesburg");
-    }, 3000);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+      toast.success(`Heard: "${transcript}"`);
+      searchTaxiRanks(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+      toast.error("Could not hear you. Please try again.");
+    };
+
+    recognition.start();
   };
 
   const handleNearMe = () => {
