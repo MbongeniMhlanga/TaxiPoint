@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useNavigate } from "react-router-dom";
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter } from 'lucide-react';
 import ThemeToggle from "../components/ThemeToggle"; // Assuming we want theme toggle here too
@@ -65,7 +65,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
 
-  const navigate = useNavigate();
+
+
+  // navigate is removed as it was unused
+
 
   // Fetch all taxi ranks
   const fetchTaxiRanks = async () => {
@@ -379,7 +382,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                         { name: 'Commuters', value: 800 },
                         { name: 'Drivers', value: 300 },
                         { name: 'Admins', value: 140 },
-                      ].map((entry, index) => (
+                      ].map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>

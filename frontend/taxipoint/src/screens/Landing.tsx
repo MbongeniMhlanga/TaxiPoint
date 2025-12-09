@@ -1,12 +1,11 @@
-/* eslint-disable no-irregular-whitespace */
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Mic, MapPin, Navigation, Plus, X, Menu } from 'lucide-react';
+import { Search, Mic, MapPin, Navigation, Plus, X } from 'lucide-react';
 
 interface User {
   id: number;
@@ -390,13 +389,7 @@ const Landing = ({ user }: LandingProps) => {
     </ul>
   );
 
-  const renderFacilities = (facilities: Record<string, any>) => (
-    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300">
-      {Object.entries(facilities).map(([name, value]) => (
-        <li key={name}><span className="font-medium">{name}:</span> {String(value)}</li>
-      ))}
-    </ul>
-  );
+
 
   return (
     <div className="relative w-full h-full overflow-hidden">

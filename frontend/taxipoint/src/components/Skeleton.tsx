@@ -1,5 +1,6 @@
+
 import React from 'react';
-import clsx from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -9,7 +10,7 @@ interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
     height?: string | number;
 }
 
-export function cn(...inputs: (string | undefined | null | false)[]) {
+export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
