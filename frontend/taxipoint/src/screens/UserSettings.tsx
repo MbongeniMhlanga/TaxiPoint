@@ -37,7 +37,7 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
       };
 
       // Call your backend API to update user settings
-      const response = await fetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
+      const response = await fetch(`/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

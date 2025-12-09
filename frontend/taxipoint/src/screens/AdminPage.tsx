@@ -73,7 +73,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   // Fetch all taxi ranks
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch("https://taxipoint-backend.onrender.com/api/taxi-ranks?page=0&size=1000");
+      const res = await fetch("/api/taxi-ranks?page=0&size=1000");
       if (!res.ok) throw new Error("Failed to fetch taxi ranks");
       const data = await res.json();
       setTaxiRanks(data.content || []);
@@ -160,8 +160,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       };
 
       const url = isEditing
-        ? `https://taxipoint-backend.onrender.com/api/taxi-ranks/${currentRankId}`
-        : "https://taxipoint-backend.onrender.com/api/taxi-ranks";
+        ? `/api/taxi-ranks/${currentRankId}`
+        : "/api/taxi-ranks";
 
       const method = isEditing ? "PUT" : "POST";
 
@@ -201,7 +201,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     setShowDeleteModal(false);
 
     try {
-      const res = await fetch(`https://taxipoint-backend.onrender.com/api/taxi-ranks/${rankToDelete}`, {
+      const res = await fetch(`/api/taxi-ranks/${rankToDelete}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user.token}` },
       });
