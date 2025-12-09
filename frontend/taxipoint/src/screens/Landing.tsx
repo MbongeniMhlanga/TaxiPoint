@@ -106,42 +106,49 @@ const Landing = ({ user }: LandingProps) => {
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 
-  // Modern Taxi Icon with gradient and shadow
+  // Professional Uber-style car silhouette icon
   const taxiIcon = L.divIcon({
     html: `
       <div style="
         position: relative;
-        width: 48px;
-        height: 48px;
+        width: 52px;
+        height: 52px;
       ">
         <div style="
           position: absolute;
-          width: 48px;
-          height: 48px;
-          background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+          width: 52px;
+          height: 52px;
+          background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.4), 0 0 0 3px white;
+          box-shadow: 0 10px 20px -6px rgba(59, 130, 246, 0.5), 0 0 0 4px white;
           border: 2px solid white;
-          font-size: 24px;
-          animation: bounce 2s ease-in-out infinite;
+          animation: float 3s ease-in-out infinite;
         ">
-          🚕
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z" 
+                  fill="white" 
+                  opacity="0.95"/>
+          </svg>
         </div>
         <style>
-          @keyframes bounce {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
+          @keyframes float {
+            0%, 100% { 
+              transform: translateY(0px) scale(1);
+            }
+            50% { 
+              transform: translateY(-6px) scale(1.05);
+            }
           }
         </style>
       </div>
     `,
     className: '',
-    iconSize: [48, 48],
-    iconAnchor: [24, 48],
-    popupAnchor: [0, -48],
+    iconSize: [52, 52],
+    iconAnchor: [26, 52],
+    popupAnchor: [0, -52],
   });
 
   // Modern Incident Icon with gradient and pulse animation
