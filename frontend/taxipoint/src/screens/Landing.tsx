@@ -1,11 +1,12 @@
 /* eslint-disable no-irregular-whitespace */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../context/ThemeContext';
+import { Search, Mic, MapPin, Navigation, Plus, X, Menu } from 'lucide-react';
 
 interface User {
   id: number;
@@ -52,11 +53,8 @@ const MapController = ({ selectedLocation }: { selectedLocation: { lat: number; 
 
   useEffect(() => {
     if (selectedLocation) {
-
-      console.log('MapController received new location:', selectedLocation);
-
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 16, {
-        duration: 1.5 // Animation duration in seconds
+        duration: 1.5,
       });
     }
   }, [selectedLocation, map]);
@@ -69,22 +67,18 @@ const ZoomControls = () => {
   const map = useMap();
 
   return (
-    <div className="absolute top-20 right-4 z-[1000] flex flex-col space-y-2">
+    <div className="absolute top-24 right-4 z-[1000] flex flex-col space-y-2">
       <button
         onClick={() => map.zoomIn()}
-        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 transition"
+        className="bg-white dark:bg-gray-800 p-2.5 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
       >
-        <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
+        <Plus size={20} />
       </button>
       <button
         onClick={() => map.zoomOut()}
-        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg p-3 rounded-lg shadow-lg border border-white/20 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 transition"
+        className="bg-white dark:bg-gray-800 p-2.5 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
       >
-        <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
-        </svg>
+        <span className="text-xl font-bold leading-none">-</span>
       </button>
     </div>
   );
@@ -102,6 +96,7 @@ const Landing = ({ user }: LandingProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isListening, setIsListening] = useState(false);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -121,7 +116,7 @@ const Landing = ({ user }: LandingProps) => {
   const createIncidentDivIcon = (count: number) =>
     L.divIcon({
       html: `<div style="
-        background: red;
+        background: #ef4444; 
         color: white;
         font-weight: bold;
         text-align: center;
@@ -131,6 +126,7 @@ const Landing = ({ user }: LandingProps) => {
         line-height: 30px;
         border: 2px solid white;
         font-size: 14px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       ">${count > 9 ? '9+' : count}</div>`,
       className: '',
       iconSize: [30, 30],
@@ -224,10 +220,6 @@ const Landing = ({ user }: LandingProps) => {
       }
       const data = await res.json();
       setIncidents(data.map(mapIncident));
-
-      if (data.length === 0) {
-        toast.info('No incidents reported at this time.');
-      }
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to fetch incidents. Please try again later.');
@@ -316,6 +308,43 @@ const Landing = ({ user }: LandingProps) => {
     }, 200);
   };
 
+  const handleVoiceSearch = () => {
+    // Mock voice search functionality for modern UI demo
+    if (!('webkitSpeechRecognition' in window)) {
+      toast.info("Voice search is not supported in this browser.");
+      return;
+    }
+
+    setIsListening(true);
+    toast.info("Listening... Speak now.");
+
+    // In a real app we'd use the Web Speech API here
+    // For now we simulate it or just show the UI state
+    setTimeout(() => {
+      setIsListening(false);
+      // Simulate receiving "Johannesburg"
+      // setSearchQuery("Johannesburg");
+    }, 3000);
+  };
+
+  const handleNearMe = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setSelectedLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+          toast.success("Zooming to your location");
+          fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => toast.error("Could not retrieve location")
+      );
+    } else {
+      toast.error("Geolocation not supported");
+    }
+  };
+
   // --- Group incidents by location ---
   const groupIncidentsByLocation = (incidents: Incident[]) => {
     const groups: Record<string, Incident[]> = {};
@@ -354,30 +383,30 @@ const Landing = ({ user }: LandingProps) => {
   }, []);
 
   const renderHours = (hours: Record<string, string>) => (
-    <ul className="list-disc list-inside">
+    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300">
       {Object.entries(hours).map(([day, time]) => (
-        <li key={day}><b>{day}:</b> {time}</li>
+        <li key={day}><span className="font-medium">{day}:</span> {time}</li>
       ))}
     </ul>
   );
 
   const renderFacilities = (facilities: Record<string, any>) => (
-    <ul className="list-disc list-inside">
+    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300">
       {Object.entries(facilities).map(([name, value]) => (
-        <li key={name}>{name}: {String(value)}</li>
+        <li key={name}><span className="font-medium">{name}:</span> {String(value)}</li>
       ))}
     </ul>
   );
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden">
       <ToastContainer position="top-center" theme={theme === 'dark' ? 'dark' : 'light'} />
 
       {/* Full Screen Map */}
       <MapContainer
         center={[-26.2044, 28.0473]}
         zoom={14}
-        style={{ height: '100vh', width: '100%' }}
+        style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
         <TileLayer
@@ -400,19 +429,40 @@ const Landing = ({ user }: LandingProps) => {
             position={[rank.latitude, rank.longitude]}
             icon={taxiIcon}
           >
-            <Popup>
-              <div className="space-y-1">
-                <h3 className="font-bold text-lg">🚖 {rank.name}</h3>
-                {rank.description && <p><b>Description:</b> {rank.description}</p>}
-                <p><b>Address:</b> {rank.address}</p>
-                <p><b>District:</b> {rank.district}</p>
-                {rank.routesServed.length > 0 && <p><b>Routes:</b> {rank.routesServed.join(', ')}</p>}
-                {rank.phone && <p><b>Phone:</b> {rank.phone}</p>}
-                {rank.hours && <div><b>Hours:</b>{renderHours(rank.hours)}</div>}
-                {rank.facilities && <div><b>Facilities:</b>{renderFacilities(rank.facilities)}</div>}
-                {rank.distanceMeters !== undefined && (
-                  <p><b>Distance:</b> {(rank.distanceMeters / 1000).toFixed(2)} km</p>
+            <Popup className="custom-popup">
+              <div className="min-w-[250px] space-y-2">
+                <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
+                  <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg">
+                    <Navigation size={16} className="text-blue-600 dark:text-blue-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-tight">{rank.name}</h3>
+                    <p className="text-xs text-gray-500">{rank.district}</p>
+                  </div>
+                </div>
+
+                {rank.description && <p className="text-sm text-gray-700 dark:text-gray-300">{rank.description}</p>}
+
+                <div className="space-y-1 text-sm">
+                  <p className="flex items-start gap-2">
+                    <MapPin size={14} className="mt-1 flex-shrink-0 text-gray-400" />
+                    <span>{rank.address}</span>
+                  </p>
+                </div>
+
+                {rank.hours && (
+                  <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
+                    <p className="font-semibold mb-1">Hours</p>
+                    {renderHours(rank.hours)}
+                  </div>
                 )}
+
+                <button
+                  onClick={() => toast.info("Navigate feature coming soon!")}
+                  className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition"
+                >
+                  Navigate Here
+                </button>
               </div>
             </Popup>
           </Marker>
@@ -425,42 +475,36 @@ const Landing = ({ user }: LandingProps) => {
             position={[group.latitude, group.longitude]}
             icon={createIncidentDivIcon(group.incidents.length)}
           >
-            <Popup>
-              {group.incidents.map((incident) => (
-                <div key={incident.id} className="mb-2">
-                  🚨 {incident.description}
-                  <br />
-                  📍 **Location:** {incident.formattedAddress}
-                  <br />
-                  <small>{new Date(incident.createdAt).toLocaleString()}</small>
-                </div>
-              ))}
+            <Popup className="custom-popup">
+              <div className="min-w-[200px]">
+                <h3 className="font-bold text-red-600 mb-2 border-b pb-1">Reported Incidents ({group.incidents.length})</h3>
+                {group.incidents.map((incident) => (
+                  <div key={incident.id} className="mb-3 last:mb-0 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
+                    <p className="font-medium text-gray-900 dark:text-white">{incident.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">{new Date(incident.createdAt).toLocaleTimeString()} • {new Date(incident.createdAt).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </div>
             </Popup>
           </Marker>
         ))}
       </MapContainer>
 
-      {/* Search Bar - Dynamic Position */}
-      <div className={`absolute ${isSearchFocused ? 'top-4 left-4 right-4' : 'bottom-0 left-0 right-0'} z-[1001] transition-all duration-300 ease-in-out`}>
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 dark:border-gray-700">
-          <div className="relative p-4">
-            <svg
-              className="absolute left-7 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+      {/* Floating Modern Search Bar */}
+      <div className={`absolute left-4 right-4 md:left-[50%] md:transform md:-translate-x-[50%] md:w-[600px] z-[1001] transition-all duration-300 ease-in-out ${isSearchFocused ? 'top-4' : 'top-6'}`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden transition-all ${isSearchFocused ? 'ring-4 ring-blue-500/10' : ''}`}>
+          <div className="relative flex items-center p-2">
+            <div className="flex-shrink-0 pl-3 pr-2 text-gray-400">
+              <Search size={20} />
+            </div>
+
             <input
               type="text"
-              placeholder="Search taxi ranks by name, district, or routes..."
+              placeholder="Search taxi ranks, districts..."
               value={searchQuery}
               onFocus={() => {
                 setIsSearchFocused(true);
-                if (searchQuery.trim()) {
-                  setShowSuggestions(true);
-                }
+                if (searchQuery.trim()) setShowSuggestions(true);
               }}
               onBlur={handleSearchBlur}
               onChange={(e) => {
@@ -471,9 +515,9 @@ const Landing = ({ user }: LandingProps) => {
                 }, 300);
                 setSearchTimeout(timeout);
               }}
-              className="w-full pl-10 pr-10 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:placeholder-gray-400"
+              className="flex-1 bg-transparent p-2 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none"
             />
-            {/* Clear button when there's text */}
+
             {searchQuery && (
               <button
                 onClick={() => {
@@ -482,45 +526,39 @@ const Landing = ({ user }: LandingProps) => {
                   setShowSuggestions(false);
                   searchTaxiRanks('');
                 }}
-                className="absolute right-7 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={18} />
               </button>
             )}
+
+            <div className="w-px h-6 bg-gray-200 dark:bg-gray-600 mx-2"></div>
+
+            <button
+              onClick={handleVoiceSearch}
+              className={`p-2 rounded-xl transition-colors ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'}`}
+            >
+              <Mic size={20} />
+            </button>
           </div>
 
-          {/* Search Suggestions Dropdown */}
+          {/* Suggestions Dropdown */}
           {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto">
+            <div className="border-t border-gray-100 dark:border-gray-700 max-h-80 overflow-y-auto w-full">
               {filteredSuggestions.map((rank) => (
                 <button
                   key={rank.id}
                   onClick={() => handleSuggestionClick(rank)}
-                  onMouseDown={(e) => e.preventDefault()} // <-- Add this line
-                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-700 last:border-b-0 flex items-start gap-3"
                 >
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {rank.name}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {rank.address}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {rank.district}
-                        {rank.distanceMeters && (
-                          <span className="ml-2">• {(rank.distanceMeters / 1000).toFixed(1)}km away</span>
-                        )}
-                      </div>
-                    </div>
+                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    <MapPin size={16} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{rank.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{rank.address}</p>
+                    {rank.distanceMeters && <p className="text-xs font-medium text-blue-600 mt-0.5">{(rank.distanceMeters / 1000).toFixed(1)} km away</p>}
                   </div>
                 </button>
               ))}
@@ -529,59 +567,67 @@ const Landing = ({ user }: LandingProps) => {
         </div>
       </div>
 
-      {/* Report Incident Button - Bottom Right */}
-      <div className="absolute bottom-28 right-4 z-[1000]">
+      {/* Floating Action Button: Near Me */}
+      <div className="absolute bottom-28 right-4 z-[1000] flex flex-col gap-3">
+        <button
+          onClick={handleNearMe}
+          className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+          title="Go to my location"
+        >
+          <Navigation size={24} className="transform -rotate-45" />
+        </button>
+
         <button
           onClick={() => setShowIncidentForm(!showIncidentForm)}
-          className="bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg transition transform hover:scale-105"
+          className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-lg shadow-red-600/30 transition transform hover:scale-105"
+          title="Report Incident"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <div className="relative">
+            <Plus size={24} className={`transform transition-transform duration-300 ${showIncidentForm ? 'rotate-45' : ''}`} />
+          </div>
         </button>
       </div>
 
-      {/* Incident Reporting Form - Bottom Overlay */}
+      {/* Incident Reporting Form - Modern Bottom Sheet/Card */}
       {showIncidentForm && (
-        <div className="absolute bottom-20 left-4 right-4 z-[1000]">
-          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg rounded-xl p-6 shadow-lg border border-white/20 dark:border-gray-700">
+        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-20 md:bottom-28 md:w-96 z-[1002]">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 animate-slideUp">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-red-600 dark:text-red-400">Report an Incident</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                Report an Incident
+              </h2>
               <button
                 onClick={() => setShowIncidentForm(false)}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={20} />
               </button>
             </div>
-            <div className="flex flex-col space-y-4">
-              <input
-                type="text"
-                placeholder="Describe the incident..."
-                value={incidentDescription}
-                onChange={(e) => setIncidentDescription(e.target.value)}
-                className="w-full p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-400 dark:placeholder-gray-400"
-                required
-              />
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="What's happening? (e.g., Heavy traffic, Accident, Protest)"
+                  value={incidentDescription}
+                  onChange={(e) => setIncidentDescription(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition resize-none"
+                  required
+                />
+              </div>
+
               <button
                 onClick={submitIncident}
-                className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+                className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg shadow-red-600/20 transition-all transform active:scale-95"
               >
-                Report Incident
+                Submit Report
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Welcome Message - Top Left
-      <div className={`absolute top-4 left-4 z-[999] transition-all duration-300 ${isSearchFocused ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <div className="bg-blue-500/90 backdrop-blur-lg rounded-lg px-4 py-2 text-white text-sm font-medium shadow-lg">
-          Welcome to TaxiPoint, {user.name}!
-        </div>
-      </div> */}
     </div>
   );
 };

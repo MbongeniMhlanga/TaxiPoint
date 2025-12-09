@@ -3,146 +3,175 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ThemeToggle from "../../components/ThemeToggle";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
+import { FaFacebook } from "react-icons/fa";
 
-// SVG components (Google, Facebook, Eye, EyeSlash)
-const GoogleIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48">
-    <path fill="#FFC107" d="M43.61 20.083H42V20H24v8h11.309a11.523 11.523 0 0 1-4.996 7.348v5.525h7.172c4.167-3.834 6.587-9.408 6.587-16.143 0-.805-.072-1.583-.192-2.327z" />
-    <path fill="#4CAF50" d="M24 44c5.966 0 10.96-1.977 14.61-5.385l-7.172-5.525c-1.921 1.293-4.382 2.063-7.438 2.063-5.718 0-10.584-3.874-12.333-9.083H4.07v5.694C7.818 39.754 15.42 44 24 44z" />
-    <path fill="#1976D2" d="M11.667 27.917c-.572-1.696-.893-3.498-.893-5.5s.32-3.804.893-5.5V11.72H4.07C2.083 15.6 1 19.64 1 23.917s1.083 8.317 3.07 12.197l7.597-5.694z" />
-    <path fill="#E53935" d="M24 10.167c3.273 0 6.276 1.18 8.604 3.42l6.34-6.34c-3.79-3.535-8.775-5.602-14.944-5.602C15.42 1.64 7.818 5.887 4.07 11.72l7.597 5.694c1.749-5.21 6.615-9.084 12.333-9.084z" />
-  </svg>
-);
-
-const FacebookIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm3 8h-1.35c-.538 0-.65.221-.65.778v1.309h2l-.209 2.19h-1.791v7.014h-3.097v-7.014h-2.096v-2.19h2.096v-1.549c0-1.584.5-2.812 2.793-2.812h1.536v2.775z" />
-  </svg>
-);
-
-const EyeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 4.5c-6.5 0-10.3 7.8-10.3 7.8S5.5 19.5 12 19.5c6.5 0 10.3-7.8 10.3-7.8S18.5 4.5 12 4.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-  </svg>
-);
-
-const EyeSlashIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 4.5c-6.5 0-10.3 7.8-10.3 7.8S5.5 19.5 12 19.5c6.5 0 10.3-7.8 10.3-7.8S18.5 4.5 12 4.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.8 1.9L22.1 21.2 21.2 22.1 1.9 2.8 2.8 1.9z" />
-  </svg>
-);
-//user
-interface UserResponse {
-  email: string;
-  name: string;
-  role: string;
-  token: string;
-}
-
-interface LoginForm {
-  email: string;
-  password: string;
-}
-
+// Interface for props
 interface LoginProps {
-  onLogin: (userData: UserResponse) => void;
+  onLogin: (user: any) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
+
     try {
-      const res = await fetch("https://taxipoint-backend.onrender.com/api/users/login", {
+      const response = await fetch("https://taxipoint-backend.onrender.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(formData),
       });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Invalid email or password.");
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Login successful!");
+        onLogin(data); // Pass full user object including role
+        navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing");
+      } else {
+        toast.error(data.message || "Invalid credentials");
       }
-      const userData: UserResponse = await res.json();
-      localStorage.setItem("user", JSON.stringify(userData));
-      onLogin(userData);
-      navigate(userData.role === "ROLE_ADMIN" ? "/admin" : "/landing");
-      toast.success(`Welcome back, ${userData.name}!`);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error) {
+      toast.error("Server error. Please try again.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
-
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen flex bg-white dark:bg-gray-900 transition-colors duration-300">
 
-      {/* Absolute theme toggle */}
+      {/* Theme Toggle (Absolute) */}
       <div className="absolute top-4 right-4 z-50">
         <ThemeToggle />
       </div>
 
-      {/* Left Side - Logo & Slogan */}
-      <div className="flex flex-col justify-center items-center md:items-start p-8 md:p-16 w-full md:w-1/3 text-center md:text-left bg-blue-600 dark:bg-gray-800 text-white transition-colors duration-300">
-        <img src="/favicon.ico" alt="TaxiPoint Logo" className="w-24 h-24 md:w-32 md:h-32 mb-4 bg-white rounded-full p-2" />
-        <h1 className="text-3xl md:text-5xl font-bold mb-2">TaxiPoint</h1>
-        <p className="text-blue-100 dark:text-gray-300 text-base md:text-lg">Your ride, your way</p>
+      {/* LEFT SIDE: Visual / Brand */}
+      <div className="hidden lg:flex lg:w-1/2 bg-blue-600 relative overflow-hidden items-center justify-center p-12">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-700 to-indigo-800 opacity-90" />
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-20"></div>
+
+        <div className="relative z-10 text-white max-w-lg text-center">
+          <div className="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl mx-auto flex items-center justify-center mb-8 shadow-2xl">
+            <span className="text-4xl font-bold text-white">TP</span>
+          </div>
+          <h1 className="text-5xl font-bold mb-6 tracking-tight">TaxiPoint</h1>
+          <p className="text-xl text-blue-100 font-light leading-relaxed">
+            Seamless commuting and rank management for the modern era. Connect, commute, and control.
+          </p>
+        </div>
+
+        {/* Decorative circles */}
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-24 right-12 w-32 h-32 bg-indigo-500/30 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Right Side - Login Card */}
-      <div className="flex justify-center items-center w-full md:w-2/3 p-8 md:p-16">
-        <div className="bg-white dark:bg-gray-800 p-8 md:p-12 rounded-3xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 animate-fadeIn transition-colors duration-300">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">Login</h2>
+      {/* RIGHT SIDE: Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
+        <div className="w-full max-w-md space-y-8">
 
-          <div className="space-y-3 mb-6">
-            <button type="button" disabled className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold shadow-none cursor-not-allowed opacity-60">
-              <GoogleIcon /> Login with Google
-            </button>
-            <button type="button" disabled className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2]/60 text-white/80 font-semibold shadow-none cursor-not-allowed">
-              <FacebookIcon /> Login with Facebook
-            </button>
+          <div className="text-center lg:text-left">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back</h2>
+            <p className="text-gray-500 dark:text-gray-400">Please enter your details to sign in.</p>
           </div>
 
-          <div className="flex items-center mb-6">
-            <hr className="flex-1 border-gray-300 dark:border-gray-600" />
-            <span className="px-3 text-gray-500 dark:text-gray-400 text-sm">or</span>
-            <hr className="flex-1 border-gray-300 dark:border-gray-600" />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required
-              className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" disabled={isLoading} />
-            <div className="relative">
-              <input type={showPassword ? "text" : "password"} name="password" placeholder="Password" value={form.password} onChange={handleChange} required
-                className="w-full p-3 pr-10 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" disabled={isLoading} />
-              <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 dark:text-gray-400">
-                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
-              </button>
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="user@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all outline-none"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end">
-              <button type="button" onClick={() => navigate("/forgot-password")} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Forgot Password?</button>
+            {/* Password Input */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot password?</a>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all outline-none"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
-            <button type="submit" className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md transition" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>Sign in <ArrowRight size={18} /></>
+              )}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-gray-600 dark:text-gray-400 text-sm md:text-base">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button type="button" disabled className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-not-allowed opacity-60">
+              <FcGoogle size={20} /> Google
+            </button>
+            <button type="button" disabled className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-not-allowed opacity-60">
+              <FaFacebook size={20} color="#1877F2" /> Facebook
+            </button>
+          </div>
+
+          <p className="text-center text-gray-600 dark:text-gray-400">
             Don't have an account?{" "}
-            <button onClick={() => navigate("/register")} className="text-blue-600 dark:text-blue-400 hover:underline">Register</button>
+            <button onClick={() => navigate("/register")} className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+              Sign up
+            </button>
           </p>
         </div>
       </div>
@@ -151,4 +180,3 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 };
 
 export default Login;
-
