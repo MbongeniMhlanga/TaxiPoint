@@ -47,7 +47,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser }) => {
   const handleProfileUpdate = async () => {
     setLoading(true);
     try {
-      const updatedData = await safeFetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}`, {
+      const updatedData = await safeFetch(`/api/users/${user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser }) => {
 
     setLoading(true);
     try {
-      await safeFetch(`https://taxipoint-backend.onrender.com/api/users/${user.id}/password`, {
+      await safeFetch(`/api/users/${user.id}/password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
