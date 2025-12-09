@@ -36,17 +36,29 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success("Login successful!");
-        onLogin(data); // Pass full user object including role
-        navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing");
-      } else {
-        toast.error(data.message || "Invalid credentials");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Login Failed:", response.status, errorText);
+        let errorMessage = "Invalid credentials";
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorMessage;
+        } catch (e) {
+          // response is not JSON
+        }
+        toast.error(errorMessage);
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      toast.error("Server error. Please try again.");
+
+      const data = await response.json();
+      toast.success("Login successful!");
+      onLogin(data);
+      navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing");
+
+    } catch (error: any) {
+      console.error("Login Network Error:", error);
+      toast.error(`Connection failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
