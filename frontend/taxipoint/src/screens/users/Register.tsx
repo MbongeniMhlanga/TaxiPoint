@@ -12,7 +12,7 @@ interface RegisterForm {
     surname: string;
     email: string;
     password: string;
-    role: "user" | "driver";
+    role: "ROLE_USER" | "ROLE_DRIVER";
 }
 
 const Register: React.FC = () => {
@@ -21,7 +21,7 @@ const Register: React.FC = () => {
         surname: "",
         email: "",
         password: "",
-        role: "user",
+        role: "ROLE_USER",
     });
 
     const [loading, setLoading] = useState(false);
@@ -43,16 +43,32 @@ const Register: React.FC = () => {
                 body: JSON.stringify(formData),
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                const errorText = await response.text();
 
-            if (response.ok) {
-                toast.success("Registration successful! Please login.");
-                navigate("/login");
-            } else {
-                toast.error(data.message || "Registration failed");
+                let errorMessage = `Error (${response.status}): Registration failed`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.message) {
+                        errorMessage = errorJson.message;
+                    }
+                } catch (e) {
+                    if (response.status === 404) errorMessage = "Error (404): Endpoint not found";
+                    if (response.status === 409) errorMessage = "Error (409): User already exists";
+                    if (response.status === 500) errorMessage = "Error (500): Internal Server Error";
+                }
+
+                toast.error(errorMessage);
+                return;
             }
-        } catch (error) {
-            toast.error("Something went wrong. Please try again.");
+
+            await response.json();
+            toast.success("Registration successful! Please login.");
+            navigate("/login");
+
+        } catch (error: any) {
+            console.error("Registration Error:", error);
+            toast.error(`Connection failed: ${error.message}`);
         } finally {
             setLoading(false);
         }

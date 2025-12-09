@@ -39,13 +39,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Login Failed:", response.status, errorText);
-        let errorMessage = "Invalid credentials";
+
+        let errorMessage = `Error (${response.status}): Invalid credentials`;
+
         try {
           const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorMessage;
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
         } catch (e) {
           // response is not JSON
+          if (response.status === 404) errorMessage = "Error (404): Endpoint not found";
+          if (response.status === 500) errorMessage = "Error (500): Internal Server Error";
         }
+
         toast.error(errorMessage);
         setLoading(false);
         return;

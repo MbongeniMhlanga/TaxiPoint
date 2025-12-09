@@ -1,0 +1,7 @@
+{
+    "name": "Test",
+    "surname": "User",
+    "email": "test_curl_user_v1@example.com",
+    "password": "Password123!",
+    "role": "user"
+}

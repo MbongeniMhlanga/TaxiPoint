@@ -10,16 +10,31 @@ export default defineConfig({
         target: 'https://taxipoint-backend.onrender.com',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, _req, _res) => {
+            proxyReq.setHeader('Origin', 'https://taxi-point.vercel.app');
+          });
+        },
       },
       '/login': {
         target: 'https://taxipoint-backend.onrender.com',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, _req, _res) => {
+            proxyReq.setHeader('Origin', 'https://taxi-point.vercel.app');
+          });
+        },
       },
       '/register': {
         target: 'https://taxipoint-backend.onrender.com',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, _req, _res) => {
+            proxyReq.setHeader('Origin', 'https://taxi-point.vercel.app');
+          });
+        },
       },
     },
   },
