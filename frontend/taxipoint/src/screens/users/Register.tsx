@@ -12,7 +12,7 @@ interface RegisterForm {
     surname: string;
     email: string;
     password: string;
-    role: "ROLE_USER" | "ROLE_DRIVER";
+    role: "user" | "driver";
 }
 
 const Register: React.FC = () => {
@@ -21,7 +21,7 @@ const Register: React.FC = () => {
         surname: "",
         email: "",
         password: "",
-        role: "ROLE_USER",
+        role: "user",
     });
 
     const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ const Register: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch("https://taxipoint-backend.onrender.com/register", {
+            const response = await fetch("/api/users/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
