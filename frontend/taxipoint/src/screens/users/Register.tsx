@@ -69,13 +69,13 @@ const Register: React.FC = () => {
                         disabled
                         className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold shadow-none cursor-not-allowed opacity-60"
                     >
-                        <FcGoogle size={22} /> Sign up with Google (Coming Soon)
+                        <FcGoogle size={22} /> Sign up with Google
                     </button>
                     <button
                         disabled
                         className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2]/60 text-white/80 font-semibold shadow-none cursor-not-allowed"
                     >
-                        <FaFacebook size={22} /> Sign up with Facebook (Coming Soon)
+                        <FaFacebook size={22} /> Sign up with Facebook
                     </button>
                 </div>
 
