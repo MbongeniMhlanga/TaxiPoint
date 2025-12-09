@@ -106,32 +106,89 @@ const Landing = ({ user }: LandingProps) => {
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 
-  const taxiIcon = L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/744/744465.png',
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
+  // Modern Taxi Icon with gradient and shadow
+  const taxiIcon = L.divIcon({
+    html: `
+      <div style="
+        position: relative;
+        width: 48px;
+        height: 48px;
+      ">
+        <div style="
+          position: absolute;
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.4), 0 0 0 3px white;
+          border: 2px solid white;
+          font-size: 24px;
+          animation: bounce 2s ease-in-out infinite;
+        ">
+          🚕
+        </div>
+        <style>
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+        </style>
+      </div>
+    `,
+    className: '',
+    iconSize: [48, 48],
+    iconAnchor: [24, 48],
+    popupAnchor: [0, -48],
   });
 
+  // Modern Incident Icon with gradient and pulse animation
   const createIncidentDivIcon = (count: number) =>
     L.divIcon({
-      html: `<div style="
-        background: #ef4444; 
-        color: white;
-        font-weight: bold;
-        text-align: center;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        line-height: 30px;
-        border: 2px solid white;
-        font-size: 14px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      ">${count > 9 ? '9+' : count}</div>`,
+      html: `
+        <div style="
+          position: relative;
+          width: 44px;
+          height: 44px;
+        ">
+          <div style="
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 16px -4px rgba(239, 68, 68, 0.5), 0 0 0 3px white, 0 0 0 6px rgba(239, 68, 68, 0.2);
+            border: 3px solid white;
+            color: white;
+            font-weight: 800;
+            font-size: ${count > 9 ? '14px' : '16px'};
+            animation: pulse 2s ease-in-out infinite;
+          ">
+            ${count > 9 ? '9+' : count}
+          </div>
+          <style>
+            @keyframes pulse {
+              0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 8px 16px -4px rgba(239, 68, 68, 0.5), 0 0 0 3px white, 0 0 0 6px rgba(239, 68, 68, 0.2);
+              }
+              50% { 
+                transform: scale(1.1);
+                box-shadow: 0 12px 20px -4px rgba(239, 68, 68, 0.6), 0 0 0 3px white, 0 0 0 10px rgba(239, 68, 68, 0.3);
+              }
+            }
+          </style>
+        </div>
+      `,
       className: '',
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-      popupAnchor: [0, -30],
+      iconSize: [44, 44],
+      iconAnchor: [22, 44],
+      popupAnchor: [0, -44],
     });
 
   // --- Fetch Nearby Taxi Ranks ---

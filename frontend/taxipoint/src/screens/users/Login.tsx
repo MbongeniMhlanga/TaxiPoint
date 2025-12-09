@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import { API_BASE_URL } from "../../config";
+import { motion } from "framer-motion";
 
 // Interface for props
 interface LoginProps {
@@ -20,7 +21,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
   const navigate = useNavigate();
+
+  // Reset animation every 10 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationKey((prev) => prev + 1);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -110,7 +120,33 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="w-full max-w-md space-y-8">
 
           <div className="text-center lg:text-left">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back</h2>
+            <motion.h2
+              key={animationKey}
+              className="text-3xl font-bold text-gray-900 dark:text-white mb-2"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.05,
+                  },
+                },
+              }}
+            >
+              {"Welcome to TaxiPoint".split("").map((char, index) => (
+                <motion.span
+                  key={index}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+            </motion.h2>
             <p className="text-gray-500 dark:text-gray-400">Please enter your details to sign in.</p>
           </div>
 
