@@ -40,7 +40,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   ];
 
   const bottomNavItems = [
-    { name: 'Profile', icon: <UserIcon size={20} />, path: '/profile' },
     { name: 'Settings', icon: <Settings size={20} />, path: '/settings' },
   ];
 
@@ -71,6 +70,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
         {/* Navigation Items */}
         <div className="flex-1 px-4 space-y-2 overflow-y-auto py-4">
+          {/* User Name Section */}
+          <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            {user.name} {user.surname}
+          </p>
+
+          {/* Profile Button */}
+          <Link
+            to="/profile"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive('/profile')
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+              }`}
+          >
+            <UserIcon size={20} />
+            <span className="font-medium">Profile</span>
+          </Link>
+
+          <div className="my-4 border-t border-gray-100 dark:border-gray-700 mx-2"></div>
+
+          {/* Menu Section */}
           <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menu</p>
           {navItems.map((item) => (
             <Link
@@ -88,7 +107,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
           <div className="my-4 border-t border-gray-100 dark:border-gray-700 mx-2"></div>
 
-          <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">User</p>
+          {/* Settings */}
           {bottomNavItems.map((item) => (
             <Link
               key={item.path}

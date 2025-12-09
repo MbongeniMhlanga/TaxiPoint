@@ -23,7 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <UserIcon size={24} />
         </div>
         <div>
-          <p className="font-bold">{user.name}</p>
+          <p className="font-bold">{user.name} {user.surname}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
         </div>
       </div>
