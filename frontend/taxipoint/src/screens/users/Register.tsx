@@ -12,7 +12,7 @@ interface RegisterForm {
     surname: string;
     email: string;
     password: string;
-    role: "user" | "driver";
+    role: "ROLE_USER" | "ROLE_DRIVER";
 }
 
 const Register: React.FC = () => {
@@ -21,7 +21,7 @@ const Register: React.FC = () => {
         surname: "",
         email: "",
         password: "",
-        role: "user",
+        role: "ROLE_USER",
     });
 
     const [loading, setLoading] = useState(false);

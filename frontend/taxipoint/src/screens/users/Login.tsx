@@ -52,6 +52,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
 
       const data = await response.json();
+
       toast.success("Login successful!");
       onLogin(data);
       navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing");
