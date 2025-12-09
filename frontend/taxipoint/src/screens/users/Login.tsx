@@ -106,11 +106,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">Login</h2>
 
           <div className="space-y-3 mb-6">
-            <button type="button" onClick={() => toast.info("Google login coming soon!")} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition">
-              <GoogleIcon /> Login with Google
+            <button type="button" disabled className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold shadow-none cursor-not-allowed opacity-60">
+              <GoogleIcon /> Login with Google (Coming Soon)
             </button>
-            <button type="button" onClick={() => toast.info("Facebook login coming soon!")} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2] text-white font-semibold shadow-md hover:bg-[#166fe5] transition">
-              <FacebookIcon /> Login with Facebook
+            <button type="button" disabled className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2]/60 text-white/80 font-semibold shadow-none cursor-not-allowed">
+              <FacebookIcon /> Login with Facebook (Coming Soon)
             </button>
           </div>
 

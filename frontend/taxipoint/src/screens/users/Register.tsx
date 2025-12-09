@@ -66,16 +66,16 @@ const Register: React.FC = () => {
 
                 <div className="space-y-3 mb-6">
                     <button
-                        onClick={() => toast.info("Google sign-up coming soon!")}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition"
+                        disabled
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold shadow-none cursor-not-allowed opacity-60"
                     >
-                        <FcGoogle size={22} /> Sign up with Google
+                        <FcGoogle size={22} /> Sign up with Google (Coming Soon)
                     </button>
                     <button
-                        onClick={() => toast.info("Facebook sign-up coming soon!")}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2] text-white font-semibold shadow-md hover:bg-[#166fe5] transition"
+                        disabled
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#1877F2]/60 text-white/80 font-semibold shadow-none cursor-not-allowed"
                     >
-                        <FaFacebook size={22} /> Sign up with Facebook
+                        <FaFacebook size={22} /> Sign up with Facebook (Coming Soon)
                     </button>
                 </div>
 
