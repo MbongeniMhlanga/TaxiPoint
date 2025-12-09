@@ -24,7 +24,7 @@ interface UserSettingsProps {
 const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
   // Initialize state with the user's existing preferences.
   const [notifications, setNotifications] = useState(user.notifications ?? true);
-  const [darkMode, setDarkMode] = useState(user.darkMode ?? false);
+  const [darkMode] = useState(user.darkMode ?? false);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
