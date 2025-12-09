@@ -557,9 +557,13 @@ const Landing = ({ user }: LandingProps) => {
               <div className="min-w-[200px]">
                 <h3 className="font-bold text-red-600 mb-2 border-b pb-1">Reported Incidents ({group.incidents.length})</h3>
                 {group.incidents.map((incident) => (
-                  <div key={incident.id} className="mb-3 last:mb-0 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
-                    <p className="font-medium text-gray-900 dark:text-white">{incident.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(incident.createdAt).toLocaleTimeString()} • {new Date(incident.createdAt).toLocaleDateString()}</p>
+                  <div key={incident.id} className="mb-3 last:mb-0 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                    <p className="font-medium text-gray-900 dark:text-white mb-2">{incident.description}</p>
+                    <div className="flex items-start gap-1.5 mb-1">
+                      <MapPin size={12} className="mt-0.5 flex-shrink-0 text-red-500" />
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{incident.formattedAddress}</p>
+                    </div>
+                    <p className="text-xs text-gray-500">{new Date(incident.createdAt).toLocaleTimeString()} • {new Date(incident.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
