@@ -129,7 +129,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       */}
       <div className="md:hidden">
         {/* Top Bar */}
-        <div className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 shadow-sm z-40 flex items-center justify-between px-4">
+        <div className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 shadow-sm z-[1500] flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
               TP
@@ -143,7 +143,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         </div>
 
         {/* Mobile Sidebar Drawer */}
-        <div className={`fixed inset-0 z-50 flex transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className={`fixed inset-0 z-[2000] flex transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
           <div className="relative w-80 bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col p-4">
             <div className="flex justify-between items-center mb-8">
