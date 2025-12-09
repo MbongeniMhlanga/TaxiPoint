@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { API_BASE_URL } from "../../config";
 
 interface UserProfileProps {
   user: {
@@ -31,6 +32,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser }) => {
     setEmail(user.email);
   }, [user]);
 
+
+
   const safeFetch = async (url: string, options: RequestInit) => {
     const res = await fetch(url, options);
     const text = await res.text();
@@ -47,7 +50,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser }) => {
   const handleProfileUpdate = async () => {
     setLoading(true);
     try {
-      const updatedData = await safeFetch(`/api/users/${user.id}`, {
+      const updatedData = await safeFetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +88,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdateUser }) => {
 
     setLoading(true);
     try {
-      await safeFetch(`/api/users/${user.id}/password`, {
+      await safeFetch(`${API_BASE_URL}/api/users/${user.id}/password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -6,6 +6,7 @@ import ThemeToggle from "../../components/ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
+import { API_BASE_URL } from "../../config";
 
 // Interface for props
 interface LoginProps {
@@ -30,7 +31,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/users/login", {
+
+
+      // ... inside component
+      // headers...
+      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

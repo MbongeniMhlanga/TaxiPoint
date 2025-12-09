@@ -6,6 +6,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import ThemeToggle from "../../components/ThemeToggle";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { API_BASE_URL } from "../../config";
 
 interface RegisterForm {
     name: string;
@@ -37,7 +38,10 @@ const Register: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch("/api/users/register", {
+
+
+            // ... inside component
+            const response = await fetch(`${API_BASE_URL}/api/users/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),

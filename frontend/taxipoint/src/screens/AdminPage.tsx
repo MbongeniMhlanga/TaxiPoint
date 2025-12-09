@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter } from 'lucide-react';
 import ThemeToggle from "../components/ThemeToggle"; // Assuming we want theme toggle here too
+import { API_BASE_URL } from "../config";
 
 // --- Icons ---
 // Using Lucide icons imported above instead of inline SVGs for consistency
@@ -73,7 +74,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   // Fetch all taxi ranks
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch("/api/taxi-ranks?page=0&size=1000");
+      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
       if (!res.ok) throw new Error("Failed to fetch taxi ranks");
       const data = await res.json();
       setTaxiRanks(data.content || []);
@@ -160,8 +161,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       };
 
       const url = isEditing
-        ? `/api/taxi-ranks/${currentRankId}`
-        : "/api/taxi-ranks";
+        ? `${API_BASE_URL}/api/taxi-ranks/${currentRankId}`
+        : `${API_BASE_URL}/api/taxi-ranks`;
 
       const method = isEditing ? "PUT" : "POST";
 
@@ -201,7 +202,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     setShowDeleteModal(false);
 
     try {
-      const res = await fetch(`/api/taxi-ranks/${rankToDelete}`, {
+      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks/${rankToDelete}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user.token}` },
       });

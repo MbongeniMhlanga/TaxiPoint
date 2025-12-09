@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Dispatch, SetStateAction, FC } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { API_BASE_URL } from "../config";
 
 // User interface
 export interface User {
@@ -37,7 +38,10 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
       };
 
       // Call your backend API to update user settings
-      const response = await fetch(`/api/users/${user.id}`, {
+
+
+      // ...
+      const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
