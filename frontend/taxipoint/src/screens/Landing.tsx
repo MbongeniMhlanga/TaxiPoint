@@ -385,18 +385,26 @@ const Landing = ({ user }: LandingProps) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      toast.info("Voice search is not supported in this browser.");
+      toast.error("Voice search is not supported in your browser. Try Chrome or Edge.");
+      return;
+    }
+
+    // If already listening, stop (acts as cancel button)
+    if (isListening) {
+      setIsListening(false);
+      toast.info("Voice search cancelled");
       return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // Show interim results as user speaks
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
-      toast.info("Listening... Speak now 🎙️");
+      setSearchQuery(''); // Clear previous search
     };
 
     recognition.onend = () => {
@@ -404,19 +412,64 @@ const Landing = ({ user }: LandingProps) => {
     };
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setSearchQuery(transcript);
-      toast.success(`Heard: "${transcript}"`);
-      searchTaxiRanks(transcript);
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show interim results as user speaks (live feedback)
+      if (interimTranscript) {
+        setSearchQuery(interimTranscript);
+      }
+
+      // Process final result
+      if (finalTranscript) {
+        setSearchQuery(finalTranscript);
+        searchTaxiRanks(finalTranscript);
+        setIsListening(false);
+      }
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error);
+      console.error("Speech recognition error:", event.error);
       setIsListening(false);
-      toast.error("Could not hear you. Please try again.");
+
+      // Provide specific, helpful error messages
+      switch (event.error) {
+        case 'no-speech':
+          toast.warning("No speech detected. Please try again.");
+          break;
+        case 'audio-capture':
+          toast.error("Microphone not found. Please check your device.");
+          break;
+        case 'not-allowed':
+          toast.error("Microphone access denied. Please allow microphone access in your browser settings.");
+          break;
+        case 'network':
+          toast.error("Network error. Please check your internet connection.");
+          break;
+        case 'aborted':
+          // User cancelled, don't show error
+          break;
+        default:
+          toast.error("Voice search failed. Please try again.");
+      }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error("Failed to start recognition:", error);
+      setIsListening(false);
+      toast.error("Could not start voice search. Please try again.");
+    }
   };
 
   const handleNearMe = () => {
@@ -629,9 +682,13 @@ const Landing = ({ user }: LandingProps) => {
 
             <button
               onClick={handleVoiceSearch}
-              className={`p-2 rounded-xl transition-colors ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'}`}
+              className={`p-2 rounded-xl transition-all duration-300 ${isListening
+                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/50'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
+                }`}
+              title={isListening ? "Click to stop listening" : "Voice search"}
             >
-              <Mic size={20} />
+              <Mic size={20} className={isListening ? 'animate-bounce' : ''} />
             </button>
           </div>
 
