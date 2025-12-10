@@ -17,6 +17,7 @@ import UserProfile from "./screens/users/UserProfile";
 import AdminPage from "./screens/AdminPage";
 import About from "./screens/About";
 import Support from "./screens/Support";
+import TaxiRanks from "./screens/TaxiRanks";
 
 // User interface
 export interface User {
@@ -129,6 +130,14 @@ const MainApp: React.FC = () => {
           <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
             <Support />
           </MainLayout>
+        } />
+
+        <Route path="/taxi-ranks" element={
+          <ProtectedRoute user={user}>
+            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+              <TaxiRanks user={user as User} />
+            </MainLayout>
+          </ProtectedRoute>
         } />
 
         <Route
