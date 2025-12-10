@@ -536,7 +536,10 @@ const Landing = ({ user }: LandingProps) => {
                 )}
 
                 <button
-                  onClick={() => toast.info("Navigate feature coming soon!")}
+                  onClick={() => {
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${rank.latitude},${rank.longitude}`;
+                    window.open(url, '_blank');
+                  }}
                   className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition"
                 >
                   Navigate Here
