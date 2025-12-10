@@ -63,7 +63,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             </div>
             <div>
               <h1 className="font-bold text-lg tracking-tight">TaxiPoint</h1>
-              <span className="text-xs text-gray-500 font-medium">Driver & Commuter</span>
+              <span className="text-xs text-gray-500 font-medium">Commuter</span>
             </div>
           </div>
         </div>
