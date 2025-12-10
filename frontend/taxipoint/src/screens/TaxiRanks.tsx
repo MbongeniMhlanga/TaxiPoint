@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Phone, Clock, Navigation, X, ArrowLeft } from 'lucide-react';
+import { MapPin, Phone, Clock, Navigation, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { toast } from 'react-toastify';
 
