@@ -199,7 +199,7 @@ const Landing = ({ user }: LandingProps) => {
     });
 
   // --- Fetch Nearby Taxi Ranks ---
-  const fetchNearbyTaxiRanks = async (lat: number, lng: number, radius: number = 5000) => {
+  const fetchNearbyTaxiRanks = async (lat: number, lng: number, radius: number = 50000) => {
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/taxi-ranks/nearby?lat=${lat}&lng=${lng}&radius_m=${radius}`,
@@ -207,10 +207,18 @@ const Landing = ({ user }: LandingProps) => {
       );
       if (!res.ok) throw new Error('Failed to fetch nearby taxi ranks');
       const data = await res.json();
-      setTaxiRanks(data || []);
+
+      // If no nearby ranks found (e.g., user is in Europe/America), show all ranks
+      if (!data || data.length === 0) {
+        console.log('No nearby ranks found, fetching all ranks...');
+        await fetchTaxiRanks();
+      } else {
+        setTaxiRanks(data || []);
+      }
     } catch (err: any) {
       console.error(err);
-      toast.error('Failed to fetch nearby taxi ranks');
+      // Fallback to all ranks if nearby search fails
+      await fetchTaxiRanks();
     }
   };
 
