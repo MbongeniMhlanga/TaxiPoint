@@ -60,6 +60,14 @@ public class Incident {
     private LocalDateTime createdAt;
 
     /**
+ * Tracks whether the incident has been resolved.
+ * Defaults to false (unresolved) when a new incident is created.
+ */
+@Builder.Default
+@Column(name = "resolved", nullable = false)
+private Boolean resolved = false;
+
+    /**
      * Custom getter to provide a serializable representation of the Point location.
      * Jackson will use this method to create a simple JSON object for the location,
      * avoiding the StackOverflowError.
