@@ -172,8 +172,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({
               </button>
             </div>
 
+            {/* User Name Section - Mobile */}
+            <div className="mb-4 px-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {user.name} {user.surname}
+              </p>
+            </div>
+
+            {/* Profile Button - Mobile */}
+            <Link
+              to="/profile"
+              onClick={() => setIsSidebarOpen(false)}
+              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all mb-4 ${isActive('/profile')
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+            >
+              <UserIcon size={20} />
+              <span className="text-lg font-medium">Profile</span>
+            </Link>
+
+            <hr className="border-gray-100 dark:border-gray-700 mb-4" />
+
             <div className="space-y-2 flex-1">
-              {navItems.concat(bottomNavItems).map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -187,6 +209,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <span className="text-lg font-medium">{item.name}</span>
                 </Link>
               ))}
+              <hr className="border-gray-100 dark:border-gray-700 my-4" />
+
+              {/* Settings */}
+              {bottomNavItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${isActive(item.path)
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  {item.icon}
+                  <span className="text-lg font-medium">{item.name}</span>
+                </Link>
+              ))}
+
               <hr className="border-gray-100 dark:border-gray-700 my-4" />
               <button
                 onClick={toggleTheme}
