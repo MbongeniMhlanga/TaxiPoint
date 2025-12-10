@@ -426,13 +426,14 @@ const Landing = ({ user }: LandingProps) => {
 
       // Show interim results as user speaks (live feedback)
       if (interimTranscript) {
-        setSearchQuery(interimTranscript);
+        setSearchQuery(interimTranscript.replace(/[,.]$/g, '').trim());
       }
 
       // Process final result
       if (finalTranscript) {
-        setSearchQuery(finalTranscript);
-        searchTaxiRanks(finalTranscript);
+        const cleanedTranscript = finalTranscript.replace(/[,.]$/g, '').trim();
+        setSearchQuery(cleanedTranscript);
+        searchTaxiRanks(cleanedTranscript);
         setIsListening(false);
       }
     };
@@ -683,8 +684,8 @@ const Landing = ({ user }: LandingProps) => {
             <button
               onClick={handleVoiceSearch}
               className={`p-2 rounded-xl transition-all duration-300 ${isListening
-                  ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/50'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
+                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/50'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
                 }`}
               title={isListening ? "Click to stop listening" : "Voice search"}
             >
