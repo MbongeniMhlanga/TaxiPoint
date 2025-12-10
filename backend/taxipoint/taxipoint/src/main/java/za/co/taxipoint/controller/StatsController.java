@@ -6,44 +6,40 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/stats")  // ✅ CHANGED: Avoids conflict
 @CrossOrigin(origins = "https://taxi-point.vercel.app")
 public class StatsController {
+    
     @Autowired
     private StatsService statsService;
+
     /**
-     * GET /api/users/count
-     * Returns total number of users from User table
-     * 
-     * @return Long - total count of all users
+     * GET /api/stats/users/count
      */
     @GetMapping("/users/count")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")  // ✅ FIXED
     public ResponseEntity<Long> getTotalUserCount() {
         long count = statsService.getTotalUserCount();
         return ResponseEntity.ok(count);
     }
+
     /**
-     * GET /api/incidents/active/count
-     * Returns count of active (unresolved) incidents
-     * 
-     * @return Long - count of unresolved incidents
+     * GET /api/stats/incidents/active
      */
-    @GetMapping("/incidents/active/count")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/incidents/active")  // ✅ SIMPLIFIED
+    @PreAuthorize("hasRole('ADMIN')")  // ✅ FIXED
     public ResponseEntity<Long> getActiveIncidentsCount() {
         long count = statsService.getActiveIncidentsCount();
         return ResponseEntity.ok(count);
     }
+
     /**
-     * GET /api/users/stats
-     * Returns user distribution by role from User table
-     * 
-     * @return UserStatsDTO - breakdown of users by role
+     * GET /api/stats/users/distribution
      */
-    @GetMapping("/users/stats")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/users/distribution")  // ✅ CHANGED
+    @PreAuthorize("hasRole('ADMIN')")  // ✅ FIXED
     public ResponseEntity<UserStatsDTO> getUserStats() {
         UserStatsDTO stats = statsService.getUserStats();
         return ResponseEntity.ok(stats);

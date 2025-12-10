@@ -66,6 +66,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
 
+  // Statistics state
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [activeIncidents, setActiveIncidents] = useState<number>(0);
+  const [userStats, setUserStats] = useState<{ users: number; admins: number; total: number }>({ users: 0, admins: 0, total: 0 });
+
 
 
   // navigate is removed as it was unused
@@ -83,8 +88,43 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     }
   };
 
+  // Fetch statistics
+  const fetchStatistics = async () => {
+    try {
+      // Fetch total users
+      const usersRes = await fetch(`${API_BASE_URL}/api/stats/users/count`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (usersRes.ok) {
+        const count = await usersRes.json();
+        setTotalUsers(count);
+      }
+
+      // Fetch active incidents
+      const incidentsRes = await fetch(`${API_BASE_URL}/api/stats/incidents/active`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (incidentsRes.ok) {
+        const count = await incidentsRes.json();
+        setActiveIncidents(count);
+      }
+
+      // Fetch user statistics
+      const statsRes = await fetch(`${API_BASE_URL}/api/stats/users/distribution`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        setUserStats(stats);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch statistics:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTaxiRanks();
+    fetchStatistics();
   }, []);
 
   const handleChange = (
@@ -307,36 +347,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
               </div>
             </div>
 
-            {/* Users Card (Placeholder) */}
+            {/* Users Card */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between hover:shadow-md transition">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Users</p>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">1,240</h3>
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{totalUsers.toLocaleString()}</h3>
                 </div>
                 <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400">
                   <Users size={24} />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-sm text-green-500">
-                <span>+12 New</span>
-                <span className="text-gray-400 ml-2">today</span>
+              <div className="mt-4 flex items-center text-sm text-gray-400">
+                <span>Registered users</span>
               </div>
             </div>
 
-            {/* Incidents Card (Placeholder) */}
+            {/* Incidents Card */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between hover:shadow-md transition">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Incidents</p>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">3</h3>
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{activeIncidents}</h3>
                 </div>
                 <div className="p-3 bg-red-50 dark:bg-red-900/30 rounded-xl text-red-600 dark:text-red-400">
                   <AlertTriangle size={24} />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm text-red-500">
-                <span>High Priority</span>
+                <span>Unresolved</span>
               </div>
             </div>
           </div>
@@ -370,9 +409,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Commuters', value: 800 },
-                        { name: 'Drivers', value: 300 },
-                        { name: 'Admins', value: 140 },
+                        { name: 'Users', value: userStats.users },
+                        { name: 'Admins', value: userStats.admins },
                       ]}
                       innerRadius={60}
                       outerRadius={80}
@@ -380,9 +418,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                       dataKey="value"
                     >
                       {[
-                        { name: 'Commuters', value: 800 },
-                        { name: 'Drivers', value: 300 },
-                        { name: 'Admins', value: 140 },
+                        { name: 'Users', value: userStats.users },
+                        { name: 'Admins', value: userStats.admins },
                       ].map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
@@ -392,9 +429,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 flex gap-4 text-xs text-gray-500">
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#0088FE]"></div>Commuters</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#00C49F]"></div>Drivers</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#FFBB28]"></div>Admins</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#0088FE]"></div>Users ({userStats.users})</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#00C49F]"></div>Admins ({userStats.admins})</div>
               </div>
             </div>
           </div>
