@@ -1,112 +1,526 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { API_BASE_URL } from '@/config';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-export default function TabTwoScreen() {
+interface TaxiRank {
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  district: string;
+  routesServed: string[];
+  hours: Record<string, string>;
+  phone: string;
+  facilities: Record<string, any>;
+  distanceMeters?: number;
+}
+
+interface Incident {
+  id: string;
+  description: string;
+  reporter: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+  formattedAddress: string;
+}
+
+export default function ExploreScreen() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const textColor = isDark ? '#fff' : '#000';
+  const bgColor = isDark ? '#000' : '#fff';
+  const secondaryBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
+  const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
+
+  const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showIncidentForm, setShowIncidentForm] = useState(false);
+  const [incidentDescription, setIncidentDescription] = useState('');
+  const [submittingIncident, setSubmittingIncident] = useState(false);
+
+  const fetchTaxiRanks = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
+      const data = await res.json();
+      setTaxiRanks(data.content || []);
+    } catch (err) {
+      console.error('Error fetching taxi ranks:', err);
+      Alert.alert('Error', 'Failed to fetch taxi ranks');
+    }
+  };
+
+  const searchTaxiRanks = async (query: string) => {
+    if (!query.trim()) {
+      setFilteredSuggestions([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/taxi-ranks/search?query=${encodeURIComponent(query)}`
+      );
+      if (!res.ok) throw new Error('Search failed');
+      const data = await res.json();
+      setTaxiRanks(data);
+      setFilteredSuggestions(data.slice(0, 5));
+      setShowSearchResults(true);
+    } catch (err) {
+      console.error('Search error:', err);
+      Alert.alert('Error', 'Failed to search taxi ranks');
+    }
+  };
+
+  const fetchIncidents = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/incidents`);
+      if (!res.ok) throw new Error('Failed to fetch incidents');
+      const data = await res.json();
+      setIncidents(data);
+    } catch (err) {
+      console.error('Error fetching incidents:', err);
+    }
+  };
+
+  const submitIncident = async () => {
+    if (!incidentDescription.trim()) {
+      Alert.alert('Error', 'Please describe the incident');
+      return;
+    }
+
+    setSubmittingIncident(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: incidentDescription,
+          reporter: 'Mobile User',
+          latitude: -26.2044,
+          longitude: 28.0473,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to submit incident');
+
+      Alert.alert('Success', 'Incident reported successfully!');
+      setIncidentDescription('');
+      setShowIncidentForm(false);
+      fetchIncidents();
+    } catch (err) {
+      console.error('Error submitting incident:', err);
+      Alert.alert('Error', 'Failed to report incident');
+    } finally {
+      setSubmittingIncident(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeData = async () => {
+      setLoading(true);
+      await Promise.all([fetchTaxiRanks(), fetchIncidents()]);
+      setLoading(false);
+    };
+
+    initializeData();
+
+    // WebSocket connection for incidents
+    try {
+      const ws = new WebSocket('wss://taxipoint-backend.onrender.com/ws/incidents');
+      ws.onmessage = (event) => {
+        const incident = JSON.parse(event.data);
+        setIncidents((prev) => [...prev, incident]);
+      };
+      return () => ws.close();
+    } catch (err) {
+      console.error('WebSocket connection failed:', err);
+    }
+  }, []);
+
+  const RankCard = ({ rank }: { rank: TaxiRank }) => (
+    <TouchableOpacity
+      style={[styles.rankCard, { backgroundColor: secondaryBgColor }]}
+      onPress={() => {
+        Alert.alert(rank.name, `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}`);
+      }}>
+      <View style={styles.rankHeader}>
+        <ThemedText style={[styles.rankName, { color: textColor }]}>{rank.name}</ThemedText>
+        <ThemedText style={styles.rankDistrict}>{rank.district}</ThemedText>
+      </View>
+
+      {rank.description && (
+        <ThemedText style={[styles.rankDescription, { color: textColor }]}>
+          {rank.description}
+        </ThemedText>
+      )}
+
+      <ThemedText style={[styles.rankAddress, { color: textColor }]}>
+        📍 {rank.address}
+      </ThemedText>
+
+      {rank.distanceMeters && (
+        <ThemedText style={[styles.rankDistance, { color: borderColor }]}>
+          {(rank.distanceMeters / 1000).toFixed(1)} km away
+        </ThemedText>
+      )}
+    </TouchableOpacity>
+  );
+
+  const IncidentCard = ({ incident }: { incident: Incident }) => (
+    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}>
+      <ThemedText style={[styles.incidentDescription, { color: textColor }]}>
+        {incident.description}
+      </ThemedText>
+      <ThemedText style={styles.incidentMeta}>
+        📍 {incident.formattedAddress}
+      </ThemedText>
+      <ThemedText style={styles.incidentTime}>
+        {new Date(incident.createdAt).toLocaleTimeString()}
+      </ThemedText>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: bgColor }]}>
+        <ActivityIndicator size="large" color={borderColor} />
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: secondaryBgColor,
+                  borderColor: borderColor,
+                },
+              ]}>
+              <ThemedText style={styles.searchIcon}>🔍</ThemedText>
+              <TextInput
+                style={[styles.searchInput, { color: textColor }]}
+                placeholder="Search taxi ranks..."
+                placeholderTextColor={isDark ? '#888' : '#ccc'}
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  if (text.trim()) {
+                    searchTaxiRanks(text);
+                  } else {
+                    setShowSearchResults(false);
+                    fetchTaxiRanks();
+                  }
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Search Results */}
+          {showSearchResults && filteredSuggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                Search Results
+              </ThemedText>
+              {filteredSuggestions.map((rank) => (
+                <RankCard key={rank.id} rank={rank} />
+              ))}
+            </View>
+          )}
+
+          {/* Taxi Ranks Section */}
+          {!showSearchResults && (
+            <>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                  🚕 Taxi Ranks
+                </ThemedText>
+              </View>
+              {taxiRanks.length > 0 ? (
+                taxiRanks.slice(0, 10).map((rank) => <RankCard key={rank.id} rank={rank} />)
+              ) : (
+                <ThemedText style={[styles.emptyText, { color: textColor }]}>
+                  No taxi ranks found
+                </ThemedText>
+              )}
+            </>
+          )}
+
+          {/* Incidents Section */}
+          {!showSearchResults && incidents.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                  ⚠️ Reported Incidents ({incidents.length})
+                </ThemedText>
+              </View>
+              {incidents.slice(0, 5).map((incident) => (
+                <IncidentCard key={incident.id} incident={incident} />
+              ))}
+            </>
+          )}
+
+          <View style={styles.spacer} />
+        </ScrollView>
+
+        {/* Floating Action Button */}
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: '#ef4444' }]}
+            onPress={() => setShowIncidentForm(!showIncidentForm)}>
+            <ThemedText style={styles.fabText}>
+              {showIncidentForm ? '✕' : '+'}
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+          </TouchableOpacity>
+        </View>
+
+        {/* Incident Form Modal */}
+        <Modal
+          visible={showIncidentForm}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowIncidentForm(false)}>
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: bgColor },
+              ]}>
+              <View style={styles.modalHeader}>
+                <ThemedText style={[styles.modalTitle, { color: textColor }]}>
+                  Report an Incident
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
+                  <ThemedText style={styles.closeButton}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={[
+                  styles.incidentInput,
+                  {
+                    color: textColor,
+                    backgroundColor: secondaryBgColor,
+                    borderColor: borderColor,
+                  },
+                ]}
+                placeholder="Describe the incident..."
+                placeholderTextColor={isDark ? '#888' : '#ccc'}
+                multiline={true}
+                numberOfLines={4}
+                value={incidentDescription}
+                onChangeText={setIncidentDescription}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: borderColor }]}
+                onPress={submitIncident}
+                disabled={submittingIncident}>
+                {submittingIncident ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <ThemedText style={styles.submitButtonText}>
+                    Submit Report
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchBar: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 8,
+  },
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  suggestionsContainer: {
+    marginBottom: 24,
+  },
+  rankCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  rankHeader: {
+    marginBottom: 8,
+  },
+  rankName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  rankDistrict: {
+    fontSize: 12,
+    opacity: 0.6,
+  },
+  rankDescription: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  rankAddress: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  rankDistance: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  incidentCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  incidentDescription: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  incidentMeta: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+  incidentTime: {
+    fontSize: 11,
+    opacity: 0.6,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 20,
+    opacity: 0.6,
+  },
+  spacer: {
+    height: 80,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+  },
+  fab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+  },
+  fabText: {
+    fontSize: 32,
+    color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: 300,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  incidentInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Picker, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
@@ -201,19 +201,6 @@ export default function RegisterScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Role Selector */}
-              <ThemedText style={[styles.label, { color: textColor }]}>Register As</ThemedText>
-              <View style={[styles.pickerContainer, { borderColor: borderColor, backgroundColor: inputBgColor }]}>
-                <Picker
-                  selectedValue={formData.role}
-                  onValueChange={(value) => handleChange('role', value)}
-                  enabled={!loading}
-                  style={{ color: textColor }}>
-                  <Picker.Item label="User" value="ROLE_USER" />
-                  <Picker.Item label="Driver" value="ROLE_DRIVER" />
-                </Picker>
-              </View>
-
               {/* Register Button */}
               <TouchableOpacity
                 style={[
@@ -313,11 +300,6 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 8,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   registerButton: {
     paddingVertical: 14,
