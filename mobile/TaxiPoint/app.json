@@ -8,8 +8,17 @@
     "scheme": "taxipoint",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "permissions": [
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "ios.permission.LOCATION_WHEN_IN_USE"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TaxiPoint needs your location to show nearby taxi ranks and incidents",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "TaxiPoint needs your location to show nearby taxi ranks and incidents"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +28,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -43,6 +56,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8bbdaafa-6e29-4b8a-95c7-a10eb963a9fc"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8bbdaafa-6e29-4b8a-95c7-a10eb963a9fc"
     }
   }
 }

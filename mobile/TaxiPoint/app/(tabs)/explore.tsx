@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ExpoMaps } from 'expo-maps';
 
 interface TaxiRank {
   id: string;
@@ -50,6 +51,10 @@ export default function ExploreScreen() {
   const secondaryBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
   const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
 
+  const mapRef = useRef<any>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
+  const [showMap, setShowMap] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +64,69 @@ export default function ExploreScreen() {
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
+
+  // Request location permissions
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'TaxiPoint Location Permission',
+            message: 'TaxiPoint needs access to your location to show nearby taxi ranks',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.error('Error requesting location permission:', err);
+        return false;
+      }
+    }
+    return true; // iOS permissions handled via app.json
+  };
+
+  // Get user's current location
+  const getUserLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      console.log('Location permission denied');
+      // Use default location (Johannesburg)
+      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+      return;
+    }
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+          // Animate map to user location
+          if (mapRef.current && mapReady) {
+            mapRef.current.animateToRegion(
+              {
+                latitude,
+                longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              },
+              1000
+            );
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          // Use default location
+          setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+        }
+      );
+    } catch (err) {
+      console.error('Geolocation error:', err);
+      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+    }
+  };
 
   const fetchTaxiRanks = async () => {
     try {
@@ -140,6 +208,7 @@ export default function ExploreScreen() {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
+      await getUserLocation();
       await Promise.all([fetchTaxiRanks(), fetchIncidents()]);
       setLoading(false);
     };
@@ -212,10 +281,95 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      {/* Map View */}
+      {showMap && userLocation && (
+        <View style={styles.mapContainer}>
+          <ExpoMaps
+            ref={mapRef}
+            style={styles.map}
+            initialCamera={{
+              center: {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              },
+              zoom: 14,
+            }}
+            onCameraChanged={() => setMapReady(true)}>
+            {/* Taxi Rank Markers */}
+            {taxiRanks.map((rank) => (
+              <ExpoMaps.Marker
+                key={`taxi-${rank.id}`}
+                latitude={rank.latitude}
+                longitude={rank.longitude}
+                onPress={() => {
+                  Alert.alert(
+                    rank.name,
+                    `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}\n\nDistrict: ${rank.district}`
+                  );
+                }}>
+                <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
+                  <ThemedText style={styles.markerText}>🚕</ThemedText>
+                </View>
+              </ExpoMaps.Marker>
+            ))}
+
+            {/* Incident Markers */}
+            {incidents.map((incident) => (
+              <ExpoMaps.Marker
+                key={`incident-${incident.id}`}
+                latitude={incident.latitude}
+                longitude={incident.longitude}
+                onPress={() => {
+                  Alert.alert(
+                    'Reported Incident',
+                    `${incident.description}\n\nLocation: ${incident.formattedAddress}`
+                  );
+                }}>
+                <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}>
+                  <ThemedText style={styles.markerText}>⚠️</ThemedText>
+                </View>
+              </ExpoMaps.Marker>
+            ))}
+
+            {/* User Location Marker */}
+            {userLocation && (
+              <ExpoMaps.Marker
+                latitude={userLocation.latitude}
+                longitude={userLocation.longitude}>
+                <View style={[styles.markerBox, { backgroundColor: '#2563EB' }]}>
+                  <ThemedText style={styles.markerText}>📍</ThemedText>
+                </View>
+              </ExpoMaps.Marker>
+            )}
+          </ExpoMaps>
+        </View>
+      )}
+
+      {/* Floating Action Buttons Container */}
+      <View style={styles.fabContainer}>
+        {/* Toggle Map/List View */}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
+          onPress={() => setShowMap(!showMap)}>
+          <ThemedText style={styles.fabText}>{showMap ? '📋' : '🗺️'}</ThemedText>
+        </TouchableOpacity>
+
+        {/* Report Incident */}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: '#ef4444' }]}
+          onPress={() => setShowIncidentForm(!showIncidentForm)}>
+          <ThemedText style={styles.fabText}>
+            {showIncidentForm ? '✕' : '+'}
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {/* List View Overlay */}
+      {!showMap && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View
@@ -302,61 +456,61 @@ export default function ExploreScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
+      </KeyboardAvoidingView>
 
-        {/* Incident Form Modal */}
-        <Modal
-          visible={showIncidentForm}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowIncidentForm(false)}>
-          <View style={styles.modalOverlay}>
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: bgColor },
-              ]}>
-              <View style={styles.modalHeader}>
-                <ThemedText style={[styles.modalTitle, { color: textColor }]}>
-                  Report an Incident
-                </ThemedText>
-                <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
-                  <ThemedText style={styles.closeButton}>✕</ThemedText>
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={[
-                  styles.incidentInput,
-                  {
-                    color: textColor,
-                    backgroundColor: secondaryBgColor,
-                    borderColor: borderColor,
-                  },
-                ]}
-                placeholder="Describe the incident..."
-                placeholderTextColor={isDark ? '#888' : '#ccc'}
-                multiline={true}
-                numberOfLines={4}
-                value={incidentDescription}
-                onChangeText={setIncidentDescription}
-              />
-
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: borderColor }]}
-                onPress={submitIncident}
-                disabled={submittingIncident}>
-                {submittingIncident ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <ThemedText style={styles.submitButtonText}>
-                    Submit Report
-                  </ThemedText>
-                )}
+      {/* Incident Form Modal */}
+      <Modal
+        visible={showIncidentForm}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowIncidentForm(false)}>
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: bgColor },
+            ]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textColor }]}>
+                Report an Incident
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
+                <ThemedText style={styles.closeButton}>✕</ThemedText>
               </TouchableOpacity>
             </View>
+
+            <TextInput
+              style={[
+                styles.incidentInput,
+                {
+                  color: textColor,
+                  backgroundColor: secondaryBgColor,
+                  borderColor: borderColor,
+                },
+              ]}
+              placeholder="Describe the incident..."
+              placeholderTextColor={isDark ? '#888' : '#ccc'}
+              multiline={true}
+              numberOfLines={4}
+              value={incidentDescription}
+              onChangeText={setIncidentDescription}
+            />
+
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: borderColor }]}
+              onPress={submitIncident}
+              disabled={submittingIncident}>
+              {submittingIncident ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <ThemedText style={styles.submitButtonText}>
+                  Submit Report
+                </ThemedText>
+              )}
+            </TouchableOpacity>
           </View>
-        </Modal>
-      </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -522,5 +676,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  callout: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    minWidth: 200,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  calloutSubtitle: {
+    fontSize: 12,
+    opacity: 0.7,
   },
 });

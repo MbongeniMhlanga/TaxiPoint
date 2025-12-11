@@ -67,7 +67,7 @@ export default function RegisterScreen() {
           if (errorJson.message) {
             errorMessage = errorJson.message;
           }
-        } catch (e) {
+        } catch (err) {
           if (response.status === 404) errorMessage = 'Error (404): Endpoint not found';
           if (response.status === 409) errorMessage = 'Error (409): User already exists';
           if (response.status === 500) errorMessage = 'Error (500): Internal Server Error';

@@ -46,7 +46,7 @@ export default function LoginScreen() {
           if (errorJson.message) {
             errorMessage = errorJson.message;
           }
-        } catch (e) {
+        } catch {
           if (response.status === 404) errorMessage = 'Error (404): Endpoint not found';
           if (response.status === 500) errorMessage = 'Error (500): Internal Server Error';
         }
@@ -56,17 +56,14 @@ export default function LoginScreen() {
       }
 
       const data = await response.json();
-      Alert.alert('Success', 'Login successful!');
+      console.log('Login successful with role:', data.role);
       
-      // Navigate based on role
-      if (data.role === 'ROLE_ADMIN') {
-        router.push('/admin');
-      } else {
-        router.push('/(tabs)/explore');
-      }
+      // Navigate to explore screen - use relative navigation
+      router.navigate('../(tabs)/explore');
     } catch (error: any) {
       console.error('Login Network Error:', error);
-      Alert.alert('Connection Error', `Connection failed: ${error.message}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Connection Error', `Connection failed: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -156,7 +153,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <ThemedText style={[styles.signupText, { color: secondaryTextColor }]}>
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
                   <ThemedText style={[styles.signupLink, { color: borderColor }]}>Sign up</ThemedText>
                 </TouchableOpacity>
