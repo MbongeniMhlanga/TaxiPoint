@@ -8,15 +8,16 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
+  PermissionsAndroid,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ExpoMaps } from 'expo-maps';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface TaxiRank {
   id: string;
@@ -51,11 +52,15 @@ export default function ExploreScreen() {
   const secondaryBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
   const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
 
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
   const [showMap, setShowMap] = useState(true);
   const [mapReady, setMapReady] = useState(false);
-  const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
+  
+  // 🔑 REFACTORED STATE: Master list (all ranks) and the currently displayed list
+  const [allTaxiRanks, setAllTaxiRanks] = useState<TaxiRank[]>([]); 
+  const [displayedTaxiRanks, setDisplayedTaxiRanks] = useState<TaxiRank[]>([]); 
+  
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -65,7 +70,7 @@ export default function ExploreScreen() {
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
 
-  // Request location permissions
+  // Request location permissions (No change)
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -88,12 +93,11 @@ export default function ExploreScreen() {
     return true; // iOS permissions handled via app.json
   };
 
-  // Get user's current location
+  // Get user's current location (No change)
   const getUserLocation = async () => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) {
       console.log('Location permission denied');
-      // Use default location (Johannesburg)
       setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
       return;
     }
@@ -103,7 +107,6 @@ export default function ExploreScreen() {
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ latitude, longitude });
-          // Animate map to user location
           if (mapRef.current && mapReady) {
             mapRef.current.animateToRegion(
               {
@@ -118,9 +121,9 @@ export default function ExploreScreen() {
         },
         (error) => {
           console.error('Error getting location:', error);
-          // Use default location
           setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-        }
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
       );
     } catch (err) {
       console.error('Geolocation error:', err);
@@ -128,21 +131,26 @@ export default function ExploreScreen() {
     }
   };
 
+  // 🔑 REFACTORED: Sets both the master list and the displayed list initially
   const fetchTaxiRanks = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
       const data = await res.json();
-      setTaxiRanks(data.content || []);
+      const ranks = data.content || [];
+      setAllTaxiRanks(ranks);
+      setDisplayedTaxiRanks(ranks); // Display all ranks by default
     } catch (err) {
       console.error('Error fetching taxi ranks:', err);
       Alert.alert('Error', 'Failed to fetch taxi ranks');
     }
   };
 
+  // 🔑 REFACTORED: Updates only the displayed list based on search results
   const searchTaxiRanks = async (query: string) => {
     if (!query.trim()) {
       setFilteredSuggestions([]);
       setShowSearchResults(false);
+      setDisplayedTaxiRanks(allTaxiRanks); // Show all ranks when search is empty
       return;
     }
 
@@ -152,7 +160,8 @@ export default function ExploreScreen() {
       );
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
-      setTaxiRanks(data);
+      
+      setDisplayedTaxiRanks(data); // Update displayed list with search results
       setFilteredSuggestions(data.slice(0, 5));
       setShowSearchResults(true);
     } catch (err) {
@@ -186,8 +195,8 @@ export default function ExploreScreen() {
         body: JSON.stringify({
           description: incidentDescription,
           reporter: 'Mobile User',
-          latitude: -26.2044,
-          longitude: 28.0473,
+          latitude: userLocation?.latitude || -26.2044,
+          longitude: userLocation?.longitude || 28.0473,
         }),
       });
 
@@ -209,7 +218,8 @@ export default function ExploreScreen() {
     const initializeData = async () => {
       setLoading(true);
       await getUserLocation();
-      await Promise.all([fetchTaxiRanks(), fetchIncidents()]);
+      // Only fetch the initial, full list here
+      await Promise.all([fetchTaxiRanks(), fetchIncidents()]); 
       setLoading(false);
     };
 
@@ -273,34 +283,38 @@ export default function ExploreScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={borderColor} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
       {/* Map View */}
       {showMap && userLocation && (
         <View style={styles.mapContainer}>
-          <ExpoMaps
+          <MapView
             ref={mapRef}
+            provider={PROVIDER_DEFAULT}
             style={styles.map}
-            initialCamera={{
-              center: {
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-              },
-              zoom: 14,
+            initialRegion={{
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
             }}
-            onCameraChanged={() => setMapReady(true)}>
-            {/* Taxi Rank Markers */}
-            {taxiRanks.map((rank) => (
-              <ExpoMaps.Marker
+            onMapReady={() => setMapReady(true)}
+            showsUserLocation={true}
+            showsMyLocationButton={false}>
+            {/* Taxi Rank Markers: NOW using displayedTaxiRanks */}
+            {displayedTaxiRanks.map((rank) => (
+              <Marker
                 key={`taxi-${rank.id}`}
-                latitude={rank.latitude}
-                longitude={rank.longitude}
+                coordinate={{
+                  latitude: rank.latitude,
+                  longitude: rank.longitude,
+                }}
                 onPress={() => {
                   Alert.alert(
                     rank.name,
@@ -310,15 +324,17 @@ export default function ExploreScreen() {
                 <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
                   <ThemedText style={styles.markerText}>🚕</ThemedText>
                 </View>
-              </ExpoMaps.Marker>
+              </Marker>
             ))}
 
             {/* Incident Markers */}
             {incidents.map((incident) => (
-              <ExpoMaps.Marker
+              <Marker
                 key={`incident-${incident.id}`}
-                latitude={incident.latitude}
-                longitude={incident.longitude}
+                coordinate={{
+                  latitude: incident.latitude,
+                  longitude: incident.longitude,
+                }}
                 onPress={() => {
                   Alert.alert(
                     'Reported Incident',
@@ -328,141 +344,142 @@ export default function ExploreScreen() {
                 <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}>
                   <ThemedText style={styles.markerText}>⚠️</ThemedText>
                 </View>
-              </ExpoMaps.Marker>
+              </Marker>
             ))}
 
             {/* User Location Marker */}
             {userLocation && (
-              <ExpoMaps.Marker
-                latitude={userLocation.latitude}
-                longitude={userLocation.longitude}>
-                <View style={[styles.markerBox, { backgroundColor: '#2563EB' }]}>
+              <Marker
+                coordinate={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                }}>
+                <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}>
                   <ThemedText style={styles.markerText}>📍</ThemedText>
                 </View>
-              </ExpoMaps.Marker>
+              </Marker>
             )}
-          </ExpoMaps>
+          </MapView>
+
+          {/* Floating Action Buttons on Map */}
+          <View style={styles.fabContainer}>
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
+              onPress={() => setShowMap(false)}>
+              <ThemedText style={styles.fabText}>📋</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: '#ef4444' }]}
+              onPress={() => setShowIncidentForm(true)}>
+              <ThemedText style={styles.fabText}>+</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Floating Action Buttons Container */}
-      <View style={styles.fabContainer}>
-        {/* Toggle Map/List View */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
-          onPress={() => setShowMap(!showMap)}>
-          <ThemedText style={styles.fabText}>{showMap ? '📋' : '🗺️'}</ThemedText>
-        </TouchableOpacity>
-
-        {/* Report Incident */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: '#ef4444' }]}
-          onPress={() => setShowIncidentForm(!showIncidentForm)}>
-          <ThemedText style={styles.fabText}>
-            {showIncidentForm ? '✕' : '+'}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-
-      {/* List View Overlay */}
+      {/* List View */}
       {!showMap && (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}>
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View
-              style={[
-                styles.searchBar,
-                {
-                  backgroundColor: secondaryBgColor,
-                  borderColor: borderColor,
-                },
-              ]}>
-              <ThemedText style={styles.searchIcon}>🔍</ThemedText>
-              <TextInput
-                style={[styles.searchInput, { color: textColor }]}
-                placeholder="Search taxi ranks..."
-                placeholderTextColor={isDark ? '#888' : '#ccc'}
-                value={searchQuery}
-                onChangeText={(text) => {
-                  setSearchQuery(text);
-                  if (text.trim()) {
-                    searchTaxiRanks(text);
-                  } else {
-                    setShowSearchResults(false);
-                    fetchTaxiRanks();
-                  }
-                }}
-              />
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <View
+                style={[
+                  styles.searchBar,
+                  {
+                    backgroundColor: secondaryBgColor,
+                    borderColor: borderColor,
+                  },
+                ]}>
+                <ThemedText style={styles.searchIcon}>🔍</ThemedText>
+                <TextInput
+                  style={[styles.searchInput, { color: textColor }]}
+                  placeholder="Search taxi ranks..."
+                  placeholderTextColor={isDark ? '#888' : '#ccc'}
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    // Call search function on change
+                    searchTaxiRanks(text); 
+                  }}
+                />
+              </View>
             </View>
+
+            {/* Search Results */}
+            {showSearchResults && filteredSuggestions.length > 0 && (
+              <View style={styles.suggestionsContainer}>
+                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                  Search Results
+                </ThemedText>
+                {/* Use filteredSuggestions (subset of results for quick access) */}
+                {filteredSuggestions.map((rank) => (
+                  <RankCard key={rank.id} rank={rank} />
+                ))}
+              </View>
+            )}
+
+            {/* Taxi Ranks Section */}
+            {!showSearchResults && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                    🚕 Nearby Taxi Ranks
+                  </ThemedText>
+                </View>
+                {/* Use displayedTaxiRanks, which is currently allTaxiRanks */}
+                {displayedTaxiRanks.length > 0 ? (
+                  displayedTaxiRanks.slice(0, 10).map((rank) => <RankCard key={rank.id} rank={rank} />)
+                ) : (
+                  <ThemedText style={[styles.emptyText, { color: textColor }]}>
+                    No taxi ranks found
+                  </ThemedText>
+                )}
+              </>
+            )}
+
+            {/* Incidents Section */}
+            {!showSearchResults && incidents.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
+                    ⚠️ Reported Incidents ({incidents.length})
+                  </ThemedText>
+                </View>
+                {incidents.slice(0, 5).map((incident) => (
+                  <IncidentCard key={incident.id} incident={incident} />
+                ))}
+              </>
+            )}
+
+            <View style={styles.spacer} />
+          </ScrollView>
+
+          {/* Floating Action Buttons on List View */}
+          <View style={styles.fabContainer}>
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
+              onPress={() => setShowMap(true)}>
+              <ThemedText style={styles.fabText}>🗺️</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: '#ef4444' }]}
+              onPress={() => setShowIncidentForm(true)}>
+              <ThemedText style={styles.fabText}>+</ThemedText>
+            </TouchableOpacity>
           </View>
-
-          {/* Search Results */}
-          {showSearchResults && filteredSuggestions.length > 0 && (
-            <View style={styles.suggestionsContainer}>
-              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                Search Results
-              </ThemedText>
-              {filteredSuggestions.map((rank) => (
-                <RankCard key={rank.id} rank={rank} />
-              ))}
-            </View>
-          )}
-
-          {/* Taxi Ranks Section */}
-          {!showSearchResults && (
-            <>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                  🚕 Taxi Ranks
-                </ThemedText>
-              </View>
-              {taxiRanks.length > 0 ? (
-                taxiRanks.slice(0, 10).map((rank) => <RankCard key={rank.id} rank={rank} />)
-              ) : (
-                <ThemedText style={[styles.emptyText, { color: textColor }]}>
-                  No taxi ranks found
-                </ThemedText>
-              )}
-            </>
-          )}
-
-          {/* Incidents Section */}
-          {!showSearchResults && incidents.length > 0 && (
-            <>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                  ⚠️ Reported Incidents ({incidents.length})
-                </ThemedText>
-              </View>
-              {incidents.slice(0, 5).map((incident) => (
-                <IncidentCard key={incident.id} incident={incident} />
-              ))}
-            </>
-          )}
-
-          <View style={styles.spacer} />
-        </ScrollView>
-
-        {/* Floating Action Button */}
-        <View style={styles.fabContainer}>
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: '#ef4444' }]}
-            onPress={() => setShowIncidentForm(!showIncidentForm)}>
-            <ThemedText style={styles.fabText}>
-              {showIncidentForm ? '✕' : '+'}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      )}
 
       {/* Incident Form Modal */}
       <Modal
         visible={showIncidentForm}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowIncidentForm(false)}>
         <View style={styles.modalOverlay}>
           <View
@@ -475,7 +492,7 @@ export default function ExploreScreen() {
                 Report an Incident
               </ThemedText>
               <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
-                <ThemedText style={styles.closeButton}>✕</ThemedText>
+                <ThemedText style={[styles.closeButton, { color: textColor }]}>✕</ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -497,7 +514,7 @@ export default function ExploreScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: borderColor }]}
+              style={[styles.submitButton, { backgroundColor: borderColor, opacity: submittingIncident ? 0.6 : 1 }]}
               onPress={submitIncident}
               disabled={submittingIncident}>
               {submittingIncident ? (
@@ -518,6 +535,31 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  mapContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  markerBox: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  markerText: {
+    fontSize: 24,
   },
   scrollView: {
     flex: 1,
@@ -610,12 +652,13 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   spacer: {
-    height: 80,
+    height: 100,
   },
   fabContainer: {
     position: 'absolute',
     bottom: 20,
     right: 20,
+    zIndex: 1000,
   },
   fab: {
     width: 60,
@@ -630,7 +673,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   fabText: {
-    fontSize: 32,
+    fontSize: 28,
     color: '#fff',
   },
   modalOverlay: {
@@ -655,7 +698,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   closeButton: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
   },
   incidentInput: {
@@ -665,6 +708,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     textAlignVertical: 'top',
+    minHeight: 100,
   },
   submitButton: {
     borderRadius: 12,
@@ -676,11 +720,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  map: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
   },
   callout: {
     padding: 12,
