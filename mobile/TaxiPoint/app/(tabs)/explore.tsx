@@ -2,19 +2,19 @@ import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  PermissionsAndroid,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    PermissionsAndroid,
+    Platform,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,14 +47,16 @@ interface Incident {
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const textColor = isDark ? '#fff' : '#000';
-  const bgColor = isDark ? '#000' : '#fff';
+  // Use theme-aware colors (hooks must not be called inside render or map/filter)
+  const textColor = useThemeColor({}, 'text');
+  const bgColor = useThemeColor({}, 'background');
+  const iconColor = useThemeColor({}, 'icon');
+  const placeholderColor = useThemeColor({ light: '#888', dark: '#ccc' }, 'icon');
   const secondaryBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
   const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
 
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
-  const [showMap, setShowMap] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   
   // 🔑 REFACTORED STATE: Master list (all ranks) and the currently displayed list
@@ -93,43 +95,7 @@ export default function ExploreScreen() {
     return true; // iOS permissions handled via app.json
   };
 
-  // Get user's current location (No change)
-  const getUserLocation = async () => {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) {
-      console.log('Location permission denied');
-      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-      return;
-    }
-
-    try {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ latitude, longitude });
-          if (mapRef.current && mapReady) {
-            mapRef.current.animateToRegion(
-              {
-                latitude,
-                longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              },
-              1000
-            );
-          }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
-      );
-    } catch (err) {
-      console.error('Geolocation error:', err);
-      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-    }
-  };
+  // ...existing code...
 
   // 🔑 REFACTORED: Sets both the master list and the displayed list initially
   const fetchTaxiRanks = async () => {
@@ -215,6 +181,42 @@ export default function ExploreScreen() {
   };
 
   useEffect(() => {
+    // Get user's current location (moved inside useEffect)
+    const getUserLocation = async () => {
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        console.log('Location permission denied');
+        setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+        return;
+      }
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission not granted');
+          setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+          return;
+        }
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const { latitude, longitude } = location.coords;
+        setUserLocation({ latitude, longitude });
+        if (mapRef.current && mapReady) {
+          mapRef.current.animateToRegion(
+            {
+              latitude,
+              longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            },
+            1000
+          );
+        }
+      } catch (err) {
+        console.error('Expo Location error:', err);
+        setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+      }
+    };
+
     const initializeData = async () => {
       setLoading(true);
       await getUserLocation();
@@ -233,10 +235,10 @@ export default function ExploreScreen() {
         setIncidents((prev) => [...prev, incident]);
       };
       return () => ws.close();
-    } catch (err) {
-      console.error('WebSocket connection failed:', err);
+    } catch {
+      // WebSocket connection failed
     }
-  }, []);
+  }, [mapReady]);
 
   const RankCard = ({ rank }: { rank: TaxiRank }) => (
     <TouchableOpacity
@@ -245,22 +247,18 @@ export default function ExploreScreen() {
         Alert.alert(rank.name, `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}`);
       }}>
       <View style={styles.rankHeader}>
-        <ThemedText style={[styles.rankName, { color: textColor }]}>{rank.name}</ThemedText>
-        <ThemedText style={styles.rankDistrict}>{rank.district}</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.rankName}>{rank.name}</ThemedText>
+        <ThemedText style={[styles.rankDistrict, { color: iconColor }]}>{rank.district}</ThemedText>
       </View>
 
       {rank.description && (
-        <ThemedText style={[styles.rankDescription, { color: textColor }]}>
-          {rank.description}
-        </ThemedText>
+        <ThemedText style={styles.rankDescription}>{rank.description}</ThemedText>
       )}
 
-      <ThemedText style={[styles.rankAddress, { color: textColor }]}>
-        📍 {rank.address}
-      </ThemedText>
+      <ThemedText style={styles.rankAddress}>📍 {rank.address}</ThemedText>
 
       {rank.distanceMeters && (
-        <ThemedText style={[styles.rankDistance, { color: borderColor }]}>
+        <ThemedText style={[styles.rankDistance, { color: borderColor }]}> 
           {(rank.distanceMeters / 1000).toFixed(1)} km away
         </ThemedText>
       )}
@@ -268,22 +266,16 @@ export default function ExploreScreen() {
   );
 
   const IncidentCard = ({ incident }: { incident: Incident }) => (
-    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}>
-      <ThemedText style={[styles.incidentDescription, { color: textColor }]}>
-        {incident.description}
-      </ThemedText>
-      <ThemedText style={styles.incidentMeta}>
-        📍 {incident.formattedAddress}
-      </ThemedText>
-      <ThemedText style={styles.incidentTime}>
-        {new Date(incident.createdAt).toLocaleTimeString()}
-      </ThemedText>
+    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}> 
+      <ThemedText style={styles.incidentDescription}>{incident.description}</ThemedText>
+      <ThemedText style={[styles.incidentMeta, { color: iconColor }]}>📍 {incident.formattedAddress}</ThemedText>
+      <ThemedText style={styles.incidentTime}>{new Date(incident.createdAt).toLocaleTimeString()}</ThemedText>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}> 
         <ActivityIndicator size="large" color={borderColor} />
       </View>
     );
@@ -291,189 +283,127 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
-      {/* Map View */}
-      {showMap && userLocation && (
-        <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            provider={PROVIDER_DEFAULT}
-            style={styles.map}
-            initialRegion={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
+      {/* Floating Search Bar */}
+      <View style={styles.floatingSearchBarContainer}>
+        <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}> 
+          <ThemedText style={styles.searchIcon}>🔍</ThemedText>
+          <TextInput
+            style={[styles.searchInput, { color: textColor }]}
+            placeholder="Search taxi ranks..."
+            placeholderTextColor={placeholderColor}
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              searchTaxiRanks(text);
             }}
-            onMapReady={() => setMapReady(true)}
-            showsUserLocation={true}
-            showsMyLocationButton={false}>
-            {/* Taxi Rank Markers: NOW using displayedTaxiRanks */}
-            {displayedTaxiRanks.map((rank) => (
-              <Marker
-                key={`taxi-${rank.id}`}
-                coordinate={{
-                  latitude: rank.latitude,
-                  longitude: rank.longitude,
-                }}
-                onPress={() => {
-                  Alert.alert(
-                    rank.name,
-                    `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}\n\nDistrict: ${rank.district}`
-                  );
-                }}>
-                <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
-                  <ThemedText style={styles.markerText}>🚕</ThemedText>
-                </View>
-              </Marker>
+          />
+        </View>
+        {/* Suggestions Dropdown */}
+        {showSearchResults && filteredSuggestions.length > 0 && (
+          <View style={styles.suggestionsDropdown}>
+            {filteredSuggestions.map((rank) => (
+              <TouchableOpacity key={rank.id} onPress={() => setSearchQuery(rank.name)} style={styles.suggestionItem}>
+                <ThemedText>{rank.name}</ThemedText>
+                <ThemedText style={{ fontSize: 12 }}>{rank.address}</ThemedText>
+              </TouchableOpacity>
             ))}
+          </View>
+        )}
+      </View>
 
-            {/* Incident Markers */}
-            {incidents.map((incident) => (
-              <Marker
-                key={`incident-${incident.id}`}
-                coordinate={{
-                  latitude: incident.latitude,
-                  longitude: incident.longitude,
-                }}
-                onPress={() => {
-                  Alert.alert(
-                    'Reported Incident',
-                    `${incident.description}\n\nLocation: ${incident.formattedAddress}`
-                  );
-                }}>
-                <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}>
-                  <ThemedText style={styles.markerText}>⚠️</ThemedText>
-                </View>
-              </Marker>
-            ))}
+      {/* Full Screen Map */}
+      <View style={styles.mapContainer}>
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_DEFAULT}
+          style={styles.map}
+          initialRegion={{
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          onMapReady={() => setMapReady(true)}
+          showsUserLocation={true}
+          showsMyLocationButton={false}>
+          {/* Taxi Rank Markers */}
+          {displayedTaxiRanks.map((rank) => (
+            <Marker
+              key={`taxi-${rank.id}`}
+              coordinate={{
+                latitude: rank.latitude,
+                longitude: rank.longitude,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  rank.name,
+                  `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}\n\nDistrict: ${rank.district}`
+                );
+              }}>
+              <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}> 
+                <ThemedText style={styles.markerText}>🚕</ThemedText>
+              </View>
+            </Marker>
+          ))}
 
-            {/* User Location Marker */}
-            {userLocation && (
-              <Marker
-                coordinate={{
+          {/* Incident Markers */}
+          {incidents.map((incident) => (
+            <Marker
+              key={`incident-${incident.id}`}
+              coordinate={{
+                latitude: incident.latitude,
+                longitude: incident.longitude,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  'Reported Incident',
+                  `${incident.description}\n\nLocation: ${incident.formattedAddress}`
+                );
+              }}>
+              <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}> 
+                <ThemedText style={styles.markerText}>⚠️</ThemedText>
+              </View>
+            </Marker>
+          ))}
+
+          {/* User Location Marker */}
+          {userLocation && (
+            <Marker
+              coordinate={{
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              }}>
+              <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}> 
+                <ThemedText style={styles.markerText}>📍</ThemedText>
+              </View>
+            </Marker>
+          )}
+        </MapView>
+
+        {/* Floating Action Buttons */}
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
+            onPress={() => {
+              if (userLocation && mapRef.current) {
+                mapRef.current.animateToRegion({
                   latitude: userLocation.latitude,
                   longitude: userLocation.longitude,
-                }}>
-                <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}>
-                  <ThemedText style={styles.markerText}>📍</ThemedText>
-                </View>
-              </Marker>
-            )}
-          </MapView>
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }, 1000);
+              }
+            }}>
+            <ThemedText style={styles.fabText}>📍</ThemedText>
+          </TouchableOpacity>
 
-          {/* Floating Action Buttons on Map */}
-          <View style={styles.fabContainer}>
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
-              onPress={() => setShowMap(false)}>
-              <ThemedText style={styles.fabText}>📋</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: '#ef4444' }]}
-              onPress={() => setShowIncidentForm(true)}>
-              <ThemedText style={styles.fabText}>+</ThemedText>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: '#ef4444' }]}
+            onPress={() => setShowIncidentForm(true)}>
+            <ThemedText style={styles.fabText}>+</ThemedText>
+          </TouchableOpacity>
         </View>
-      )}
-
-      {/* List View */}
-      {!showMap && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}>
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <View
-                style={[
-                  styles.searchBar,
-                  {
-                    backgroundColor: secondaryBgColor,
-                    borderColor: borderColor,
-                  },
-                ]}>
-                <ThemedText style={styles.searchIcon}>🔍</ThemedText>
-                <TextInput
-                  style={[styles.searchInput, { color: textColor }]}
-                  placeholder="Search taxi ranks..."
-                  placeholderTextColor={isDark ? '#888' : '#ccc'}
-                  value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    // Call search function on change
-                    searchTaxiRanks(text); 
-                  }}
-                />
-              </View>
-            </View>
-
-            {/* Search Results */}
-            {showSearchResults && filteredSuggestions.length > 0 && (
-              <View style={styles.suggestionsContainer}>
-                <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                  Search Results
-                </ThemedText>
-                {/* Use filteredSuggestions (subset of results for quick access) */}
-                {filteredSuggestions.map((rank) => (
-                  <RankCard key={rank.id} rank={rank} />
-                ))}
-              </View>
-            )}
-
-            {/* Taxi Ranks Section */}
-            {!showSearchResults && (
-              <>
-                <View style={styles.sectionHeader}>
-                  <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                    🚕 Nearby Taxi Ranks
-                  </ThemedText>
-                </View>
-                {/* Use displayedTaxiRanks, which is currently allTaxiRanks */}
-                {displayedTaxiRanks.length > 0 ? (
-                  displayedTaxiRanks.slice(0, 10).map((rank) => <RankCard key={rank.id} rank={rank} />)
-                ) : (
-                  <ThemedText style={[styles.emptyText, { color: textColor }]}>
-                    No taxi ranks found
-                  </ThemedText>
-                )}
-              </>
-            )}
-
-            {/* Incidents Section */}
-            {!showSearchResults && incidents.length > 0 && (
-              <>
-                <View style={styles.sectionHeader}>
-                  <ThemedText style={[styles.sectionTitle, { color: textColor }]}>
-                    ⚠️ Reported Incidents ({incidents.length})
-                  </ThemedText>
-                </View>
-                {incidents.slice(0, 5).map((incident) => (
-                  <IncidentCard key={incident.id} incident={incident} />
-                ))}
-              </>
-            )}
-
-            <View style={styles.spacer} />
-          </ScrollView>
-
-          {/* Floating Action Buttons on List View */}
-          <View style={styles.fabContainer}>
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
-              onPress={() => setShowMap(true)}>
-              <ThemedText style={styles.fabText}>🗺️</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: '#ef4444' }]}
-              onPress={() => setShowIncidentForm(true)}>
-              <ThemedText style={styles.fabText}>+</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      )}
+      </View>
 
       {/* Incident Form Modal */}
       <Modal
@@ -488,7 +418,7 @@ export default function ExploreScreen() {
               { backgroundColor: bgColor },
             ]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textColor }]}>
+              <ThemedText style={[styles.modalTitle, { color: textColor }]}> 
                 Report an Incident
               </ThemedText>
               <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
@@ -506,7 +436,7 @@ export default function ExploreScreen() {
                 },
               ]}
               placeholder="Describe the incident..."
-              placeholderTextColor={isDark ? '#888' : '#ccc'}
+              placeholderTextColor={placeholderColor}
               multiline={true}
               numberOfLines={4}
               value={incidentDescription}
@@ -520,7 +450,7 @@ export default function ExploreScreen() {
               {submittingIncident ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.submitButtonText}>
+                <ThemedText style={styles.submitButtonText}> 
                   Submit Report
                 </ThemedText>
               )}
@@ -533,6 +463,36 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
+    floatingSearchBarContainer: {
+      position: 'absolute',
+      top: 24,
+      left: 16,
+      right: 16,
+      zIndex: 1001,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    suggestionsDropdown: {
+      backgroundColor: '#fff',
+      borderRadius: 12,
+      marginTop: 4,
+      padding: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    suggestionItem: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+    },
   container: {
     flex: 1,
   },
