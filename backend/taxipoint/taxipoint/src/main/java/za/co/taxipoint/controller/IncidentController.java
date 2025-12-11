@@ -14,7 +14,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@CrossOrigin(origins = "https://taxi-point.vercel.app")
+@CrossOrigin(origins = {
+    "https://taxi-point.vercel.app",
+    "http://localhost:*",
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "http://10.0.2.2:*"
+})
 @RequestMapping("/api/incidents")
 @RequiredArgsConstructor
 public class IncidentController {

@@ -9,7 +9,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/stats")  // ✅ CHANGED: Avoids conflict
-@CrossOrigin(origins = "https://taxi-point.vercel.app")
+@CrossOrigin(origins = {
+    "https://taxi-point.vercel.app",
+    "http://localhost:*",
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "http://10.0.2.2:*"
+})
 public class StatsController {
     
     @Autowired
