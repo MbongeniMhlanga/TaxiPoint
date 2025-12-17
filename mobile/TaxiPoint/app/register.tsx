@@ -191,7 +191,7 @@ export default function RegisterScreen() {
                   secureTextEntry={!showPassword}
                   editable={!loading}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
                   disabled={loading}>
@@ -216,12 +216,14 @@ export default function RegisterScreen() {
                 )}
               </TouchableOpacity>
 
-              <ThemedText style={[styles.loginText, { color: secondaryTextColor }]}>
-                Already have an account?{' '}
+              <View style={styles.footerContainer}>
+                <ThemedText style={[styles.footerText, { color: secondaryTextColor }]}>
+                  Already have an account?
+                </ThemedText>
                 <TouchableOpacity onPress={() => router.back()} disabled={loading}>
                   <ThemedText style={[styles.loginLink, { color: borderColor }]}>Login</ThemedText>
                 </TouchableOpacity>
-              </ThemedText>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -253,13 +255,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 10,
     fontSize: 28,
     fontWeight: 'bold',
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 30,
     fontSize: 14,
   },
@@ -317,12 +319,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  loginText: {
-    textAlign: 'center',
-    fontSize: 14,
+  footerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 16,
+  },
+  footerText: {
+    fontSize: 14,
   },
   loginLink: {
     fontWeight: 'bold',
+    marginLeft: 5,
   },
 });

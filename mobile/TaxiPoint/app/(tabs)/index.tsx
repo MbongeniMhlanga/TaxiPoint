@@ -21,7 +21,7 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    
+
     // Simple validation
     if (!email.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email');
@@ -57,7 +57,7 @@ export default function LoginScreen() {
 
       const data = await response.json();
       console.log('Login successful with role:', data.role);
-      
+
       // Navigate to explore screen - use relative navigation
       router.navigate('../(tabs)/explore');
     } catch (error: any) {
@@ -77,7 +77,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -128,7 +128,7 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   editable={!loading}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
                   disabled={loading}>
@@ -152,12 +152,14 @@ export default function LoginScreen() {
                 )}
               </TouchableOpacity>
 
-              <ThemedText style={[styles.signupText, { color: secondaryTextColor }]}>
-                Don&apos;t have an account?{' '}
+              <View style={styles.footerContainer}>
+                <ThemedText style={[styles.footerText, { color: secondaryTextColor }]}>
+                  Don&apos;t have an account?
+                </ThemedText>
                 <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
                   <ThemedText style={[styles.signupLink, { color: borderColor }]}>Sign up</ThemedText>
                 </TouchableOpacity>
-              </ThemedText>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -181,13 +183,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: {
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 10,
     fontSize: 28,
     fontWeight: 'bold',
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 30,
     fontSize: 14,
   },
@@ -248,12 +250,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  signupText: {
-    textAlign: 'center',
-    fontSize: 14,
+  footerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 16,
+  },
+  footerText: {
+    fontSize: 14,
   },
   signupLink: {
     fontWeight: 'bold',
+    marginLeft: 5,
   },
 });

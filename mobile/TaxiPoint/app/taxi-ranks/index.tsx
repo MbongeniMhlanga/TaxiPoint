@@ -1,8 +1,8 @@
 import { API_BASE_URL } from '@/config';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import { Clock, MapPin, Navigation, Phone, Search, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -95,20 +95,20 @@ export default function TaxiRanksScreen() {
                     <Text style={styles.cardDistrict}>{item.district}</Text>
                 </View>
                 <View style={styles.mapIconBg}>
-                    <MapPin size={20} color="#2563EB" />
+                    <Feather name="map-pin" size={20} color="#2563EB" />
                 </View>
             </View>
 
             <View style={styles.cardBody}>
                 <View style={styles.infoRow}>
-                    <MapPin size={16} color="#9CA3AF" />
+                    <Feather name="map-pin" size={16} color="#9CA3AF" />
                     <Text style={[styles.infoText, { color: subTextColor }]} numberOfLines={2}>
                         {item.address}
                     </Text>
                 </View>
                 {item.phone ? (
                     <View style={styles.infoRow}>
-                        <Phone size={16} color="#9CA3AF" />
+                        <Feather name="phone" size={16} color="#9CA3AF" />
                         <Text style={[styles.infoText, { color: subTextColor }]}>{item.phone}</Text>
                     </View>
                 ) : null}
@@ -131,7 +131,7 @@ export default function TaxiRanksScreen() {
                     {/* Header */}
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            <X size={24} color={textColor} />
+                            <Feather name="x" size={24} color={textColor} />
                         </TouchableOpacity>
                         <View>
                             <Text style={[styles.headerTitle, { color: textColor }]}>Taxi Ranks Directory</Text>
@@ -141,7 +141,7 @@ export default function TaxiRanksScreen() {
 
                     {/* Search Bar */}
                     <View style={[styles.searchContainer, { backgroundColor: cardBg, borderColor }]}>
-                        <Search size={20} color={subTextColor} style={{ marginRight: 10 }} />
+                        <Feather name="search" size={20} color={subTextColor} style={{ marginRight: 10 }} />
                         <TextInput
                             style={[styles.searchInput, { color: textColor }]}
                             placeholder="Search by name, district, or address..."
@@ -191,11 +191,11 @@ export default function TaxiRanksScreen() {
                                                 onPress={() => setSelectedRank(null)}
                                                 style={styles.closeModalButton}
                                             >
-                                                <X size={20} color="#FFFFFF" />
+                                                <Feather name="x" size={20} color="#FFFFFF" />
                                             </TouchableOpacity>
                                             <View style={styles.modalHeaderContent}>
                                                 <View style={styles.largeIconBg}>
-                                                    <MapPin size={28} color="#2563EB" />
+                                                    <Feather name="map-pin" size={28} color="#2563EB" />
                                                 </View>
                                                 <View style={{ flex: 1 }}>
                                                     <Text style={styles.modalTitleWhite}>{selectedRank.name}</Text>
@@ -215,7 +215,7 @@ export default function TaxiRanksScreen() {
                                             <View style={styles.section}>
                                                 <Text style={[styles.sectionHeader, { color: textColor }]}>Location</Text>
                                                 <View style={styles.infoRow}>
-                                                    <MapPin size={20} color={subTextColor} />
+                                                    <Feather name="map-pin" size={20} color={subTextColor} />
                                                     <Text style={[styles.sectionText, { color: subTextColor, flex: 1 }]}>{selectedRank.address}</Text>
                                                 </View>
                                             </View>
@@ -228,7 +228,7 @@ export default function TaxiRanksScreen() {
                                                         onPress={() => Linking.openURL(`tel:${selectedRank.phone}`)}
                                                     >
                                                         <View style={styles.phoneIconBg}>
-                                                            <Phone size={20} color="#FFFFFF" />
+                                                            <Feather name="phone" size={20} color="#FFFFFF" />
                                                         </View>
                                                         <View>
                                                             <Text style={{ color: subTextColor, fontSize: 12 }}>Call Now</Text>
@@ -241,7 +241,7 @@ export default function TaxiRanksScreen() {
                                             {selectedRank.hours && Object.keys(selectedRank.hours).length > 0 ? (
                                                 <View style={styles.section}>
                                                     <View style={styles.rowCenter}>
-                                                        <Clock size={20} color={textColor} style={{ marginRight: 8 }} />
+                                                        <Feather name="clock" size={20} color={textColor} style={{ marginRight: 8 }} />
                                                         <Text style={[styles.sectionHeader, { color: textColor, marginBottom: 0 }]}>Operating Hours</Text>
                                                     </View>
                                                     <View style={[styles.hoursContainer, { backgroundColor: isDark ? '#111827' : '#F9FAFB' }]}>
@@ -280,7 +280,7 @@ export default function TaxiRanksScreen() {
                                                     end={{ x: 1, y: 0 }}
                                                     style={styles.navigateButtonGradient}
                                                 >
-                                                    <Navigation size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                                    <Feather name="navigation" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                                                     <Text style={styles.navigateButtonText}>Get Directions</Text>
                                                 </LinearGradient>
                                             </TouchableOpacity>

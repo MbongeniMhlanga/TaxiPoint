@@ -3,18 +3,21 @@ import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    PermissionsAndroid,
-    Platform,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Modal,
+  PermissionsAndroid,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,11 +61,12 @@ export default function ExploreScreen() {
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
   const [mapReady, setMapReady] = useState(false);
-  
+
   // 🔑 REFACTORED STATE: Master list (all ranks) and the currently displayed list
-  const [allTaxiRanks, setAllTaxiRanks] = useState<TaxiRank[]>([]); 
-  const [displayedTaxiRanks, setDisplayedTaxiRanks] = useState<TaxiRank[]>([]); 
-  
+  const [allTaxiRanks, setAllTaxiRanks] = useState<TaxiRank[]>([]);
+  const [displayedTaxiRanks, setDisplayedTaxiRanks] = useState<TaxiRank[]>([]);
+  const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -126,7 +130,7 @@ export default function ExploreScreen() {
       );
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
-      
+
       setDisplayedTaxiRanks(data); // Update displayed list with search results
       setFilteredSuggestions(data.slice(0, 5));
       setShowSearchResults(true);
@@ -221,7 +225,7 @@ export default function ExploreScreen() {
       setLoading(true);
       await getUserLocation();
       // Only fetch the initial, full list here
-      await Promise.all([fetchTaxiRanks(), fetchIncidents()]); 
+      await Promise.all([fetchTaxiRanks(), fetchIncidents()]);
       setLoading(false);
     };
 
@@ -258,7 +262,7 @@ export default function ExploreScreen() {
       <ThemedText style={styles.rankAddress}>📍 {rank.address}</ThemedText>
 
       {rank.distanceMeters && (
-        <ThemedText style={[styles.rankDistance, { color: borderColor }]}> 
+        <ThemedText style={[styles.rankDistance, { color: borderColor }]}>
           {(rank.distanceMeters / 1000).toFixed(1)} km away
         </ThemedText>
       )}
@@ -266,7 +270,7 @@ export default function ExploreScreen() {
   );
 
   const IncidentCard = ({ incident }: { incident: Incident }) => (
-    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}> 
+    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}>
       <ThemedText style={styles.incidentDescription}>{incident.description}</ThemedText>
       <ThemedText style={[styles.incidentMeta, { color: iconColor }]}>📍 {incident.formattedAddress}</ThemedText>
       <ThemedText style={styles.incidentTime}>{new Date(incident.createdAt).toLocaleTimeString()}</ThemedText>
@@ -275,7 +279,7 @@ export default function ExploreScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}> 
+      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={borderColor} />
       </View>
     );
@@ -285,8 +289,8 @@ export default function ExploreScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
       {/* Floating Search Bar */}
       <View style={styles.floatingSearchBarContainer}>
-        <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}> 
-          <ThemedText style={styles.searchIcon}>🔍</ThemedText>
+        <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}>
+          <Feather name="search" size={20} color={iconColor} style={{ marginRight: 8 }} />
           <TextInput
             style={[styles.searchInput, { color: textColor }]}
             placeholder="Search taxi ranks..."
@@ -302,7 +306,24 @@ export default function ExploreScreen() {
         {showSearchResults && filteredSuggestions.length > 0 && (
           <View style={styles.suggestionsDropdown}>
             {filteredSuggestions.map((rank) => (
-              <TouchableOpacity key={rank.id} onPress={() => setSearchQuery(rank.name)} style={styles.suggestionItem}>
+              <TouchableOpacity
+                key={rank.id}
+                onPress={() => {
+                  setSearchQuery(rank.name);
+                  setDisplayedTaxiRanks([rank]);
+                  setSelectedRank(rank);
+                  setShowSearchResults(false);
+                  if (mapRef.current) {
+                    mapRef.current.animateToRegion({
+                      latitude: rank.latitude,
+                      longitude: rank.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }, 1000);
+                  }
+                }}
+                style={styles.suggestionItem}
+              >
                 <ThemedText>{rank.name}</ThemedText>
                 <ThemedText style={{ fontSize: 12 }}>{rank.address}</ThemedText>
               </TouchableOpacity>
@@ -334,14 +355,9 @@ export default function ExploreScreen() {
                 latitude: rank.latitude,
                 longitude: rank.longitude,
               }}
-              onPress={() => {
-                Alert.alert(
-                  rank.name,
-                  `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}\n\nDistrict: ${rank.district}`
-                );
-              }}>
-              <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}> 
-                <ThemedText style={styles.markerText}>🚕</ThemedText>
+              onPress={() => setSelectedRank(rank)}>
+              <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
+                <Feather name="map-pin" size={24} color="#FFFFFF" />
               </View>
             </Marker>
           ))}
@@ -360,8 +376,8 @@ export default function ExploreScreen() {
                   `${incident.description}\n\nLocation: ${incident.formattedAddress}`
                 );
               }}>
-              <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}> 
-                <ThemedText style={styles.markerText}>⚠️</ThemedText>
+              <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}>
+                <Feather name="alert-triangle" size={24} color="#FFFFFF" />
               </View>
             </Marker>
           ))}
@@ -373,8 +389,8 @@ export default function ExploreScreen() {
                 latitude: userLocation.latitude,
                 longitude: userLocation.longitude,
               }}>
-              <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}> 
-                <ThemedText style={styles.markerText}>📍</ThemedText>
+              <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}>
+                <Feather name="user" size={24} color="#FFFFFF" />
               </View>
             </Marker>
           )}
@@ -394,13 +410,13 @@ export default function ExploreScreen() {
                 }, 1000);
               }
             }}>
-            <ThemedText style={styles.fabText}>📍</ThemedText>
+            <Feather name="crosshair" size={24} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: '#ef4444' }]}
             onPress={() => setShowIncidentForm(true)}>
-            <ThemedText style={styles.fabText}>+</ThemedText>
+            <Feather name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -418,11 +434,11 @@ export default function ExploreScreen() {
               { backgroundColor: bgColor },
             ]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textColor }]}> 
+              <ThemedText style={[styles.modalTitle, { color: textColor }]}>
                 Report an Incident
               </ThemedText>
               <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
-                <ThemedText style={[styles.closeButton, { color: textColor }]}>✕</ThemedText>
+                <Feather name="x" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
 
@@ -450,7 +466,7 @@ export default function ExploreScreen() {
               {submittingIncident ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.submitButtonText}> 
+                <ThemedText style={styles.submitButtonText}>
                   Submit Report
                 </ThemedText>
               )}
@@ -458,41 +474,137 @@ export default function ExploreScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+      {/* Detail Modal */}
+      <Modal
+        visible={!!selectedRank}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedRank(null)}
+      >
+        <View style={styles.rankModalOverlay}>
+          <View style={[styles.rankModalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
+            {selectedRank && (
+              <>
+                <LinearGradient
+                  colors={['#2563EB', '#9333EA']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.rankModalHeader}
+                >
+                  <TouchableOpacity
+                    onPress={() => setSelectedRank(null)}
+                    style={styles.closeRankModalButton}
+                  >
+                    <Feather name="x" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <View style={styles.rankModalHeaderContent}>
+                    <View style={styles.largeIconBg}>
+                      <Feather name="map-pin" size={28} color="#2563EB" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.rankModalTitleWhite}>{selectedRank.name}</ThemedText>
+                      <ThemedText style={styles.rankModalSubtitleWhite}>{selectedRank.district}</ThemedText>
+                    </View>
+                  </View>
+                </LinearGradient>
+
+                <View style={styles.rankModalBody}>
+                  {selectedRank.description ? (
+                    <View style={styles.section}>
+                      <ThemedText style={[styles.sectionHeader, { color: textColor }]}>About</ThemedText>
+                      <ThemedText style={[styles.sectionText, { color: placeholderColor }]}>{selectedRank.description}</ThemedText>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.section}>
+                    <ThemedText style={[styles.sectionHeader, { color: textColor }]}>Location</ThemedText>
+                    <View style={styles.infoRow}>
+                      <Feather name="map-pin" size={20} color={placeholderColor} />
+                      <ThemedText style={[styles.sectionText, { color: placeholderColor, flex: 1 }]}>{selectedRank.address}</ThemedText>
+                    </View>
+                  </View>
+
+                  {selectedRank.phone ? (
+                    <View style={styles.section}>
+                      <ThemedText style={[styles.sectionHeader, { color: textColor }]}>Contact</ThemedText>
+                      <TouchableOpacity
+                        style={[styles.callButton, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#F0FDF4', borderColor: isDark ? '#14532D' : '#BBF7D0' }]}
+                        onPress={() => Linking.openURL(`tel:${selectedRank.phone}`)}
+                      >
+                        <View style={styles.phoneIconBg}>
+                          <Feather name="phone" size={20} color="#FFFFFF" />
+                        </View>
+                        <View>
+                          <ThemedText style={{ color: placeholderColor, fontSize: 12 }}>Call Now</ThemedText>
+                          <ThemedText style={{ color: textColor, fontSize: 16, fontWeight: '600' }}>{selectedRank.phone}</ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={styles.navigateButton}
+                    onPress={() => {
+                      const url = Platform.select({
+                        ios: `maps:0,0?q=${selectedRank.latitude},${selectedRank.longitude}(${selectedRank.name})`,
+                        android: `geo:0,0?q=${selectedRank.latitude},${selectedRank.longitude}(${selectedRank.name})`,
+                        default: `https://www.google.com/maps/search/?api=1&query=${selectedRank.latitude},${selectedRank.longitude}`
+                      });
+                      Linking.openURL(url!);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={['#2563EB', '#9333EA']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.navigateButtonGradient}
+                    >
+                      <Feather name="navigation" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <ThemedText style={styles.navigateButtonText}>Get Directions</ThemedText>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView >
   );
 }
 
 const styles = StyleSheet.create({
-    floatingSearchBarContainer: {
-      position: 'absolute',
-      top: 24,
-      left: 16,
-      right: 16,
-      zIndex: 1001,
-      borderRadius: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    suggestionsDropdown: {
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      marginTop: 4,
-      padding: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    suggestionItem: {
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: '#eee',
-    },
+  floatingSearchBarContainer: {
+    position: 'absolute',
+    top: 24,
+    left: 16,
+    right: 16,
+    zIndex: 1001,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  suggestionsDropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: 4,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  suggestionItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
   container: {
     flex: 1,
   },
@@ -687,13 +799,97 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     minWidth: 200,
   },
-  calloutTitle: {
-    fontSize: 14,
+  rankModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  rankModalContent: {
+    height: '65%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  rankModalHeader: {
+    padding: 24,
+    paddingTop: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  closeRankModalButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  rankModalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  largeIconBg: {
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 12
+  },
+  rankModalTitleWhite: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#FFFFFF'
   },
-  calloutSubtitle: {
-    fontSize: 12,
-    opacity: 0.7,
+  rankModalSubtitleWhite: {
+    fontSize: 16,
+    color: '#DBEAFE'
   },
+  rankModalBody: {
+    padding: 24,
+    gap: 20,
+    flex: 1,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionText: {
+    fontSize: 16,
+    lineHeight: 24
+  },
+  callButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12
+  },
+  phoneIconBg: {
+    backgroundColor: '#16A34A',
+    padding: 8,
+    borderRadius: 8
+  },
+  navigateButton: {
+    marginTop: 8,
+    borderRadius: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  navigateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12
+  },
+  navigateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600'
+  }
 });
