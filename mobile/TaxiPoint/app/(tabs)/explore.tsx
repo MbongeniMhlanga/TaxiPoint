@@ -311,9 +311,7 @@ export default function ExploreScreen() {
   };
 
   useEffect(() => {
-    if (!refreshing) {
-      initializeData();
-    }
+    initializeData();
 
     // Real-time WebSockets
     const connections: WebSocket[] = [];
@@ -359,7 +357,19 @@ export default function ExploreScreen() {
     return () => {
       connections.forEach(ws => ws.close());
     };
-  }, [mapReady]);
+  }, []);
+
+  // NEW: Animate map once ready and user location is available
+  useEffect(() => {
+    if (mapReady && userLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
+    }
+  }, [mapReady, userLocation]);
 
   // 🎙️ Voice Search Effect
   useEffect(() => {
@@ -491,7 +501,7 @@ export default function ExploreScreen() {
       <View style={styles.floatingSearchBarContainer}>
         <View style={styles.liveIndicatorContainer}>
           <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.liveText, { color: textColor }]}>Live</Text>
+          <ThemedText style={[styles.liveText, { color: textColor }]}>Live</ThemedText>
         </View>
         <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}>
           <Feather name="search" size={20} color={iconColor} style={{ marginRight: 12 }} />
@@ -549,7 +559,7 @@ export default function ExploreScreen() {
                 style={styles.suggestionItem}
               >
                 <ThemedText>{rank.name}</ThemedText>
-                <ThemedText style={{ fontSize: 12, color: subTextColor }}>{rank.address}</ThemedText>
+                <ThemedText style={{ fontSize: 12, color: placeholderColor }}>{rank.address}</ThemedText>
                 {rank.routesServed && rank.routesServed.length > 0 && (
                   <ThemedText style={{ fontSize: 11, color: primaryColor, marginTop: 2 }}>
                     🚌 {rank.routesServed.slice(0, 3).join(', ')}{rank.routesServed.length > 3 ? '...' : ''}
@@ -576,10 +586,11 @@ export default function ExploreScreen() {
           onMapReady={() => setMapReady(true)}
           showsUserLocation={true}
           showsMyLocationButton={false}>
-          {/* Taxi Rank Markers */}
-          {displayedTaxiRanks.map((rank) => (
+          {/* Taxi Rank Markers - Limited to 50 for performance */}
+          {displayedTaxiRanks.slice(0, 50).map((rank) => (
             <Marker
               key={`taxi-${rank.id}`}
+              tracksViewChanges={false}
               coordinate={{
                 latitude: rank.latitude,
                 longitude: rank.longitude,
