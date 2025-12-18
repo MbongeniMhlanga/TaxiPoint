@@ -586,44 +586,48 @@ export default function ExploreScreen() {
           onMapReady={() => setMapReady(true)}
           showsUserLocation={true}
           showsMyLocationButton={false}>
-          {/* Taxi Rank Markers - Limited to 50 for performance */}
-          {displayedTaxiRanks.slice(0, 50).map((rank) => (
-            <Marker
-              key={`taxi-${rank.id}`}
-              tracksViewChanges={false}
-              coordinate={{
-                latitude: rank.latitude,
-                longitude: rank.longitude,
-              }}
-              onPress={() => setSelectedRank(rank)}>
-              <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
-                <Feather name="map-pin" size={24} color="#FFFFFF" />
-              </View>
-            </Marker>
-          ))}
+          {displayedTaxiRanks
+            .filter(rank => typeof rank.latitude === 'number' && typeof rank.longitude === 'number' && !isNaN(rank.latitude))
+            .slice(0, 50)
+            .map((rank) => (
+              <Marker
+                key={`taxi-${rank.id}`}
+                tracksViewChanges={false}
+                coordinate={{
+                  latitude: rank.latitude,
+                  longitude: rank.longitude,
+                }}
+                onPress={() => setSelectedRank(rank)}>
+                <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
+                  <Feather name="map-pin" size={24} color="#FFFFFF" />
+                </View>
+              </Marker>
+            ))}
 
           {/* Incident Markers */}
-          {incidents.map((incident) => (
-            <Marker
-              key={`incident-${incident.id}`}
-              coordinate={{
-                latitude: incident.latitude,
-                longitude: incident.longitude,
-              }}
-              onPress={() => {
-                Alert.alert(
-                  'Reported Incident',
-                  `${incident.description}\n\nLocation: ${incident.formattedAddress}`
-                );
-              }}>
-              <View style={[styles.markerBox, { backgroundColor: colors.error }]}>
-                <Feather name="alert-triangle" size={24} color="#FFFFFF" />
-              </View>
-            </Marker>
-          ))}
+          {incidents
+            .filter(incident => typeof incident.latitude === 'number' && typeof incident.longitude === 'number' && !isNaN(incident.latitude))
+            .map((incident) => (
+              <Marker
+                key={`incident-${incident.id}`}
+                coordinate={{
+                  latitude: incident.latitude,
+                  longitude: incident.longitude,
+                }}
+                onPress={() => {
+                  Alert.alert(
+                    'Reported Incident',
+                    `${incident.description}\n\nLocation: ${incident.formattedAddress}`
+                  );
+                }}>
+                <View style={[styles.markerBox, { backgroundColor: colors.error }]}>
+                  <Feather name="alert-triangle" size={24} color="#FFFFFF" />
+                </View>
+              </Marker>
+            ))}
 
           {/* User Location Marker */}
-          {userLocation && (
+          {userLocation && typeof userLocation.latitude === 'number' && typeof userLocation.longitude === 'number' && (
             <Marker
               coordinate={{
                 latitude: userLocation.latitude,
@@ -895,6 +899,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapContainer: {
+    flex: 1,
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#f0f0f0', // Light grey background while map loads
   },
