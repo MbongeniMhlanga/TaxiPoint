@@ -285,11 +285,25 @@ export default function ExploreScreen() {
     };
 
     const initializeData = async () => {
-      setLoading(true);
-      await getUserLocation();
-      // Only fetch the initial, full list here
-      await Promise.all([fetchTaxiRanks(), fetchIncidents()]);
-      setLoading(false);
+      // 5-second safety timeout for loading state
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 5000);
+
+      try {
+        setLoading(true);
+        await getUserLocation();
+        // Only fetch the initial, full list here
+        await Promise.all([
+          fetchTaxiRanks().catch(e => console.error('Ranks fetch error:', e)),
+          fetchIncidents().catch(e => console.error('Incidents fetch error:', e))
+        ]);
+      } catch (error) {
+        console.error('Data initialization error:', error);
+      } finally {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      }
     };
 
     initializeData();
@@ -508,10 +522,10 @@ export default function ExploreScreen() {
         <MapView
           ref={mapRef}
           provider={PROVIDER_DEFAULT}
-          style={styles.map}
+          style={[styles.map, { flex: 1, alignSelf: 'stretch' }]}
           initialRegion={{
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
+            latitude: userLocation?.latitude || -26.2044,
+            longitude: userLocation?.longitude || 28.0473,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           }}
