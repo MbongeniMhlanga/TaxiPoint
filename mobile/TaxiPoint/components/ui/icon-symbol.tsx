@@ -23,6 +23,7 @@ const MAPPING = {
   'info.circle.fill': 'info',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'shield.fill': 'security',
 } as IconMapping;
 
 /**

@@ -85,6 +85,7 @@ export default function ExploreScreen() {
   // 🎙️ Voice Search States
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [voiceResults, setVoiceResults] = useState<string[]>([]);
+  const [voiceAvailable, setVoiceAvailable] = useState(false);
 
   // Request location permissions (No change)
   const requestLocationPermission = async () => {
@@ -308,6 +309,13 @@ export default function ExploreScreen() {
 
   // 🎙️ Voice Search Effect
   useEffect(() => {
+    if (!Voice || Platform.OS === 'web') {
+      setVoiceAvailable(false);
+      return;
+    }
+
+    setVoiceAvailable(true);
+
     Voice.onSpeechStart = () => setIsVoiceListening(true);
     Voice.onSpeechEnd = () => setIsVoiceListening(false);
     Voice.onSpeechError = (e: SpeechErrorEvent) => {
@@ -330,11 +338,19 @@ export default function ExploreScreen() {
     };
 
     return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
+      if (Voice) {
+        Voice.destroy().then(() => {
+          if (Voice) Voice.removeAllListeners();
+        }).catch(err => console.error('Voice destroy error:', err));
+      }
     };
   }, []);
 
   const startVoiceSearch = async () => {
+    if (!voiceAvailable || !Voice) {
+      Alert.alert('Voice Search', 'Voice search is not supported on this device or platform.');
+      return;
+    }
     try {
       setSearchQuery('');
       setIsVoiceListening(true);
@@ -436,16 +452,20 @@ export default function ExploreScreen() {
               <Feather name="x" size={18} color={placeholderColor} style={{ marginRight: 12 }} />
             </TouchableOpacity>
           )}
-          <View style={styles.voiceSeparator} />
-          {isVoiceListening ? (
-            <TouchableOpacity onPress={cancelVoiceSearch} style={styles.voiceButtonActive}>
-              <View style={[styles.pulseCircle, { backgroundColor: colors.error }]} />
-              <Feather name="mic-off" size={20} color={colors.error} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={startVoiceSearch}>
-              <Feather name="mic" size={20} color={iconColor} style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
+          {voiceAvailable && (
+            <>
+              <View style={styles.voiceSeparator} />
+              {isVoiceListening ? (
+                <TouchableOpacity onPress={cancelVoiceSearch} style={styles.voiceButtonActive}>
+                  <View style={[styles.pulseCircle, { backgroundColor: colors.error }]} />
+                  <Feather name="mic-off" size={20} color={colors.error} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={startVoiceSearch}>
+                  <Feather name="mic" size={20} color={iconColor} style={{ marginLeft: 8 }} />
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
         {/* Suggestions Dropdown */}

@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,6 +14,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -50,7 +52,10 @@ export default function LoginScreen() {
       const data = await response.json();
       console.log('Login successful with role:', data.role);
 
-      if (data.role === 'ADMIN') {
+      // Store in context
+      login(email, data.role, data.token);
+
+      if (data.role === 'ADMIN' || data.role === 'ROLE_ADMIN') {
         router.replace({
           pathname: '/admin/dashboard',
           params: { token: data.token, email: email }

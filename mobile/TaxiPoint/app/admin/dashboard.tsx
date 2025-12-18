@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -49,14 +50,15 @@ interface TaxiRankForm {
 export default function AdminDashboard() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { user, logout: logoutFromContext } = useAuth();
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const theme = colorScheme ?? 'light';
     const colors = Colors[theme];
 
-    // User info from login
-    const [token] = useState<string>((params.token as string) || '');
-    const [userEmail] = useState<string>((params.email as string) || 'Admin');
+    // User info from context or params (fallback)
+    const [token] = useState<string>(user?.token || (params.token as string) || '');
+    const [userEmail] = useState<string>(user?.email || (params.email as string) || 'Admin');
 
     // State
     const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
@@ -127,7 +129,14 @@ export default function AdminDashboard() {
     const handleLogout = () => {
         Alert.alert('Logout', 'Are you sure you want to logout?', [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Logout', style: 'destructive', onPress: () => router.replace('/') }
+            {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: () => {
+                    logoutFromContext();
+                    router.replace('/');
+                }
+            }
         ]);
     };
 

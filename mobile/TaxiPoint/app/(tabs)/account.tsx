@@ -1,5 +1,6 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -7,6 +8,7 @@ import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity,
 
 export default function AccountScreen() {
     const router = useRouter();
+    const { isAdmin, user, logout } = useAuth();
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const themeColors = Colors[theme];
@@ -35,13 +37,40 @@ export default function AccountScreen() {
         },
     ];
 
+    const handleLogout = () => {
+        logout();
+        router.replace('/(tabs)');
+    };
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
                     <Text style={[styles.headerTitle, { color: themeColors.text }]}>Account</Text>
+                    {user && (
+                        <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{user.email}</Text>
+                    )}
                 </View>
 
+                {isAdmin && (
+                    <>
+                        <Text style={[styles.sectionHeaderTitle, { color: themeColors.textSecondary }]}>ADMINISTRATION</Text>
+                        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+                            <TouchableOpacity
+                                style={[styles.item, styles.lastItem]}
+                                onPress={() => router.push('/admin/dashboard')}
+                            >
+                                <View style={styles.itemLeft}>
+                                    <IconSymbol size={24} name="shield.fill" color={themeColors.tint} style={styles.icon} />
+                                    <Text style={[styles.itemTitle, { color: themeColors.text }]}>Admin Dashboard</Text>
+                                </View>
+                                <IconSymbol size={20} name="chevron.right" color={themeColors.icon} />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
+
+                <Text style={[styles.sectionHeaderTitle, { color: themeColors.textSecondary }]}>SETTING</Text>
                 <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
                     {menuItems.map((item, index) => (
                         <TouchableOpacity
@@ -63,7 +92,10 @@ export default function AccountScreen() {
                 </View>
 
                 {/* Example Logout Button - Optional but good for Account page */}
-                <TouchableOpacity style={[styles.logoutButton, { borderColor: themeColors.tint }]}>
+                <TouchableOpacity
+                    style={[styles.logoutButton, { borderColor: themeColors.tint }]}
+                    onPress={handleLogout}
+                >
                     <Text style={[styles.logoutText, { color: themeColors.tint }]}>Log Out</Text>
                 </TouchableOpacity>
 
@@ -86,6 +118,19 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 34,
         fontWeight: 'bold',
+    },
+    headerSubtitle: {
+        fontSize: 16,
+        marginTop: 5,
+        opacity: 0.7,
+    },
+    sectionHeaderTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 8,
+        marginLeft: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     section: {
         borderRadius: 12,
