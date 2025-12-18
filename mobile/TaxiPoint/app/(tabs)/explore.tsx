@@ -692,9 +692,10 @@ export default function ExploreScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.error }]}
+            style={[styles.fab, { backgroundColor: colors.error, flexDirection: 'row', width: 'auto', paddingHorizontal: 16 }]}
             onPress={() => setShowIncidentForm(true)}>
-            <Feather name="plus" size={24} color="#fff" />
+            <Feather name="alert-triangle" size={20} color="#fff" />
+            <ThemedText style={{ color: '#fff', marginLeft: 8, fontWeight: 'bold' }}>Report</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -1072,9 +1073,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -1082,6 +1082,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
+    minWidth: 56,
   },
   fabText: {
     fontSize: 28,

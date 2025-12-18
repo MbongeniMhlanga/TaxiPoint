@@ -1,10 +1,11 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
 
     const [firstName, setFirstName] = useState(user?.firstName || "");
     const [lastName, setLastName] = useState(user?.lastName || "");
+    const [email, setEmail] = useState(user?.email || "");
     const [profileImage, setProfileImage] = useState(user?.profileImage || null);
 
     // Password management
@@ -26,10 +28,51 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
+    // 🔄 Fetch full user profile on mount if missing name/surname
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (!user?.token) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.name) setFirstName(data.name);
+                    if (data.surname) setLastName(data.surname);
+                    if (data.email) setEmail(data.email);
+                    // Update context too
+                    updateUser({ firstName: data.name, lastName: data.surname, email: data.email });
+                }
+            } catch (e) {
+                console.error("Failed to fetch profile:", e);
+            }
+        };
+
+        if (!firstName || !lastName) {
+            fetchProfile();
+        }
+    }, []);
+
     const onRefresh = async () => {
         setRefreshing(true);
-        // Simulate a data reload - in a real app, refresh AuthContext or fetch user data
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Re-fetch profile data
+        if (user?.token) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setFirstName(data.name || "");
+                    setLastName(data.surname || "");
+                    setEmail(data.email || "");
+                    updateUser({ firstName: data.name, lastName: data.surname, email: data.email });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
         setRefreshing(false);
     };
 
@@ -59,31 +102,82 @@ export default function ProfileScreen() {
         if (!result.canceled) {
             const uri = result.assets[0].uri;
             setProfileImage(uri);
-            // Auto-save the image
+            // In a real app, upload this to a server
             await updateUser({ profileImage: uri });
         }
     };
 
     const handleUpdateProfile = async () => {
-        if (!firstName.trim() || !lastName.trim()) {
-            Alert.alert("Error", "First Name and Last Name cannot be empty.");
+        if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+            Alert.alert("Error", "Please fill in all mandatory fields (Name, Surname, Email).");
             return;
         }
 
         setLoading(true);
 
         try {
-            // In a real app, you would send this to your backend
-            // For now, we update the local persistent context
+            // 1. Update Profile Info
+            const profileRes = await fetch(`${API_BASE_URL}/api/users/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user?.token}`
+                },
+                body: JSON.stringify({
+                    name: firstName,
+                    surname: lastName,
+                    email: email
+                }),
+            });
+
+            if (!profileRes.ok) throw new Error("Profile update failed");
+
+            // 2. Handle Password Change (if current password is provided)
+            if (currentPassword) {
+                if (newPassword !== confirmPassword) {
+                    Alert.alert("Error", "New passwords do not match.");
+                    setLoading(false);
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    Alert.alert("Error", "New password must be at least 6 characters.");
+                    setLoading(false);
+                    return;
+                }
+
+                const passRes = await fetch(`${API_BASE_URL}/api/users/change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user?.token}`
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    }),
+                });
+
+                if (!passRes.ok) {
+                    const errData = await passRes.json();
+                    throw new Error(errData.message || "Password change failed");
+                }
+            }
+
+            // Success: Update Context
             await updateUser({
                 firstName,
                 lastName,
+                email,
                 profileImage: profileImage || undefined
             });
 
             Alert.alert("Success", "Profile updated successfully!");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+
         } catch (e: any) {
-            Alert.alert("Update Failed", "An error occurred while updating your profile.");
+            Alert.alert("Update Failed", e.message || "An error occurred while updating your profile.");
         } finally {
             setLoading(false);
         }
@@ -100,7 +194,7 @@ export default function ProfileScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={[styles.container, { backgroundColor: bgColor }]}
         >
-            <Stack.Screen options={{ title: 'Your Profile' }} />
+            <Stack.Screen options={{ title: 'Edit Profile' }} />
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
@@ -121,44 +215,91 @@ export default function ProfileScreen() {
                             </View>
                         )}
                         <View style={[styles.changePhotoBtn, { backgroundColor: cardBg }]}>
-                            <IconSymbol name="gearshape.fill" size={16} color={tintColor} />
+                            <IconSymbol name="camera.fill" size={16} color={tintColor} />
                         </View>
                     </TouchableOpacity>
-                    <Text style={[styles.emailHint, { color: subTextColor }]}>{user?.email}</Text>
+                    <Text style={[styles.emailHint, { color: subTextColor }]}>Manage your account details</Text>
                 </View>
 
                 <View style={[styles.card, { backgroundColor: cardBg }]}>
-                    <Text style={[styles.sectionTitle, { color: tintColor }]}>Personal Details</Text>
+                    <Text style={[styles.sectionTitle, { color: tintColor }]}>Personal Info</Text>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: subTextColor }]}>First Name</Text>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={firstName}
-                            onChangeText={setFirstName}
-                            placeholder="Enter first name"
-                            placeholderTextColor={subTextColor}
-                        />
+                    <View style={styles.row}>
+                        <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                            <Text style={[styles.label, { color: subTextColor }]}>Name</Text>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+                                value={firstName}
+                                onChangeText={setFirstName}
+                                placeholder="Name"
+                                placeholderTextColor={subTextColor}
+                            />
+                        </View>
+
+                        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                            <Text style={[styles.label, { color: subTextColor }]}>Surname</Text>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+                                value={lastName}
+                                onChangeText={setLastName}
+                                placeholder="Surname"
+                                placeholderTextColor={subTextColor}
+                            />
+                        </View>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: subTextColor }]}>Surname</Text>
+                        <Text style={[styles.label, { color: subTextColor }]}>Email Address</Text>
                         <TextInput
                             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={lastName}
-                            onChangeText={setLastName}
-                            placeholder="Enter surname"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            placeholder="Email"
                             placeholderTextColor={subTextColor}
                         />
                     </View>
                 </View>
 
-                {/* Security Section (Placeholder for UI consistency) */}
                 <View style={[styles.card, { backgroundColor: cardBg, marginTop: 20 }]}>
-                    <Text style={[styles.sectionTitle, { color: tintColor }]}>Security</Text>
-                    <Text style={[styles.subtitle, { color: subTextColor }]}>
-                        Password change features will be available in the next update.
-                    </Text>
+                    <Text style={[styles.sectionTitle, { color: tintColor }]}>Change Password</Text>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: subTextColor }]}>Current Password</Text>
+                        <TextInput
+                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+                            value={currentPassword}
+                            onChangeText={setCurrentPassword}
+                            secureTextEntry
+                            placeholder="••••••••"
+                            placeholderTextColor={subTextColor}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: subTextColor }]}>New Password</Text>
+                        <TextInput
+                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+                            value={newPassword}
+                            onChangeText={setNewPassword}
+                            secureTextEntry
+                            placeholder="Minimum 6 characters"
+                            placeholderTextColor={subTextColor}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: subTextColor }]}>Confirm New Password</Text>
+                        <TextInput
+                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry
+                            placeholder="Repeat new password"
+                            placeholderTextColor={subTextColor}
+                        />
+                    </View>
                 </View>
 
                 <TouchableOpacity
@@ -185,6 +326,10 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 20,
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     avatarContainer: {
         alignItems: 'center',

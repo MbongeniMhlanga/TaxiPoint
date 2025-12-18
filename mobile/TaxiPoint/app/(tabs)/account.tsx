@@ -60,7 +60,9 @@ export default function AccountScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerInfo}>
                         <View>
-                            <Text style={[styles.headerTitle, { color: themeColors.text }]}>Profile</Text>
+                            <Text style={[styles.headerTitle, { color: themeColors.text }]}>
+                                {user?.firstName ? `Hi, ${user.firstName}` : 'Profile'}
+                            </Text>
                             {user && (
                                 <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{user.email}</Text>
                             )}
