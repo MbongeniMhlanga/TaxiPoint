@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function AccountScreen() {
     const router = useRouter();
@@ -46,10 +46,25 @@ export default function AccountScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
-                    <Text style={[styles.headerTitle, { color: themeColors.text }]}>Account</Text>
-                    {user && (
-                        <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{user.email}</Text>
-                    )}
+                    <View style={styles.headerInfo}>
+                        <View>
+                            <Text style={[styles.headerTitle, { color: themeColors.text }]}>Profile</Text>
+                            {user && (
+                                <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{user.email}</Text>
+                            )}
+                        </View>
+                        <TouchableOpacity onPress={() => router.push('/account/profile')}>
+                            {user?.profileImage ? (
+                                <Image source={{ uri: user.profileImage }} style={styles.headerAvatar} />
+                            ) : (
+                                <View style={[styles.headerAvatar, { backgroundColor: themeColors.tint }]}>
+                                    <Text style={styles.avatarInitial}>
+                                        {(user?.firstName?.charAt(0) || user?.email.charAt(0) || '?').toUpperCase()}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {isAdmin && (
@@ -117,6 +132,23 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 34,
+        fontWeight: 'bold',
+    },
+    headerInfo: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerAvatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarInitial: {
+        color: '#fff',
+        fontSize: 24,
         fontWeight: 'bold',
     },
     headerSubtitle: {

@@ -5,12 +5,16 @@ interface User {
     email: string;
     role: string;
     token: string;
+    profileImage?: string;
+    firstName?: string;
+    lastName?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     login: (email: string, role: string, token: string) => void;
     logout: () => void;
+    updateUser: (data: Partial<User>) => Promise<void>;
     isAdmin: boolean;
     isLoading: boolean;
 }
@@ -60,10 +64,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const updateUser = async (data: Partial<User>) => {
+        if (!user) return;
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        try {
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        } catch (error) {
+            console.error('Failed to update user session:', error);
+        }
+    };
+
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN';
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAdmin, isLoading }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser, isAdmin, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

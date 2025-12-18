@@ -1,19 +1,22 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
-    const { colorScheme } = useTheme();
+    const { user, updateUser } = useAuth();
+    const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const colors = Colors[theme];
     const router = useRouter();
 
-    // Mock initial user data - In a real app, retrieve this from AuthContext
-    const [name, setName] = useState("John");
-    const [surname, setSurname] = useState("Doe");
+    const [firstName, setFirstName] = useState(user?.firstName || "");
+    const [lastName, setLastName] = useState(user?.lastName || "");
+    const [profileImage, setProfileImage] = useState(user?.profileImage || null);
 
     // Password management
     const [currentPassword, setCurrentPassword] = useState("");
@@ -30,52 +33,58 @@ export default function ProfileScreen() {
     const inputBorder = colors.border;
     const tintColor = colors.tint;
 
-    const handleUpdateProfile = async () => {
-        // Basic Validation
-        if (!name.trim() || !surname.trim()) {
-            Alert.alert("Error", "Name and Surname cannot be empty.");
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (status !== 'granted') {
+            Alert.alert('Permission Denied', 'We need access to your gallery to change your profile picture.');
             return;
         }
 
-        if (newPassword || confirmPassword) {
-            if (!currentPassword) {
-                Alert.alert("Error", "Please enter your current password to set a new one.");
-                return;
-            }
-            if (newPassword !== confirmPassword) {
-                Alert.alert("Error", "New passwords do not match.");
-                return;
-            }
-            if (newPassword.length < 6) {
-                Alert.alert("Error", "New password must be at least 6 characters.");
-                return;
-            }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            const uri = result.assets[0].uri;
+            setProfileImage(uri);
+            // Auto-save the image
+            await updateUser({ profileImage: uri });
+        }
+    };
+
+    const handleUpdateProfile = async () => {
+        if (!firstName.trim() || !lastName.trim()) {
+            Alert.alert("Error", "First Name and Last Name cannot be empty.");
+            return;
         }
 
         setLoading(true);
 
         try {
-            // Simulate API check for current password
-            // In reality: await api.updateProfile({ ... })
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Mock check for demonstration
-            if (currentPassword && currentPassword !== "password123") {
-                throw new Error("Incorrect current password");
-            }
+            // In a real app, you would send this to your backend
+            // For now, we update the local persistent context
+            await updateUser({
+                firstName,
+                lastName,
+                profileImage: profileImage || undefined
+            });
 
             Alert.alert("Success", "Profile updated successfully!");
-
-            // Reset sensitive fields
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
-
         } catch (e: any) {
-            Alert.alert("Update Failed", e.message || "An error occurred while updating your profile.");
+            Alert.alert("Update Failed", "An error occurred while updating your profile.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const getInitials = () => {
+        const f = firstName.charAt(0) || user?.email.charAt(0) || "?";
+        const l = lastName.charAt(0) || "";
+        return (f + l).toUpperCase();
     };
 
     return (
@@ -87,14 +96,21 @@ export default function ProfileScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* Profile Avatar Placeholder */}
+                {/* Profile Avatar Section */}
                 <View style={styles.avatarContainer}>
-                    <View style={[styles.avatar, { backgroundColor: tintColor }]}>
-                        <Text style={styles.avatarText}>{name[0]}{surname[0]}</Text>
-                    </View>
-                    <TouchableOpacity style={[styles.changePhotoBtn, { backgroundColor: cardBg }]}>
-                        <IconSymbol name="gearshape.fill" size={16} color={tintColor} />
+                    <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+                        {profileImage ? (
+                            <Image source={{ uri: profileImage }} style={styles.avatar} />
+                        ) : (
+                            <View style={[styles.avatar, { backgroundColor: tintColor }]}>
+                                <Text style={styles.avatarText}>{getInitials()}</Text>
+                            </View>
+                        )}
+                        <View style={[styles.changePhotoBtn, { backgroundColor: cardBg }]}>
+                            <IconSymbol name="gearshape.fill" size={16} color={tintColor} />
+                        </View>
                     </TouchableOpacity>
+                    <Text style={[styles.emailHint, { color: subTextColor }]}>{user?.email}</Text>
                 </View>
 
                 <View style={[styles.card, { backgroundColor: cardBg }]}>
@@ -104,8 +120,8 @@ export default function ProfileScreen() {
                         <Text style={[styles.label, { color: subTextColor }]}>First Name</Text>
                         <TextInput
                             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={name}
-                            onChangeText={setName}
+                            value={firstName}
+                            onChangeText={setFirstName}
                             placeholder="Enter first name"
                             placeholderTextColor={subTextColor}
                         />
@@ -115,55 +131,20 @@ export default function ProfileScreen() {
                         <Text style={[styles.label, { color: subTextColor }]}>Surname</Text>
                         <TextInput
                             style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={surname}
-                            onChangeText={setSurname}
+                            value={lastName}
+                            onChangeText={setLastName}
                             placeholder="Enter surname"
                             placeholderTextColor={subTextColor}
                         />
                     </View>
                 </View>
 
+                {/* Security Section (Placeholder for UI consistency) */}
                 <View style={[styles.card, { backgroundColor: cardBg, marginTop: 20 }]}>
                     <Text style={[styles.sectionTitle, { color: tintColor }]}>Security</Text>
                     <Text style={[styles.subtitle, { color: subTextColor }]}>
-                        Leave blank if you don't want to change your password.
+                        Password change features will be available in the next update.
                     </Text>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: subTextColor }]}>Current Password</Text>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={currentPassword}
-                            onChangeText={setCurrentPassword}
-                            placeholder="Current password"
-                            placeholderTextColor={subTextColor}
-                            secureTextEntry
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: subTextColor }]}>New Password</Text>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={newPassword}
-                            onChangeText={setNewPassword}
-                            placeholder="New password"
-                            placeholderTextColor={subTextColor}
-                            secureTextEntry
-                        />
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: subTextColor }]}>Confirm New Password</Text>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                            placeholder="Confirm new password"
-                            placeholderTextColor={subTextColor}
-                            secureTextEntry
-                        />
-                    </View>
                 </View>
 
                 <TouchableOpacity
@@ -197,9 +178,9 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
@@ -210,20 +191,25 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         color: '#fff',
-        fontSize: 36,
+        fontSize: 40,
         fontWeight: 'bold',
     },
     changePhotoBtn: {
         position: 'absolute',
-        bottom: 0,
-        right: '35%',
-        padding: 8,
-        borderRadius: 20,
+        bottom: 5,
+        right: 5,
+        padding: 10,
+        borderRadius: 25,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 4,
+    },
+    emailHint: {
+        marginTop: 10,
+        fontSize: 14,
+        fontWeight: '500',
     },
     card: {
         padding: 20,
