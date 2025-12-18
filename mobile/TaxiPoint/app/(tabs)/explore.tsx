@@ -13,6 +13,7 @@ import {
   Modal,
   PermissionsAndroid,
   Platform,
+  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -422,7 +423,7 @@ export default function ExploreScreen() {
   }, []);
 
   const startVoiceSearch = async () => {
-    if (!voiceAvailable || !Voice) {
+    if (!voiceAvailable || !Voice || typeof Voice.start !== 'function') {
       Alert.alert('Voice Search', 'Voice search is not supported on this device or platform.');
       return;
     }
@@ -438,7 +439,9 @@ export default function ExploreScreen() {
 
   const stopVoiceSearch = async () => {
     try {
-      await Voice.stop();
+      if (Voice && typeof Voice.stop === 'function') {
+        await Voice.stop();
+      }
       setIsVoiceListening(false);
     } catch (e) {
       console.error('Stop Voice Error:', e);
@@ -447,7 +450,9 @@ export default function ExploreScreen() {
 
   const cancelVoiceSearch = async () => {
     try {
-      await Voice.cancel();
+      if (Voice && typeof Voice.cancel === 'function') {
+        await Voice.cancel();
+      }
       setIsVoiceListening(false);
       setSearchQuery('');
       searchTaxiRanks('');
@@ -459,9 +464,7 @@ export default function ExploreScreen() {
   const RankCard = ({ rank }: { rank: TaxiRank }) => (
     <TouchableOpacity
       style={[styles.rankCard, { backgroundColor: secondaryBgColor }]}
-      onPress={() => {
-        Alert.alert(rank.name, `${rank.address}\n\nRoutes: ${rank.routesServed?.join(', ') || 'N/A'}\n\nPhone: ${rank.phone || 'N/A'}`);
-      }}>
+      onPress={() => setSelectedRank(rank)}>
       <View style={styles.rankHeader}>
         <ThemedText type="defaultSemiBold" style={styles.rankName}>{rank.name}</ThemedText>
         <ThemedText style={[styles.rankDistrict, { color: iconColor }]}>{rank.district}</ThemedText>
@@ -553,7 +556,7 @@ export default function ExploreScreen() {
         </View>
         {/* Suggestions Dropdown */}
         {showSearchResults && filteredSuggestions.length > 0 && (
-          <View style={styles.suggestionsDropdown}>
+          <View style={[styles.suggestionsDropdown, { backgroundColor: secondaryBgColor, borderColor: borderColor, borderWidth: 1 }]}>
             {filteredSuggestions.map((rank) => (
               <TouchableOpacity
                 key={rank.id}
@@ -571,10 +574,10 @@ export default function ExploreScreen() {
                     }, 1000);
                   }
                 }}
-                style={styles.suggestionItem}
+                style={[styles.suggestionItem, { borderBottomColor: borderColor }]}
               >
-                <ThemedText>{rank.name}</ThemedText>
-                <ThemedText style={{ fontSize: 12, color: placeholderColor }}>{rank.address}</ThemedText>
+                <ThemedText style={{ color: textColor, fontWeight: '600' }}>{rank.name}</ThemedText>
+                <ThemedText style={{ fontSize: 12, color: textColor, opacity: 0.8 }}>{rank.address}</ThemedText>
                 {rank.routesServed && rank.routesServed.length > 0 && (
                   <ThemedText style={{ fontSize: 11, color: primaryColor, marginTop: 2 }}>
                     🚌 {rank.routesServed.slice(0, 3).join(', ')}{rank.routesServed.length > 3 ? '...' : ''}
@@ -784,7 +787,7 @@ export default function ExploreScreen() {
                   </View>
                 </LinearGradient>
 
-                <View style={styles.rankModalBody}>
+                <ScrollView style={styles.rankModalBody} contentContainerStyle={{ paddingBottom: 40 }}>
                   {selectedRank.description ? (
                     <View style={styles.section}>
                       <ThemedText style={[styles.sectionHeader, { color: textColor }]}>About</ThemedText>
@@ -853,13 +856,13 @@ export default function ExploreScreen() {
                       <ThemedText style={styles.navigateButtonText}>Get Directions</ThemedText>
                     </LinearGradient>
                   </TouchableOpacity>
-                </View>
+                </ScrollView>
               </>
             )}
           </View>
         </View>
       </Modal>
-    </SafeAreaView >
+    </SafeAreaView>
   );
 }
 
@@ -900,7 +903,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   suggestionsDropdown: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginTop: 4,
     padding: 8,
@@ -911,10 +913,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   suggestionItem: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   container: {
     flex: 1,
@@ -922,7 +923,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#f0f0f0', // Light grey background while map loads
+    backgroundColor: '#f0f0f0',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -970,7 +971,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 0, // Reset padding
+    paddingVertical: 0,
     fontWeight: '500',
   },
   voiceSeparator: {
@@ -1264,3 +1265,4 @@ const styles = StyleSheet.create({
     marginRight: 6,
   }
 });
+

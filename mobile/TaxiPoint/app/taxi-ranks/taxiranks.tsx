@@ -48,22 +48,24 @@ export default function TaxiRanksScreen() {
 
     // 🎙️ Voice Search Effect
     useEffect(() => {
-        Voice.onSpeechStart = () => setIsVoiceListening(true);
-        Voice.onSpeechEnd = () => setIsVoiceListening(false);
-        Voice.onSpeechError = (e: SpeechErrorEvent) => {
-            console.error('Speech Error:', e);
-            setIsVoiceListening(false);
-        };
-        Voice.onSpeechResults = (e: SpeechResultsEvent) => {
-            if (e.value && e.value.length > 0) {
-                setSearchQuery(e.value[0]);
-            }
-        };
-        Voice.onSpeechPartialResults = (e: SpeechResultsEvent) => {
-            if (e.value && e.value.length > 0) {
-                setSearchQuery(e.value[0]);
-            }
-        };
+        if (Voice) {
+            Voice.onSpeechStart = () => setIsVoiceListening(true);
+            Voice.onSpeechEnd = () => setIsVoiceListening(false);
+            Voice.onSpeechError = (e: SpeechErrorEvent) => {
+                console.error('Speech Error:', e);
+                setIsVoiceListening(false);
+            };
+            Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+                if (e.value && e.value.length > 0) {
+                    setSearchQuery(e.value[0]);
+                }
+            };
+            Voice.onSpeechPartialResults = (e: SpeechResultsEvent) => {
+                if (e.value && e.value.length > 0) {
+                    setSearchQuery(e.value[0]);
+                }
+            };
+        }
 
         return () => {
             if (Voice && typeof Voice.destroy === 'function') {

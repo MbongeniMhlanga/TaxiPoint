@@ -13,15 +13,25 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarShowLabel: true,
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
+        tabBarStyle: {
+          backgroundColor: Colors[colorScheme ?? 'light'].background,
+          borderTopColor: Colors[colorScheme ?? 'light'].border,
+          ...Platform.select({
+            ios: {
+              position: 'absolute',
+              height: 88,
+              paddingBottom: 30,
+            },
+            default: {
+              height: 60,
+              paddingBottom: 10,
+            },
+          }),
+        },
       }}>
 
       {/* Hide the Login screen from the Tab Bar */}
