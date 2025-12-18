@@ -78,6 +78,7 @@ export default function ExploreScreen() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
@@ -284,14 +285,17 @@ export default function ExploreScreen() {
       }
     };
 
-    const initializeData = async () => {
+    const initializeData = async (isRefresh = false) => {
       // 5-second safety timeout for loading state
       const timeoutId = setTimeout(() => {
         setLoading(false);
+        setRefreshing(false);
       }, 5000);
 
       try {
-        setLoading(true);
+        if (!isRefresh) setLoading(true);
+        else setRefreshing(true);
+
         await getUserLocation();
         // Only fetch the initial, full list here
         await Promise.all([
@@ -303,10 +307,13 @@ export default function ExploreScreen() {
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
+        setRefreshing(false);
       }
     };
 
-    initializeData();
+    if (!refreshing) {
+      initializeData();
+    }
 
     // WebSocket connection for incidents
     try {
@@ -522,7 +529,7 @@ export default function ExploreScreen() {
         <MapView
           ref={mapRef}
           provider={PROVIDER_DEFAULT}
-          style={[styles.map, { flex: 1, alignSelf: 'stretch' }]}
+          style={StyleSheet.absoluteFillObject}
           initialRegion={{
             latitude: userLocation?.latitude || -26.2044,
             longitude: userLocation?.longitude || 28.0473,
@@ -583,6 +590,16 @@ export default function ExploreScreen() {
 
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: primaryColor, marginBottom: refreshing ? 0 : 12 }]}
+            onPress={() => initializeData(true)}>
+            {refreshing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Feather name="rotate-cw" size={24} color="#fff" />
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: primaryColor, marginBottom: 12 }]}
             onPress={() => {
@@ -807,14 +824,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#f0f0f0', // Light grey background while map loads
   },
   map: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   markerBox: {
     paddingHorizontal: 10,

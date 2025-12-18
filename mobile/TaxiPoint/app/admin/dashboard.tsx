@@ -12,6 +12,7 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -114,6 +115,12 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error('Fetch stats error:', err);
         }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([fetchTaxiRanks(), fetchStatistics()]);
+        setRefreshing(false);
     };
 
     const initialize = async () => {
@@ -295,7 +302,13 @@ export default function AdminDashboard() {
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} />
+                }
+            >
                 {/* Bento Stats */}
                 <View style={styles.statsGrid}>
                     <StatCard

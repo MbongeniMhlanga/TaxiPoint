@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
     const { user, updateUser } = useAuth();
@@ -24,6 +24,14 @@ export default function ProfileScreen() {
     const [confirmPassword, setConfirmPassword] = useState("");
 
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        // Simulate a data reload - in a real app, refresh AuthContext or fetch user data
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setRefreshing(false);
+    };
 
     const bgColor = colors.background;
     const cardBg = colors.surface;
@@ -94,7 +102,13 @@ export default function ProfileScreen() {
         >
             <Stack.Screen options={{ title: 'Your Profile' }} />
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tintColor} />
+                }
+            >
 
                 {/* Profile Avatar Section */}
                 <View style={styles.avatarContainer}>

@@ -4,11 +4,18 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function AccountScreen() {
     const router = useRouter();
     const { isAdmin, user, logout } = useAuth();
+    const [refreshing, setRefreshing] = React.useState(false);
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setRefreshing(false);
+    }, []);
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const themeColors = Colors[theme];
@@ -44,7 +51,12 @@ export default function AccountScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView
+                contentContainerStyle={styles.content}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.tint} />
+                }
+            >
                 <View style={styles.header}>
                     <View style={styles.headerInfo}>
                         <View>

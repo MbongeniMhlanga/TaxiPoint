@@ -88,6 +88,7 @@ export default function TaxiRanksScreen() {
         }
     };
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const router = useRouter();
     const colorScheme = useColorScheme();
@@ -97,17 +98,20 @@ export default function TaxiRanksScreen() {
         fetchTaxiRanks();
     }, []);
 
-    const fetchTaxiRanks = async () => {
+    const fetchTaxiRanks = async (isRefresh = false) => {
         try {
+            if (!isRefresh) setLoading(true);
+            else setRefreshing(true);
             const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
             setTaxiRanks(data.content || []);
         } catch (err: any) {
-            console.error(err);
+            console.error('Error fetching taxi ranks:', err);
             Alert.alert('Error', 'Failed to fetch taxi ranks');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
