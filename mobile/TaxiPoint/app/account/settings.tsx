@@ -43,7 +43,7 @@ export default function SettingsScreen() {
             <Stack.Screen options={{ title: 'Settings' }} />
 
             <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-                <Text style={[styles.title, { color: tintColor }]}>User Settings</Text>
+                <Text style={[styles.title, { color: tintColor }]}>Application Preferences</Text>
 
                 {/* Notifications */}
                 <View style={[styles.optionRow, { backgroundColor: sectionBg, borderColor }]}>

@@ -52,9 +52,9 @@ export default function SupportScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={[styles.card, { backgroundColor: cardBg }]}>
-                    <Text style={[styles.title, { color: tintColor }]}>Support</Text>
+                    <Text style={[styles.title, { color: tintColor }]}>Support Center</Text>
                     <Text style={[styles.description, { color: subTextColor }]}>
-                        Having issues? Fill out the form below and our support team will reach out to you.
+                        Need assistance? Please detail your request below and our team will get in touch.
                     </Text>
 
                     <View style={styles.form}>

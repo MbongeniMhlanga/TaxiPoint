@@ -201,8 +201,8 @@ export default function TaxiRanksScreen() {
                             <Feather name="x" size={24} color={textColor} />
                         </TouchableOpacity>
                         <View>
-                            <Text style={[styles.headerTitle, { color: textColor }]}>Taxi Ranks Directory</Text>
-                            <Text style={[styles.headerSubtitle, { color: subTextColor }]}>Browse all available taxi ranks</Text>
+                            <Text style={[styles.headerTitle, { color: textColor }]}>Transport Hubs</Text>
+                            <Text style={[styles.headerSubtitle, { color: subTextColor }]}>Comprehensive directory of community ranks</Text>
                         </View>
                     </View>
 

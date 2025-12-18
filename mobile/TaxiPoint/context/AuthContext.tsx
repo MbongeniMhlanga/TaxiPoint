@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface User {
     email: string;
@@ -11,25 +12,58 @@ interface AuthContextType {
     login: (email: string, role: string, token: string) => void;
     logout: () => void;
     isAdmin: boolean;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_STORAGE_KEY = 'taxipoint_user_session';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const login = (email: string, role: string, token: string) => {
-        setUser({ email, role, token });
+    // Load session from storage on mount
+    useEffect(() => {
+        const loadSession = async () => {
+            try {
+                const savedUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
+                if (savedUser) {
+                    setUser(JSON.parse(savedUser));
+                }
+            } catch (error) {
+                console.error('Failed to load user session:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadSession();
+    }, []);
+
+    const login = async (email: string, role: string, token: string) => {
+        const newUser = { email, role, token };
+        setUser(newUser);
+        try {
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+        } catch (error) {
+            console.error('Failed to save user session:', error);
+        }
     };
 
-    const logout = () => {
+    const logout = async () => {
         setUser(null);
+        try {
+            await AsyncStorage.removeItem(USER_STORAGE_KEY);
+        } catch (error) {
+            console.error('Failed to remove user session:', error);
+        }
     };
 
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN';
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAdmin }}>
+        <AuthContext.Provider value={{ user, login, logout, isAdmin, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

@@ -14,9 +14,27 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user, isLoading, isAdmin } = useAuth();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      if (isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/(tabs)/explore');
+      }
+    }
+  }, [user, isLoading, isAdmin]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   const handleLogin = async () => {
     if (!email || !password) {

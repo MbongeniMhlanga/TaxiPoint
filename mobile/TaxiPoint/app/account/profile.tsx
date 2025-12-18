@@ -83,7 +83,7 @@ export default function ProfileScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={[styles.container, { backgroundColor: bgColor }]}
         >
-            <Stack.Screen options={{ title: 'Edit Profile' }} />
+            <Stack.Screen options={{ title: 'Your Profile' }} />
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
