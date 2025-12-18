@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -33,7 +34,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 const savedUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
                 if (savedUser) {
-                    setUser(JSON.parse(savedUser));
+                    const parsedUser = JSON.parse(savedUser);
+                    setUser(parsedUser);
+
+                    // If profile data is missing, try to fetch it
+                    if (parsedUser.token && (!parsedUser.name || !parsedUser.surname)) {
+                        console.log('Fetching missing profile data...');
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+                                headers: { 'Authorization': `Bearer ${parsedUser.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                const updatedUser = {
+                                    ...parsedUser,
+                                    name: data.name || parsedUser.name,
+                                    surname: data.surname || parsedUser.surname,
+                                    email: data.email || parsedUser.email
+                                };
+                                setUser(updatedUser);
+                                await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+                            }
+                        } catch (e) {
+                            console.error('Failed to auto-fetch profile:', e);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load user session:', error);

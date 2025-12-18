@@ -67,9 +67,11 @@ export default function ProfileScreen() {
     // 🔄 Sync state with context if it updates elsewhere
     useEffect(() => {
         if (user) {
-            if (user.name && !name) setName(user.name);
-            if (user.surname && !surname) setSurname(user.surname);
-            if (user.email && !email) setEmail(user.email);
+            // Only autofill if the current form is empty, to avoid overwriting user changes
+            if (user.name && name === "") setName(user.name);
+            if (user.surname && surname === "") setSurname(user.surname);
+            if (user.email && email === "") setEmail(user.email);
+            if (user.profileImage && !profileImage) setProfileImage(user.profileImage);
         }
     }, [user]);
 

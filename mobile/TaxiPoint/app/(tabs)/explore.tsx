@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   PermissionsAndroid,
@@ -234,7 +235,7 @@ export default function ExploreScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           description: incidentDescription,
-          reporter: 'Mobile User',
+          reporter: user ? `${user.name || ''} ${user.surname || ''}`.trim() || 'Mobile User' : 'Mobile User',
           latitude: userLocation?.latitude || -26.2044,
           longitude: userLocation?.longitude || 28.0473,
         }),
@@ -714,52 +715,59 @@ export default function ExploreScreen() {
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowIncidentForm(false)}>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: bgColor },
-            ]}>
-            <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textColor }]}>
-                Report a Safety Concern
-              </ThemedText>
-              <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
-                <Feather name="x" size={24} color={textColor} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: bgColor },
+              ]}>
+              <View style={styles.modalHeader}>
+                <ThemedText style={[styles.modalTitle, { color: textColor }]}>
+                  Report a Safety Concern
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
+                  <Feather name="x" size={24} color={textColor} />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={[
+                  styles.incidentInput,
+                  {
+                    color: textColor,
+                    backgroundColor: secondaryBgColor,
+                    borderColor: borderColor,
+                  },
+                ]}
+                placeholder="Describe the incident..."
+                placeholderTextColor={placeholderColor}
+                multiline={true}
+                numberOfLines={4}
+                value={incidentDescription}
+                onChangeText={setIncidentDescription}
+                autoFocus={true}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: primaryColor, opacity: submittingIncident ? 0.6 : 1 }]}
+                onPress={submitIncident}
+                disabled={submittingIncident}>
+                {submittingIncident ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <ThemedText style={styles.submitButtonText}>
+                    Submit Report
+                  </ThemedText>
+                )}
               </TouchableOpacity>
             </View>
-
-            <TextInput
-              style={[
-                styles.incidentInput,
-                {
-                  color: textColor,
-                  backgroundColor: secondaryBgColor,
-                  borderColor: borderColor,
-                },
-              ]}
-              placeholder="Describe the incident..."
-              placeholderTextColor={placeholderColor}
-              multiline={true}
-              numberOfLines={4}
-              value={incidentDescription}
-              onChangeText={setIncidentDescription}
-            />
-
-            <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: primaryColor, opacity: submittingIncident ? 0.6 : 1 }]}
-              onPress={submitIncident}
-              disabled={submittingIncident}>
-              {submittingIncident ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <ThemedText style={styles.submitButtonText}>
-                  Submit Report
-                </ThemedText>
-              )}
-            </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Detail Modal */}

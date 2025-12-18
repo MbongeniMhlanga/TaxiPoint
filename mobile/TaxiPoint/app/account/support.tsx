@@ -18,10 +18,11 @@ export default function SupportScreen() {
 
     useEffect(() => {
         if (user) {
-            if (user.name || user.surname) {
-                setName(`${user.name || ""} ${user.surname || ""}`.trim());
+            const fullName = `${user.name || ""} ${user.surname || ""}`.trim();
+            if (fullName && name === "") {
+                setName(fullName);
             }
-            if (user.email) {
+            if (user.email && email === "") {
                 setEmail(user.email);
             }
         }
