@@ -76,7 +76,7 @@ export default function LoginScreen() {
       console.log('Login successful with role:', data.role);
 
       // Store in context - This will trigger the useEffect above for redirection
-      login(email, data.role, data.token);
+      login(email, data.role, data.token, data.name, data.surname);
     } catch (error: any) {
       console.error('Login Network Error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';

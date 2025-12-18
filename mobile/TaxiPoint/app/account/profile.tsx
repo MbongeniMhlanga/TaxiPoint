@@ -15,8 +15,8 @@ export default function ProfileScreen() {
     const colors = Colors[theme];
     const router = useRouter();
 
-    const [firstName, setFirstName] = useState(user?.firstName || "");
-    const [lastName, setLastName] = useState(user?.lastName || "");
+    const [name, setName] = useState(user?.name || "");
+    const [surname, setSurname] = useState(user?.surname || "");
     const [email, setEmail] = useState(user?.email || "");
     const [profileImage, setProfileImage] = useState(user?.profileImage || null);
 
@@ -28,7 +28,7 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // 🔄 Fetch full user profile on mount if missing name/surname
+    // 🔄 Fetch full user profile on mount
     useEffect(() => {
         const fetchProfile = async () => {
             if (!user?.token) return;
@@ -38,21 +38,40 @@ export default function ProfileScreen() {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.name) setFirstName(data.name);
-                    if (data.surname) setLastName(data.surname);
-                    if (data.email) setEmail(data.email);
-                    // Update context too
-                    updateUser({ firstName: data.name, lastName: data.surname, email: data.email });
+                    console.log("Fetched profile data:", data);
+
+                    // Map backend keys to our state
+                    const n = data.name || "";
+                    const s = data.surname || "";
+                    const userEmail = data.email || user.email;
+
+                    setName(n);
+                    setSurname(s);
+                    setEmail(userEmail);
+
+                    // Update context with the latest info
+                    updateUser({
+                        name: n,
+                        surname: s,
+                        email: userEmail
+                    });
                 }
             } catch (e) {
                 console.error("Failed to fetch profile:", e);
             }
         };
 
-        if (!firstName || !lastName) {
-            fetchProfile();
+        fetchProfile();
+    }, [user?.token]);
+
+    // 🔄 Sync state with context if it updates elsewhere
+    useEffect(() => {
+        if (user) {
+            if (user.name && !name) setName(user.name);
+            if (user.surname && !surname) setSurname(user.surname);
+            if (user.email && !email) setEmail(user.email);
         }
-    }, []);
+    }, [user]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -64,10 +83,14 @@ export default function ProfileScreen() {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    setFirstName(data.name || "");
-                    setLastName(data.surname || "");
-                    setEmail(data.email || "");
-                    updateUser({ firstName: data.name, lastName: data.surname, email: data.email });
+                    const n = data.name || "";
+                    const s = data.surname || "";
+                    const userEmail = data.email || user.email;
+
+                    setName(n);
+                    setSurname(s);
+                    setEmail(userEmail);
+                    updateUser({ name: n, surname: s, email: userEmail });
                 }
             } catch (e) {
                 console.error(e);
@@ -108,7 +131,7 @@ export default function ProfileScreen() {
     };
 
     const handleUpdateProfile = async () => {
-        if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+        if (!name.trim() || !surname.trim() || !email.trim()) {
             Alert.alert("Error", "Please fill in all mandatory fields (Name, Surname, Email).");
             return;
         }
@@ -124,8 +147,8 @@ export default function ProfileScreen() {
                     'Authorization': `Bearer ${user?.token}`
                 },
                 body: JSON.stringify({
-                    name: firstName,
-                    surname: lastName,
+                    name: name,
+                    surname: surname,
                     email: email
                 }),
             });
@@ -165,8 +188,8 @@ export default function ProfileScreen() {
 
             // Success: Update Context
             await updateUser({
-                firstName,
-                lastName,
+                name,
+                surname,
                 email,
                 profileImage: profileImage || undefined
             });
@@ -184,8 +207,8 @@ export default function ProfileScreen() {
     };
 
     const getInitials = () => {
-        const f = firstName.charAt(0) || user?.email.charAt(0) || "?";
-        const l = lastName.charAt(0) || "";
+        const f = name.charAt(0) || user?.email.charAt(0) || "?";
+        const l = surname.charAt(0) || "";
         return (f + l).toUpperCase();
     };
 
@@ -229,8 +252,8 @@ export default function ProfileScreen() {
                             <Text style={[styles.label, { color: subTextColor }]}>Name</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                                value={firstName}
-                                onChangeText={setFirstName}
+                                value={name}
+                                onChangeText={setName}
                                 placeholder="Name"
                                 placeholderTextColor={subTextColor}
                             />
@@ -240,8 +263,8 @@ export default function ProfileScreen() {
                             <Text style={[styles.label, { color: subTextColor }]}>Surname</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
-                                value={lastName}
-                                onChangeText={setLastName}
+                                value={surname}
+                                onChangeText={setSurname}
                                 placeholder="Surname"
                                 placeholderTextColor={subTextColor}
                             />

@@ -6,13 +6,13 @@ interface User {
     role: string;
     token: string;
     profileImage?: string;
-    firstName?: string;
-    lastName?: string;
+    name?: string;
+    surname?: string;
 }
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, role: string, token: string) => void;
+    login: (email: string, role: string, token: string, name?: string, surname?: string) => void;
     logout: () => void;
     updateUser: (data: Partial<User>) => Promise<void>;
     isAdmin: boolean;
@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadSession();
     }, []);
 
-    const login = async (email: string, role: string, token: string) => {
-        const newUser = { email, role, token };
+    const login = async (email: string, role: string, token: string, name?: string, surname?: string) => {
+        const newUser = { email, role, token, name, surname };
         setUser(newUser);
         try {
             await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));

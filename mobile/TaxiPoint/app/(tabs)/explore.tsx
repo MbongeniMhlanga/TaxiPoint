@@ -663,7 +663,6 @@ export default function ExploreScreen() {
           )}
         </MapView>
 
-
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
           <TouchableOpacity
@@ -692,10 +691,19 @@ export default function ExploreScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: colors.error, flexDirection: 'row', width: 'auto', paddingHorizontal: 16 }]}
-            onPress={() => setShowIncidentForm(true)}>
-            <Feather name="alert-triangle" size={20} color="#fff" />
-            <ThemedText style={{ color: '#fff', marginLeft: 8, fontWeight: 'bold' }}>Report</ThemedText>
+            style={[styles.fab, {
+              backgroundColor: colors.error,
+              transform: [{ rotate: showIncidentForm ? '45deg' : '0deg' }],
+              shadowColor: colors.error,
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+              elevation: 8,
+              width: 60,
+              height: 60,
+              borderRadius: 30
+            }]}
+            onPress={() => setShowIncidentForm(!showIncidentForm)}>
+            <Feather name="plus" size={32} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -1068,9 +1076,9 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 90,
     right: 20,
-    zIndex: 1000,
+    zIndex: 2000,
   },
   fab: {
     height: 56,

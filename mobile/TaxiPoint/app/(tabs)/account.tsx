@@ -61,7 +61,7 @@ export default function AccountScreen() {
                     <View style={styles.headerInfo}>
                         <View>
                             <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-                                {user?.firstName ? `Hi, ${user.firstName}` : 'Profile'}
+                                {user?.name ? `Hi, ${user.name}` : 'Profile'}
                             </Text>
                             {user && (
                                 <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>{user.email}</Text>
@@ -73,7 +73,7 @@ export default function AccountScreen() {
                             ) : (
                                 <View style={[styles.headerAvatar, { backgroundColor: themeColors.tint }]}>
                                     <Text style={styles.avatarInitial}>
-                                        {(user?.firstName?.charAt(0) || user?.email.charAt(0) || '?').toUpperCase()}
+                                        {(user?.name?.charAt(0) || user?.email.charAt(0) || '?').toUpperCase()}
                                     </Text>
                                 </View>
                             )}

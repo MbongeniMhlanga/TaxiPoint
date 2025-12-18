@@ -1,9 +1,11 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 export default function SupportScreen() {
+    const { user } = useAuth();
     const colorScheme = useColorScheme();
     const theme = colorScheme ?? 'light';
     const colors = Colors[theme];
@@ -13,6 +15,17 @@ export default function SupportScreen() {
     const [email, setEmail] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            if (user.name || user.surname) {
+                setName(`${user.name || ""} ${user.surname || ""}`.trim());
+            }
+            if (user.email) {
+                setEmail(user.email);
+            }
+        }
+    }, [user]);
 
     const bgColor = colors.background;
     const cardBg = colors.surface;
