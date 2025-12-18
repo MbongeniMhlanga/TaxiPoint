@@ -99,6 +99,43 @@ export default function ExploreScreen() {
     return true; // iOS permissions handled via app.json
   };
 
+  // Helper function for Levenshtein distance (Fuzzy Search)
+  const levenshteinDistance = (a: string, b: string) => {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix = [];
+
+    // increment along the first column of each row
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+
+    // increment each column in the first row
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    // Fill in the rest of the matrix
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) == a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            Math.min(
+              matrix[i][j - 1] + 1, // insertion
+              matrix[i - 1][j] + 1 // deletion
+            )
+          );
+        }
+      }
+    }
+
+    return matrix[b.length][a.length];
+  };
+
   // ...existing code...
 
   // 🔑 REFACTORED: Sets both the master list and the displayed list initially
@@ -115,29 +152,43 @@ export default function ExploreScreen() {
     }
   };
 
-  // 🔑 REFACTORED: Updates only the displayed list based on search results
+  // 🔑 REFACTORED: Intelligent Client-Side Search
   const searchTaxiRanks = async (query: string) => {
     if (!query.trim()) {
       setFilteredSuggestions([]);
       setShowSearchResults(false);
-      setDisplayedTaxiRanks(allTaxiRanks); // Show all ranks when search is empty
+      setDisplayedTaxiRanks(allTaxiRanks);
       return;
     }
 
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/taxi-ranks/search?query=${encodeURIComponent(query)}`
-      );
-      if (!res.ok) throw new Error('Search failed');
-      const data = await res.json();
+    const lowerQuery = query.toLowerCase();
 
-      setDisplayedTaxiRanks(data); // Update displayed list with search results
-      setFilteredSuggestions(data.slice(0, 5));
-      setShowSearchResults(true);
-    } catch (err) {
-      console.error('Search error:', err);
-      Alert.alert('Error', 'Failed to search taxi ranks');
+    // 1. Exact/Substring Match
+    let matches = allTaxiRanks.filter(rank =>
+      rank.name.toLowerCase().includes(lowerQuery) ||
+      rank.district.toLowerCase().includes(lowerQuery) ||
+      rank.address.toLowerCase().includes(lowerQuery)
+    );
+
+    // 2. Fuzzy Match (if few results)
+    if (matches.length < 3) {
+      const fuzzyMatches = allTaxiRanks.filter(rank => {
+        // Don't include if already matched
+        if (matches.find(m => m.id === rank.id)) return false;
+
+        const distName = levenshteinDistance(lowerQuery, rank.name.toLowerCase());
+        const distDistrict = levenshteinDistance(lowerQuery, rank.district.toLowerCase());
+
+        // Threshold: Allow 2 typos for short words, 3 for longer
+        const threshold = lowerQuery.length > 4 ? 3 : 2;
+        return distName <= threshold || distDistrict <= threshold;
+      });
+      matches = [...matches, ...fuzzyMatches];
     }
+
+    setDisplayedTaxiRanks(matches);
+    setFilteredSuggestions(matches.slice(0, 5));
+    setShowSearchResults(true);
   };
 
   const fetchIncidents = async () => {
@@ -290,10 +341,10 @@ export default function ExploreScreen() {
       {/* Floating Search Bar */}
       <View style={styles.floatingSearchBarContainer}>
         <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}>
-          <Feather name="search" size={20} color={iconColor} style={{ marginRight: 8 }} />
+          <Feather name="search" size={20} color={iconColor} style={{ marginRight: 12 }} />
           <TextInput
             style={[styles.searchInput, { color: textColor }]}
-            placeholder="Search taxi ranks..."
+            placeholder="Where to?"
             placeholderTextColor={placeholderColor}
             value={searchQuery}
             onChangeText={(text) => {
@@ -301,6 +352,15 @@ export default function ExploreScreen() {
               searchTaxiRanks(text);
             }}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => { setSearchQuery(''); searchTaxiRanks(''); }}>
+              <Feather name="x" size={18} color={placeholderColor} style={{ marginRight: 12 }} />
+            </TouchableOpacity>
+          )}
+          <View style={styles.voiceSeparator} />
+          <TouchableOpacity onPress={() => Alert.alert('Voice Search', 'Listening... (Feature coming soon)')}>
+            <Feather name="mic" size={20} color={iconColor} style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
         </View>
         {/* Suggestions Dropdown */}
         {showSearchResults && filteredSuggestions.length > 0 && (
@@ -577,16 +637,15 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   floatingSearchBarContainer: {
     position: 'absolute',
-    top: 24,
+    top: 60, // Lowered for better reachability (Uber style)
     left: 16,
     right: 16,
     zIndex: 1001,
-    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
   },
   suggestionsDropdown: {
     backgroundColor: '#fff',
@@ -644,10 +703,15 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 30, // Uber-style pill shape
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchIcon: {
     fontSize: 18,
@@ -656,7 +720,14 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 8,
+    paddingVertical: 0, // Reset padding
+    fontWeight: '500',
+  },
+  voiceSeparator: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#ddd',
+    marginHorizontal: 8,
   },
   sectionHeader: {
     marginBottom: 12,

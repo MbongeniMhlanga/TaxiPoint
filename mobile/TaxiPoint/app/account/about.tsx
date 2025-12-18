@@ -145,7 +145,7 @@ export default function AboutScreen() {
                         <Text style={[styles.ctaText, { color: subTextColor }]}>
                             Join thousands of commuters who trust TaxiPoint.
                         </Text>
-                        <TouchableOpacity onPress={() => router.push('/taxi-ranks')}>
+                        <TouchableOpacity onPress={() => router.push('/taxi-ranks/taxiranks')}>
                             <LinearGradient
                                 colors={['#2563EB', '#9333EA']}
                                 start={{ x: 0, y: 0 }}
