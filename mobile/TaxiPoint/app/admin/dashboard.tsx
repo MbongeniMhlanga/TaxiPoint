@@ -131,6 +131,39 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         initialize();
+
+        // Real-time WebSockets for Management
+        const connections: WebSocket[] = [];
+
+        // 1. Stats Socket
+        try {
+            const statsWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/stats');
+            statsWs.onmessage = (event) => {
+                const update = JSON.parse(event.data);
+                if (update.type === 'USER_COUNT') setTotalUsers(update.value);
+                if (update.type === 'INCIDENT_COUNT') setActiveIncidents(update.value);
+                if (update.type === 'DISTRIBUTION') setUserStats(update.value);
+            };
+            connections.push(statsWs);
+        } catch (e) { console.error('WS Stats error:', e); }
+
+        // 2. Taxi Ranks Socket
+        try {
+            const rankWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/ranks');
+            rankWs.onmessage = (event) => {
+                const rank = JSON.parse(event.data);
+                setTaxiRanks((prev) => {
+                    const exists = prev.find(r => r.id === rank.id);
+                    if (exists) return prev.map(r => r.id === rank.id ? rank : r);
+                    return [...prev, rank];
+                });
+            };
+            connections.push(rankWs);
+        } catch (e) { console.error('WS Ranks error:', e); }
+
+        return () => {
+            connections.forEach(ws => ws.close());
+        };
     }, []);
 
     const handleLogout = () => {

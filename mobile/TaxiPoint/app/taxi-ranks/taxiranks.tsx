@@ -96,6 +96,22 @@ export default function TaxiRanksScreen() {
 
     useEffect(() => {
         fetchTaxiRanks();
+
+        // Real-time updates for ranks
+        try {
+            const rankWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/ranks');
+            rankWs.onmessage = (event) => {
+                const rank = JSON.parse(event.data);
+                setTaxiRanks((prev) => {
+                    const exists = prev.find(r => r.id === rank.id);
+                    if (exists) return prev.map(r => r.id === rank.id ? rank : r);
+                    return [...prev, rank];
+                });
+            };
+            return () => rankWs.close();
+        } catch (e) {
+            console.error('WS Ranks error:', e);
+        }
     }, []);
 
     const fetchTaxiRanks = async (isRefresh = false) => {

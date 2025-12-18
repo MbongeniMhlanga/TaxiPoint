@@ -248,84 +248,117 @@ export default function ExploreScreen() {
     }
   };
 
-  useEffect(() => {
-    // Get user's current location (moved inside useEffect)
-    const getUserLocation = async () => {
-      const hasPermission = await requestLocationPermission();
-      if (!hasPermission) {
-        console.log('Location permission denied');
+  // Get user's current location
+  const getUserLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      console.log('Location permission denied');
+      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+      return;
+    }
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission not granted');
         setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
         return;
       }
-
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.log('Location permission not granted');
-          setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-          return;
-        }
-        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        const { latitude, longitude } = location.coords;
-        setUserLocation({ latitude, longitude });
-        if (mapRef.current && mapReady) {
-          mapRef.current.animateToRegion(
-            {
-              latitude,
-              longitude,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            },
-            1000
-          );
-        }
-      } catch (err) {
-        console.error('Expo Location error:', err);
-        setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const { latitude, longitude } = location.coords;
+      setUserLocation({ latitude, longitude });
+      if (mapRef.current && mapReady) {
+        mapRef.current.animateToRegion(
+          {
+            latitude,
+            longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          },
+          1000
+        );
       }
-    };
+    } catch (err) {
+      console.error('Expo Location error:', err);
+      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+    }
+  };
 
-    const initializeData = async (isRefresh = false) => {
-      // 5-second safety timeout for loading state
-      const timeoutId = setTimeout(() => {
-        setLoading(false);
-        setRefreshing(false);
-      }, 5000);
+  const initializeData = async (isRefresh = false) => {
+    // 5-second safety timeout for loading state
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setRefreshing(false);
+    }, 5000);
 
-      try {
-        if (!isRefresh) setLoading(true);
-        else setRefreshing(true);
+    try {
+      if (!isRefresh) setLoading(true);
+      else setRefreshing(true);
 
-        await getUserLocation();
-        // Only fetch the initial, full list here
-        await Promise.all([
-          fetchTaxiRanks().catch(e => console.error('Ranks fetch error:', e)),
-          fetchIncidents().catch(e => console.error('Incidents fetch error:', e))
-        ]);
-      } catch (error) {
-        console.error('Data initialization error:', error);
-      } finally {
-        clearTimeout(timeoutId);
-        setLoading(false);
-        setRefreshing(false);
-      }
-    };
+      await getUserLocation();
+      // Only fetch the initial, full list here
+      await Promise.all([
+        fetchTaxiRanks().catch(e => console.error('Ranks fetch error:', e)),
+        fetchIncidents().catch(e => console.error('Incidents fetch error:', e))
+      ]);
+    } catch (error) {
+      console.error('Data initialization error:', error);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
+  useEffect(() => {
     if (!refreshing) {
       initializeData();
     }
 
-    // WebSocket connection for incidents
-    try {
-      const ws = new WebSocket('wss://taxipoint-backend.onrender.com/ws/incidents');
-      ws.onmessage = (event) => {
-        const incident = JSON.parse(event.data);
-        setIncidents((prev) => [...prev, incident]);
-      };
-      return () => ws.close();
-    } catch {
-      // WebSocket connection failed
-    }
+    // Real-time WebSockets
+    const connections: WebSocket[] = [];
+
+    const connectWebSockets = () => {
+      // 1. Incidents Socket
+      try {
+        const incidentWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/incidents');
+        incidentWs.onmessage = (event) => {
+          const incident = JSON.parse(event.data);
+          setIncidents((prev) => {
+            const exists = prev.find(i => i.id === incident.id);
+            if (exists) return prev.map(i => i.id === incident.id ? incident : i);
+            return [incident, ...prev];
+          });
+        };
+        connections.push(incidentWs);
+      } catch (e) { console.error('WS Incidents error:', e); }
+
+      // 2. Taxi Ranks Socket
+      try {
+        const rankWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/ranks');
+        rankWs.onmessage = (event) => {
+          const rank = JSON.parse(event.data);
+          setAllTaxiRanks((prev) => {
+            const exists = prev.find(r => r.id === rank.id);
+            if (exists) return prev.map(r => r.id === rank.id ? rank : r);
+            return [...prev, rank];
+          });
+          // Also update displayed list if not searching
+          setDisplayedTaxiRanks(prev => {
+            const exists = prev.find(r => r.id === rank.id);
+            if (exists) return prev.map(r => r.id === rank.id ? rank : r);
+            return [...prev, rank];
+          });
+        };
+        connections.push(rankWs);
+      } catch (e) { console.error('WS Ranks error:', e); }
+    };
+
+    connectWebSockets();
+
+    return () => {
+      connections.forEach(ws => ws.close());
+    };
   }, [mapReady]);
 
   // 🎙️ Voice Search Effect
@@ -456,6 +489,10 @@ export default function ExploreScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
       {/* Floating Search Bar */}
       <View style={styles.floatingSearchBarContainer}>
+        <View style={styles.liveIndicatorContainer}>
+          <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
+          <Text style={[styles.liveText, { color: textColor }]}>Live</Text>
+        </View>
         <View style={[styles.searchBar, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}>
           <Feather name="search" size={20} color={iconColor} style={{ marginRight: 12 }} />
           <TextInput
@@ -793,7 +830,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   floatingSearchBarContainer: {
     position: 'absolute',
-    top: 60, // Lowered for better reachability (Uber style)
+    top: 60,
     left: 16,
     right: 16,
     zIndex: 1001,
@@ -802,6 +839,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
+  },
+  liveIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   suggestionsDropdown: {
     backgroundColor: '#fff',
