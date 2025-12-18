@@ -3,7 +3,6 @@ import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
-import Voice, { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
@@ -21,6 +20,11 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// import { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
+type SpeechErrorEvent = any;
+type SpeechResultsEvent = any;
+// 🛡️ Safely stub Voice for Expo Go compatibility
+const Voice: any = null;
 
 interface TaxiRank {
   id: string;
@@ -374,7 +378,7 @@ export default function ExploreScreen() {
 
   // 🎙️ Voice Search Effect
   useEffect(() => {
-    if (!Voice || Platform.OS === 'web') {
+    if (!Voice) {
       setVoiceAvailable(false);
       return;
     }
@@ -403,10 +407,16 @@ export default function ExploreScreen() {
     };
 
     return () => {
-      if (Voice) {
-        Voice.destroy().then(() => {
-          if (Voice) Voice.removeAllListeners();
-        }).catch(err => console.error('Voice destroy error:', err));
+      if (Voice && typeof Voice.destroy === 'function') {
+        try {
+          Voice.destroy().then(() => {
+            if (typeof Voice.removeAllListeners === 'function') {
+              Voice.removeAllListeners();
+            }
+          }).catch((err: any) => console.error('Voice destroy error:', err));
+        } catch (e) {
+          console.log('Voice cleanup skipped');
+        }
       }
     };
   }, []);

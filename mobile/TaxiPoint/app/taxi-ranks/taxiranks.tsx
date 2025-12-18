@@ -2,7 +2,6 @@ import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
-import Voice, { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -13,7 +12,6 @@ import {
     Linking,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,6 +19,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+// import { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
+type SpeechErrorEvent = any;
+type SpeechResultsEvent = any;
+const Voice: any = null;
 
 interface TaxiRank {
     id: string;
@@ -63,7 +66,13 @@ export default function TaxiRanksScreen() {
         };
 
         return () => {
-            Voice.destroy().then(Voice.removeAllListeners);
+            if (Voice && typeof Voice.destroy === 'function') {
+                Voice.destroy().then(() => {
+                    if (typeof Voice.removeAllListeners === 'function') {
+                        Voice.removeAllListeners();
+                    }
+                });
+            }
         };
     }, []);
 
