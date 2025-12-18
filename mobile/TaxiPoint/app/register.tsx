@@ -88,11 +88,15 @@ export default function RegisterScreen() {
     }
   };
 
-  const bgColor = isDark ? '#000' : '#fff';
-  const textColor = isDark ? '#fff' : '#000';
-  const inputBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
-  const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
-  const secondaryTextColor = isDark ? '#888' : '#666';
+  const theme = colorScheme ?? 'light';
+  const colors = Colors[theme];
+
+  const bgColor = colors.background;
+  const textColor = colors.text;
+  const inputBgColor = colors.secondaryBackground;
+  const borderColor = colors.border;
+  const primaryColor = colors.tint;
+  const secondaryTextColor = colors.textSecondary;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
@@ -102,7 +106,7 @@ export default function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton} disabled={loading}>
-              <ThemedText style={[styles.backText, { color: borderColor }]}>← Back</ThemedText>
+              <ThemedText style={[styles.backText, { color: primaryColor }]}>← Back</ThemedText>
             </TouchableOpacity>
 
             <ThemedText type="title" style={[styles.title, { color: textColor }]}>
@@ -205,7 +209,7 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.registerButton,
-                  { backgroundColor: borderColor, opacity: loading ? 0.6 : 1 },
+                  { backgroundColor: primaryColor, opacity: loading ? 0.6 : 1 },
                 ]}
                 onPress={handleRegister}
                 disabled={loading}>
@@ -221,7 +225,7 @@ export default function RegisterScreen() {
                   Already have an account?
                 </ThemedText>
                 <TouchableOpacity onPress={() => router.back()} disabled={loading}>
-                  <ThemedText style={[styles.loginLink, { color: borderColor }]}>Login</ThemedText>
+                  <ThemedText style={[styles.loginLink, { color: primaryColor }]}>Login</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>

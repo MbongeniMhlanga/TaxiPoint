@@ -2,8 +2,8 @@ import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import { Feather } from '@expo/vector-icons';
+import Voice, { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
@@ -50,13 +50,19 @@ interface Incident {
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  // Use theme-aware colors (hooks must not be called inside render or map/filter)
-  const textColor = useThemeColor({}, 'text');
-  const bgColor = useThemeColor({}, 'background');
-  const iconColor = useThemeColor({}, 'icon');
-  const placeholderColor = useThemeColor({ light: '#888', dark: '#ccc' }, 'icon');
-  const secondaryBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
-  const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
+  // Use theme-aware colors
+  const theme = colorScheme ?? 'light';
+  const colors = Colors[theme];
+
+  const textColor = colors.text;
+  const bgColor = colors.background;
+  const iconColor = colors.icon;
+  const placeholderColor = colors.textSecondary;
+  const secondaryBgColor = colors.secondaryBackground;
+
+  // Explicitly separate border and primary colors
+  const borderColor = colors.border;
+  const primaryColor = colors.tint;
 
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
@@ -75,6 +81,10 @@ export default function ExploreScreen() {
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
+
+  // 🎙️ Voice Search States
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [voiceResults, setVoiceResults] = useState<string[]>([]);
 
   // Request location permissions (No change)
   const requestLocationPermission = async () => {
@@ -167,7 +177,8 @@ export default function ExploreScreen() {
     let matches = allTaxiRanks.filter(rank =>
       rank.name.toLowerCase().includes(lowerQuery) ||
       rank.district.toLowerCase().includes(lowerQuery) ||
-      rank.address.toLowerCase().includes(lowerQuery)
+      rank.address.toLowerCase().includes(lowerQuery) ||
+      (rank.routesServed && rank.routesServed.some(route => route.toLowerCase().includes(lowerQuery)))
     );
 
     // 2. Fuzzy Match (if few results)
@@ -295,11 +306,70 @@ export default function ExploreScreen() {
     }
   }, [mapReady]);
 
+  // 🎙️ Voice Search Effect
+  useEffect(() => {
+    Voice.onSpeechStart = () => setIsVoiceListening(true);
+    Voice.onSpeechEnd = () => setIsVoiceListening(false);
+    Voice.onSpeechError = (e: SpeechErrorEvent) => {
+      console.error('Speech Error:', e);
+      setIsVoiceListening(false);
+    };
+    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+      if (e.value && e.value.length > 0) {
+        const text = e.value[0];
+        setSearchQuery(text);
+        searchTaxiRanks(text);
+      }
+    };
+    Voice.onSpeechPartialResults = (e: SpeechResultsEvent) => {
+      if (e.value && e.value.length > 0) {
+        const text = e.value[0];
+        setSearchQuery(text);
+        searchTaxiRanks(text);
+      }
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, []);
+
+  const startVoiceSearch = async () => {
+    try {
+      setSearchQuery('');
+      setIsVoiceListening(true);
+      await Voice.start('en-US');
+    } catch (e) {
+      console.error('Start Voice Error:', e);
+      setIsVoiceListening(false);
+    }
+  };
+
+  const stopVoiceSearch = async () => {
+    try {
+      await Voice.stop();
+      setIsVoiceListening(false);
+    } catch (e) {
+      console.error('Stop Voice Error:', e);
+    }
+  };
+
+  const cancelVoiceSearch = async () => {
+    try {
+      await Voice.cancel();
+      setIsVoiceListening(false);
+      setSearchQuery('');
+      searchTaxiRanks('');
+    } catch (e) {
+      console.error('Cancel Voice Error:', e);
+    }
+  };
+
   const RankCard = ({ rank }: { rank: TaxiRank }) => (
     <TouchableOpacity
       style={[styles.rankCard, { backgroundColor: secondaryBgColor }]}
       onPress={() => {
-        Alert.alert(rank.name, `${rank.address}\n\nPhone: ${rank.phone || 'N/A'}`);
+        Alert.alert(rank.name, `${rank.address}\n\nRoutes: ${rank.routesServed?.join(', ') || 'N/A'}\n\nPhone: ${rank.phone || 'N/A'}`);
       }}>
       <View style={styles.rankHeader}>
         <ThemedText type="defaultSemiBold" style={styles.rankName}>{rank.name}</ThemedText>
@@ -307,13 +377,22 @@ export default function ExploreScreen() {
       </View>
 
       {rank.description && (
-        <ThemedText style={styles.rankDescription}>{rank.description}</ThemedText>
+        <ThemedText style={styles.rankDescription} numberOfLines={2}>{rank.description}</ThemedText>
+      )}
+
+      {rank.routesServed && rank.routesServed.length > 0 && (
+        <View style={styles.cardRoutesContainer}>
+          <Feather name="truck" size={14} color={primaryColor} />
+          <ThemedText style={[styles.cardRoutesText, { color: primaryColor }]}>
+            {rank.routesServed.slice(0, 3).join(', ')}{rank.routesServed.length > 3 ? '...' : ''}
+          </ThemedText>
+        </View>
       )}
 
       <ThemedText style={styles.rankAddress}>📍 {rank.address}</ThemedText>
 
       {rank.distanceMeters && (
-        <ThemedText style={[styles.rankDistance, { color: borderColor }]}>
+        <ThemedText style={[styles.rankDistance, { color: primaryColor }]}>
           {(rank.distanceMeters / 1000).toFixed(1)} km away
         </ThemedText>
       )}
@@ -321,7 +400,7 @@ export default function ExploreScreen() {
   );
 
   const IncidentCard = ({ incident }: { incident: Incident }) => (
-    <View style={[styles.incidentCard, { backgroundColor: isDark ? '#4a1f1f' : '#ffe6e6' }]}>
+    <View style={[styles.incidentCard, { backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: colors.error }]}>
       <ThemedText style={styles.incidentDescription}>{incident.description}</ThemedText>
       <ThemedText style={[styles.incidentMeta, { color: iconColor }]}>📍 {incident.formattedAddress}</ThemedText>
       <ThemedText style={styles.incidentTime}>{new Date(incident.createdAt).toLocaleTimeString()}</ThemedText>
@@ -331,7 +410,7 @@ export default function ExploreScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={borderColor} />
+        <ActivityIndicator size="large" color={primaryColor} />
       </View>
     );
   }
@@ -358,9 +437,16 @@ export default function ExploreScreen() {
             </TouchableOpacity>
           )}
           <View style={styles.voiceSeparator} />
-          <TouchableOpacity onPress={() => Alert.alert('Voice Search', 'Listening... (Feature coming soon)')}>
-            <Feather name="mic" size={20} color={iconColor} style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
+          {isVoiceListening ? (
+            <TouchableOpacity onPress={cancelVoiceSearch} style={styles.voiceButtonActive}>
+              <View style={[styles.pulseCircle, { backgroundColor: colors.error }]} />
+              <Feather name="mic-off" size={20} color={colors.error} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={startVoiceSearch}>
+              <Feather name="mic" size={20} color={iconColor} style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+          )}
         </View>
         {/* Suggestions Dropdown */}
         {showSearchResults && filteredSuggestions.length > 0 && (
@@ -385,7 +471,12 @@ export default function ExploreScreen() {
                 style={styles.suggestionItem}
               >
                 <ThemedText>{rank.name}</ThemedText>
-                <ThemedText style={{ fontSize: 12 }}>{rank.address}</ThemedText>
+                <ThemedText style={{ fontSize: 12, color: subTextColor }}>{rank.address}</ThemedText>
+                {rank.routesServed && rank.routesServed.length > 0 && (
+                  <ThemedText style={{ fontSize: 11, color: primaryColor, marginTop: 2 }}>
+                    🚌 {rank.routesServed.slice(0, 3).join(', ')}{rank.routesServed.length > 3 ? '...' : ''}
+                  </ThemedText>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -436,7 +527,7 @@ export default function ExploreScreen() {
                   `${incident.description}\n\nLocation: ${incident.formattedAddress}`
                 );
               }}>
-              <View style={[styles.markerBox, { backgroundColor: '#EF4444' }]}>
+              <View style={[styles.markerBox, { backgroundColor: colors.error }]}>
                 <Feather name="alert-triangle" size={24} color="#FFFFFF" />
               </View>
             </Marker>
@@ -449,7 +540,7 @@ export default function ExploreScreen() {
                 latitude: userLocation.latitude,
                 longitude: userLocation.longitude,
               }}>
-              <View style={[styles.markerBox, { backgroundColor: '#10B981' }]}>
+              <View style={[styles.markerBox, { backgroundColor: colors.success }]}>
                 <Feather name="user" size={24} color="#FFFFFF" />
               </View>
             </Marker>
@@ -459,7 +550,7 @@ export default function ExploreScreen() {
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: borderColor, marginBottom: 12 }]}
+            style={[styles.fab, { backgroundColor: primaryColor, marginBottom: 12 }]}
             onPress={() => {
               if (userLocation && mapRef.current) {
                 mapRef.current.animateToRegion({
@@ -474,7 +565,7 @@ export default function ExploreScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: '#ef4444' }]}
+            style={[styles.fab, { backgroundColor: colors.error }]}
             onPress={() => setShowIncidentForm(true)}>
             <Feather name="plus" size={24} color="#fff" />
           </TouchableOpacity>
@@ -520,7 +611,7 @@ export default function ExploreScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: borderColor, opacity: submittingIncident ? 0.6 : 1 }]}
+              style={[styles.submitButton, { backgroundColor: primaryColor, opacity: submittingIncident ? 0.6 : 1 }]}
               onPress={submitIncident}
               disabled={submittingIncident}>
               {submittingIncident ? (
@@ -547,7 +638,7 @@ export default function ExploreScreen() {
             {selectedRank && (
               <>
                 <LinearGradient
-                  colors={['#2563EB', '#9333EA']}
+                  colors={[primaryColor, '#9333EA']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.rankModalHeader}
@@ -560,7 +651,7 @@ export default function ExploreScreen() {
                   </TouchableOpacity>
                   <View style={styles.rankModalHeaderContent}>
                     <View style={styles.largeIconBg}>
-                      <Feather name="map-pin" size={28} color="#2563EB" />
+                      <Feather name="map-pin" size={28} color={primaryColor} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <ThemedText style={styles.rankModalTitleWhite}>{selectedRank.name}</ThemedText>
@@ -584,6 +675,20 @@ export default function ExploreScreen() {
                       <ThemedText style={[styles.sectionText, { color: placeholderColor, flex: 1 }]}>{selectedRank.address}</ThemedText>
                     </View>
                   </View>
+
+                  {selectedRank.routesServed && selectedRank.routesServed.length > 0 && (
+                    <View style={styles.section}>
+                      <ThemedText style={[styles.sectionHeader, { color: textColor }]}>Routes Served</ThemedText>
+                      <View style={styles.routesContainer}>
+                        {selectedRank.routesServed.map((route, idx) => (
+                          <View key={idx} style={[styles.routeBadge, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
+                            <Feather name="truck" size={12} color={primaryColor} />
+                            <ThemedText style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</ThemedText>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
                   {selectedRank.phone ? (
                     <View style={styles.section}>
@@ -615,7 +720,7 @@ export default function ExploreScreen() {
                     }}
                   >
                     <LinearGradient
-                      colors={['#2563EB', '#9333EA']}
+                      colors={[primaryColor, '#9333EA']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.navigateButtonGradient}
@@ -741,9 +846,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   rankCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   rankHeader: {
     marginBottom: 8,
@@ -769,10 +880,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  cardRoutesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
+  cardRoutesText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   incidentCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
   },
   incidentDescription: {
     fontSize: 14,
@@ -962,5 +1084,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600'
+  },
+  routesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  routeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  routeBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: 20,
+  },
+  voiceButtonActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  pulseCircle: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   }
 });

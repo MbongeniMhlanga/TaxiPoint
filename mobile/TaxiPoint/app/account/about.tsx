@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowRight, Heart, MapPin, Shield, TrendingUp, Users, Zap } from 'lucide-react-native';
@@ -7,17 +8,20 @@ const { width } = Dimensions.get('window');
 
 export default function AboutScreen() {
     const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const theme = colorScheme ?? 'light';
+    const colors = Colors[theme];
+    const isDark = theme === 'dark';
     const router = useRouter();
 
-    // Theme colors matching the web app
+    // Theme colors
     const backgroundColors = isDark
-        ? ['#111827', '#1F2937', '#111827'] // gray-900, gray-800, gray-900
-        : ['#F9FAFB', '#EFF6FF', '#FAF5FF']; // gray-50, blue-50, purple-50
+        ? [colors.background, colors.secondaryBackground, colors.background]
+        : [colors.background, '#EFF6FF', '#FAF5FF']; // Finer gradients for light mode
 
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#111827';
-    const subTextColor = isDark ? '#D1D5DB' : '#4B5563';
+    const cardBg = colors.surface;
+    const textColor = colors.text;
+    const subTextColor = colors.textSecondary;
+    const primaryColor = colors.tint;
 
     const features = [
         {
@@ -72,7 +76,7 @@ export default function AboutScreen() {
                     {/* Header / Nav - Custom since we hid the default header */}
                     {/* Hero Section */}
                     <LinearGradient
-                        colors={['#2563EB', '#9333EA']} // blue-600 to purple-600
+                        colors={[primaryColor, '#9333EA']} // Keeping the secondary purple for premium feel
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.heroSection}
@@ -120,7 +124,7 @@ export default function AboutScreen() {
 
                     {/* Stats Section */}
                     <LinearGradient
-                        colors={['#2563EB', '#9333EA']}
+                        colors={[primaryColor, '#9333EA']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.statsSection}
@@ -147,7 +151,7 @@ export default function AboutScreen() {
                         </Text>
                         <TouchableOpacity onPress={() => router.push('/taxi-ranks/taxiranks')}>
                             <LinearGradient
-                                colors={['#2563EB', '#9333EA']}
+                                colors={[primaryColor, '#9333EA']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.ctaButton}
@@ -312,7 +316,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 32,
         borderRadius: 50,
-        shadowColor: '#2563EB',
+        shadowColor: Colors.light.tint, // Use a fixed shadow color for consistency or primaryColor
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,

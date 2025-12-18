@@ -1,13 +1,15 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
-    const { colors, colorScheme } = useTheme();
+    const { colorScheme } = useTheme();
+    const theme = colorScheme ?? 'light';
+    const colors = Colors[theme];
     const router = useRouter();
-    const isDark = colorScheme === 'dark';
 
     // Mock initial user data - In a real app, retrieve this from AuthContext
     const [name, setName] = useState("John");
@@ -21,11 +23,11 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(false);
 
     const bgColor = colors.background;
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+    const cardBg = colors.surface;
     const textColor = colors.text;
-    const subTextColor = isDark ? '#D1D5DB' : '#6B7280';
-    const inputBg = isDark ? '#111827' : '#F9FAFB';
-    const inputBorder = isDark ? '#374151' : '#D1D5DB';
+    const subTextColor = colors.textSecondary;
+    const inputBg = colors.secondaryBackground;
+    const inputBorder = colors.border;
     const tintColor = colors.tint;
 
     const handleUpdateProfile = async () => {

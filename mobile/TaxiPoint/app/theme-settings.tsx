@@ -1,31 +1,33 @@
 import { ThemedText } from '@/components/themed-text';
+import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ThemeSettingsScreen() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorScheme } = useTheme();
+  const themeColors = Colors[colorScheme ?? 'light'];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ThemedText type="title" style={styles.title}>Theme Settings</ThemedText>
       <TouchableOpacity
-        style={[styles.button, theme === 'light' && styles.selected]}
+        style={[styles.button, { backgroundColor: themeColors.secondaryBackground }, theme === 'light' && { backgroundColor: themeColors.tint }]}
         onPress={() => setTheme('light')}
       >
-        <ThemedText>Light</ThemedText>
+        <ThemedText style={theme === 'light' && { color: '#fff' }}>Light</ThemedText>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.button, theme === 'dark' && styles.selected]}
+        style={[styles.button, { backgroundColor: themeColors.secondaryBackground }, theme === 'dark' && { backgroundColor: themeColors.tint }]}
         onPress={() => setTheme('dark')}
       >
-        <ThemedText>Dark</ThemedText>
+        <ThemedText style={theme === 'dark' && { color: '#fff' }}>Dark</ThemedText>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.button, theme === 'system' && styles.selected]}
+        style={[styles.button, { backgroundColor: themeColors.secondaryBackground }, theme === 'system' && { backgroundColor: themeColors.tint }]}
         onPress={() => setTheme('system')}
       >
-        <ThemedText>System Default</ThemedText>
+        <ThemedText style={theme === 'system' && { color: '#fff' }}>System Default</ThemedText>
       </TouchableOpacity>
     </View>
   );
@@ -45,11 +47,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: '#eee',
     width: 200,
     alignItems: 'center',
-  },
-  selected: {
-    backgroundColor: '#0a7ea4',
   },
 });

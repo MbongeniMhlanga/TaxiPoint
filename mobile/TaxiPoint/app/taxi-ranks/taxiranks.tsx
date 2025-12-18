@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '@/config';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
+import Voice, { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -37,6 +39,54 @@ interface TaxiRank {
 export default function TaxiRanksScreen() {
     const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
     const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+
+    // 🎙️ Voice Search States
+    const [isVoiceListening, setIsVoiceListening] = useState(false);
+
+    // 🎙️ Voice Search Effect
+    useEffect(() => {
+        Voice.onSpeechStart = () => setIsVoiceListening(true);
+        Voice.onSpeechEnd = () => setIsVoiceListening(false);
+        Voice.onSpeechError = (e: SpeechErrorEvent) => {
+            console.error('Speech Error:', e);
+            setIsVoiceListening(false);
+        };
+        Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+            if (e.value && e.value.length > 0) {
+                setSearchQuery(e.value[0]);
+            }
+        };
+        Voice.onSpeechPartialResults = (e: SpeechResultsEvent) => {
+            if (e.value && e.value.length > 0) {
+                setSearchQuery(e.value[0]);
+            }
+        };
+
+        return () => {
+            Voice.destroy().then(Voice.removeAllListeners);
+        };
+    }, []);
+
+    const startVoiceSearch = async () => {
+        try {
+            setSearchQuery('');
+            setIsVoiceListening(true);
+            await Voice.start('en-US');
+        } catch (e) {
+            console.error('Start Voice Error:', e);
+            setIsVoiceListening(false);
+        }
+    };
+
+    const cancelVoiceSearch = async () => {
+        try {
+            await Voice.cancel();
+            setIsVoiceListening(false);
+            setSearchQuery('');
+        } catch (e) {
+            console.error('Cancel Voice Error:', e);
+        }
+    };
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const router = useRouter();
@@ -64,14 +114,19 @@ export default function TaxiRanksScreen() {
     const filteredRanks = taxiRanks.filter(rank =>
         rank.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         rank.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rank.address.toLowerCase().includes(searchQuery.toLowerCase())
+        rank.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (rank.routesServed && rank.routesServed.some(route => route.toLowerCase().includes(searchQuery.toLowerCase())))
     );
 
-    const bgColor = isDark ? '#111827' : '#F9FAFB';
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#111827';
-    const subTextColor = isDark ? '#9CA3AF' : '#4B5563';
-    const borderColor = isDark ? '#374151' : '#E5E7EB';
+    const theme = colorScheme ?? 'light';
+    const colors = Colors[theme];
+
+    const bgColor = colors.background;
+    const cardBg = colors.surface; // Using surface for cards
+    const textColor = colors.text;
+    const subTextColor = colors.textSecondary;
+    const borderColor = colors.border;
+    const primaryColor = colors.tint;
 
     const renderHours = (hours: Record<string, string>) => {
         if (!hours || Object.keys(hours).length === 0) return <Text style={{ color: subTextColor }}>Not available</Text>;
@@ -92,30 +147,42 @@ export default function TaxiRanksScreen() {
             <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                     <Text style={[styles.cardTitle, { color: textColor }]}>{item.name}</Text>
-                    <Text style={styles.cardDistrict}>{item.district}</Text>
+                    <Text style={[styles.cardDistrict, { color: primaryColor }]}>{item.district}</Text>
                 </View>
                 <View style={styles.mapIconBg}>
-                    <Feather name="map-pin" size={20} color="#2563EB" />
+                    <Feather name="map-pin" size={20} color={primaryColor} />
                 </View>
             </View>
 
             <View style={styles.cardBody}>
                 <View style={styles.infoRow}>
-                    <Feather name="map-pin" size={16} color="#9CA3AF" />
+                    <Feather name="map-pin" size={16} color={subTextColor} />
                     <Text style={[styles.infoText, { color: subTextColor }]} numberOfLines={2}>
                         {item.address}
                     </Text>
                 </View>
+                {item.routesServed && item.routesServed.length > 0 && (
+                    <View style={styles.cardRoutesContainer}>
+                        {item.routesServed.slice(0, 4).map((route, idx) => (
+                            <View key={idx} style={[styles.routeBadge, { backgroundColor: primaryColor + '15', borderColor: primaryColor }]}>
+                                <Text style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</Text>
+                            </View>
+                        ))}
+                        {item.routesServed.length > 4 && (
+                            <Text style={[styles.moreRoutesText, { color: subTextColor }]}>+{item.routesServed.length - 4} more</Text>
+                        )}
+                    </View>
+                )}
                 {item.phone ? (
                     <View style={styles.infoRow}>
-                        <Feather name="phone" size={16} color="#9CA3AF" />
+                        <Feather name="phone" size={16} color={subTextColor} />
                         <Text style={[styles.infoText, { color: subTextColor }]}>{item.phone}</Text>
                     </View>
                 ) : null}
             </View>
 
             <View style={[styles.cardFooter, { borderColor }]}>
-                <Text style={styles.viewDetailsText}>View Details →</Text>
+                <Text style={[styles.viewDetailsText, { color: primaryColor }]}>View Details →</Text>
             </View>
         </TouchableOpacity>
     );
@@ -124,7 +191,7 @@ export default function TaxiRanksScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
             <Stack.Screen options={{ headerShown: false }} />
             <LinearGradient
-                colors={isDark ? ['#111827', '#1F2937', '#111827'] : ['#F9FAFB', '#EFF6FF', '#FAF5FF']}
+                colors={isDark ? [colors.background, colors.secondaryBackground, colors.background] : [colors.background, '#EFF6FF', '#FAF5FF']}
                 style={{ flex: 1 }}
             >
                 <View style={styles.container}>
@@ -144,16 +211,26 @@ export default function TaxiRanksScreen() {
                         <Feather name="search" size={20} color={subTextColor} style={{ marginRight: 10 }} />
                         <TextInput
                             style={[styles.searchInput, { color: textColor }]}
-                            placeholder="Search by name, district, or address..."
+                            placeholder="Search name, district, route..."
                             placeholderTextColor={subTextColor}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
+                        {isVoiceListening ? (
+                            <TouchableOpacity onPress={cancelVoiceSearch} style={styles.voiceButtonActive}>
+                                <View style={[styles.pulseCircle, { backgroundColor: colors.error }]} />
+                                <Feather name="mic-off" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={startVoiceSearch}>
+                                <Feather name="mic" size={20} color={subTextColor} style={{ marginLeft: 8 }} />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {loading ? (
                         <View style={styles.centerContent}>
-                            <ActivityIndicator size="large" color="#2563EB" />
+                            <ActivityIndicator size="large" color={primaryColor} />
                             <Text style={{ marginTop: 10, color: subTextColor }}>Loading taxi ranks...</Text>
                         </View>
                     ) : (
@@ -182,7 +259,7 @@ export default function TaxiRanksScreen() {
                                 {selectedRank && (
                                     <>
                                         <LinearGradient
-                                            colors={['#2563EB', '#9333EA']}
+                                            colors={[primaryColor, '#9333EA']}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 0 }}
                                             style={styles.modalHeader}
@@ -195,7 +272,7 @@ export default function TaxiRanksScreen() {
                                             </TouchableOpacity>
                                             <View style={styles.modalHeaderContent}>
                                                 <View style={styles.largeIconBg}>
-                                                    <Feather name="map-pin" size={28} color="#2563EB" />
+                                                    <Feather name="map-pin" size={28} color={primaryColor} />
                                                 </View>
                                                 <View style={{ flex: 1 }}>
                                                     <Text style={styles.modalTitleWhite}>{selectedRank.name}</Text>
@@ -224,7 +301,7 @@ export default function TaxiRanksScreen() {
                                                 <View style={styles.section}>
                                                     <Text style={[styles.sectionHeader, { color: textColor }]}>Contact</Text>
                                                     <TouchableOpacity
-                                                        style={[styles.callButton, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#F0FDF4', borderColor: isDark ? '#14532D' : '#BBF7D0' }]}
+                                                        style={[styles.callButton, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4', borderColor: isDark ? '#065F46' : '#BBF7D0' }]}
                                                         onPress={() => Linking.openURL(`tel:${selectedRank.phone}`)}
                                                     >
                                                         <View style={styles.phoneIconBg}>
@@ -275,7 +352,7 @@ export default function TaxiRanksScreen() {
                                                 }}
                                             >
                                                 <LinearGradient
-                                                    colors={['#2563EB', '#9333EA']}
+                                                    colors={[primaryColor, '#9333EA']}
                                                     start={{ x: 0, y: 0 }}
                                                     end={{ x: 1, y: 0 }}
                                                     style={styles.navigateButtonGradient}
@@ -363,17 +440,37 @@ const styles = StyleSheet.create({
     },
     cardDistrict: {
         fontSize: 14,
-        color: '#2563EB',
         fontWeight: '500',
     },
     mapIconBg: {
-        backgroundColor: '#DBEAFE', // blue-100
+        backgroundColor: 'rgba(37, 99, 235, 0.1)', // Subtle brand background
         padding: 8,
         borderRadius: 8,
     },
     cardBody: {
         gap: 8,
         marginBottom: 16,
+    },
+    cardRoutesContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginTop: 4,
+    },
+    routeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+    },
+    routeBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    moreRoutesText: {
+        fontSize: 11,
+        alignSelf: 'center',
+        marginLeft: 2,
     },
     infoRow: {
         flexDirection: 'row',
@@ -388,7 +485,6 @@ const styles = StyleSheet.create({
         paddingTop: 12,
     },
     viewDetailsText: {
-        color: '#2563EB',
         fontWeight: '600',
         fontSize: 14,
     },
@@ -426,7 +522,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     largeIconBg: {
-        backgroundColor: '#EFF6FF',
+        backgroundColor: 'rgba(255,255,255,0.2)',
         padding: 12,
         borderRadius: 12
     },
@@ -465,7 +561,7 @@ const styles = StyleSheet.create({
         gap: 12
     },
     phoneIconBg: {
-        backgroundColor: '#16A34A',
+        backgroundColor: '#10B981', // colors.success
         padding: 8,
         borderRadius: 8
     },
@@ -495,7 +591,7 @@ const styles = StyleSheet.create({
     navigateButton: {
         marginTop: 8,
         borderRadius: 12,
-        shadowColor: '#2563EB',
+        shadowColor: '#2563EB', // Use constant for shadow or theme
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -512,5 +608,16 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600'
+    },
+    voiceButtonActive: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 8,
+    },
+    pulseCircle: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
     }
 });

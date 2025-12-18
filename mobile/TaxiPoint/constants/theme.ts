@@ -10,20 +10,34 @@ const tintColorDark = '#60A5FA'; // Blue-400
 
 export const Colors = {
   light: {
-    text: '#111827', // gray-900
-    background: '#F9FAFB', // gray-50
-    tint: tintColorLight,
-    icon: '#6B7280', // gray-500
-    tabIconDefault: '#9CA3AF', // gray-400
-    tabIconSelected: tintColorLight,
+    text: '#111827', // Deep Charcoal
+    textSecondary: '#6B7280', // Cool Gray
+    background: '#FFFFFF', // Pure White
+    secondaryBackground: '#F3F4F6', // Light Gray Surface
+    tint: '#2563EB', // Primary Brand Blue
+    primaryColor: '#2563EB',
+    icon: '#6B7280',
+    border: '#E5E7EB',
+    error: '#EF4444',
+    success: '#10B981',
+    surface: '#FFFFFF',
+    tabIconDefault: '#9CA3AF',
+    tabIconSelected: '#2563EB',
   },
   dark: {
-    text: '#F3F4F6', // gray-100
-    background: '#111827', // gray-900
-    tint: tintColorDark,
-    icon: '#9CA3AF', // gray-400
-    tabIconDefault: '#6B7280', // gray-500
-    tabIconSelected: tintColorDark,
+    text: '#F9FAFB', // Off-White
+    textSecondary: '#9CA3AF', // Gray
+    background: '#111827', // Deep Blue-Black (Modern Dark Mode)
+    secondaryBackground: '#1F2937', // Lighter Dark Surface
+    tint: '#3B82F6', // Lighter Blue for Dark Mode
+    primaryColor: '#3B82F6',
+    icon: '#9CA3AF',
+    border: '#374151',
+    error: '#EF4444',
+    success: '#10B981',
+    surface: '#1F2937',
+    tabIconDefault: '#6B7280',
+    tabIconSelected: '#3B82F6',
   },
 };
 

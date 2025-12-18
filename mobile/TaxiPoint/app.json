@@ -17,7 +17,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "TaxiPoint needs your location to show nearby taxi ranks and incidents",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "TaxiPoint needs your location to show nearby taxi ranks and incidents"
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "TaxiPoint needs your location to show nearby taxi ranks and incidents",
+        "NSSpeechRecognitionUsageDescription": "TaxiPoint needs speech recognition for voice search",
+        "NSMicrophoneUsageDescription": "TaxiPoint needs microphone access for voice search"
       }
     },
     "android": {
@@ -32,8 +34,7 @@
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.mbongenimhlanga.TaxiPoint"
     },
@@ -43,6 +44,7 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-voice/voice",
       [
         "expo-splash-screen",
         {

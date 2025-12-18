@@ -37,29 +37,28 @@ export default function LoginScreen() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Login Failed:', response.status, errorText);
-
-        let errorMessage = `Error (${response.status}): Invalid credentials`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.message) {
-            errorMessage = errorJson.message;
-          }
-        } catch {
-          if (response.status === 404) errorMessage = 'Error (404): Endpoint not found';
-          if (response.status === 500) errorMessage = 'Error (500): Internal Server Error';
+        if (response.status === 401) {
+          Alert.alert('Login Failed', 'Wrong credentials, please try again');
+        } else {
+          Alert.alert('Login Failed', 'Something went wrong. Please try again later.');
+          const errorText = await response.text();
+          console.error('Login Error:', response.status, errorText);
         }
-
-        Alert.alert('Login Failed', errorMessage);
         return;
       }
 
       const data = await response.json();
       console.log('Login successful with role:', data.role);
 
-      // Navigate to explore screen - use relative navigation
-      router.navigate('../(tabs)/explore');
+      if (data.role === 'ADMIN') {
+        router.replace({
+          pathname: '/admin/dashboard',
+          params: { token: data.token, email: email }
+        });
+      } else {
+        // Navigate to explore screen - use relative navigation
+        router.navigate('../(tabs)/explore');
+      }
     } catch (error: any) {
       console.error('Login Network Error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -69,11 +68,15 @@ export default function LoginScreen() {
     }
   };
 
-  const bgColor = isDark ? '#000' : '#fff';
-  const textColor = isDark ? '#fff' : '#000';
-  const inputBgColor = isDark ? '#1a1a1a' : '#f5f5f5';
-  const borderColor = Colors[isDark ? 'dark' : 'light'].tint;
-  const secondaryTextColor = isDark ? '#888' : '#666';
+  const theme = colorScheme ?? 'light';
+  const colors = Colors[theme];
+
+  const bgColor = colors.background;
+  const textColor = colors.text;
+  const inputBgColor = colors.secondaryBackground;
+  const borderColor = colors.border;
+  const primaryColor = colors.tint;
+  const secondaryTextColor = colors.textSecondary;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
@@ -110,7 +113,7 @@ export default function LoginScreen() {
               <View style={styles.passwordLabelContainer}>
                 <ThemedText style={[styles.label, { color: textColor }]}>Password</ThemedText>
                 <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Password recovery coming soon!')}>
-                  <ThemedText style={[styles.forgotLink, { color: borderColor }]}>Forgot password?</ThemedText>
+                  <ThemedText style={[styles.forgotLink, { color: primaryColor }]}>Forgot password?</ThemedText>
                 </TouchableOpacity>
               </View>
               <View style={[styles.passwordInput, { borderColor: borderColor, backgroundColor: inputBgColor }]}>
@@ -141,7 +144,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={[
                   styles.loginButton,
-                  { backgroundColor: borderColor, opacity: loading ? 0.6 : 1 },
+                  { backgroundColor: primaryColor, opacity: loading ? 0.6 : 1 },
                 ]}
                 onPress={handleLogin}
                 disabled={loading}>
@@ -157,7 +160,7 @@ export default function LoginScreen() {
                   Don&apos;t have an account?
                 </ThemedText>
                 <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
-                  <ThemedText style={[styles.signupLink, { color: borderColor }]}>Sign up</ThemedText>
+                  <ThemedText style={[styles.signupLink, { color: primaryColor }]}>Sign up</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>

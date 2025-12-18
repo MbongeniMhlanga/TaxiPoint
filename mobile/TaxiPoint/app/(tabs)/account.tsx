@@ -8,8 +8,9 @@ import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity,
 export default function AccountScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
-    const theme = Colors[colorScheme ?? 'light'];
-    const isDark = colorScheme === 'dark';
+    const theme = colorScheme ?? 'light';
+    const themeColors = Colors[theme];
+    const isDark = theme === 'dark';
 
     const menuItems = [
         {
@@ -35,35 +36,35 @@ export default function AccountScreen() {
     ];
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
-                    <Text style={[styles.headerTitle, { color: theme.text }]}>Account</Text>
+                    <Text style={[styles.headerTitle, { color: themeColors.text }]}>Account</Text>
                 </View>
 
-                <View style={[styles.section, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+                <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
                     {menuItems.map((item, index) => (
                         <TouchableOpacity
                             key={item.title}
                             style={[
                                 styles.item,
-                                { borderBottomColor: isDark ? '#38383A' : '#E5E5EA' },
+                                { borderBottomColor: themeColors.border },
                                 index === menuItems.length - 1 && styles.lastItem,
                             ]}
                             onPress={() => router.push(item.route as any)}
                         >
                             <View style={styles.itemLeft}>
-                                <IconSymbol size={24} name={item.icon} color={theme.tint} style={styles.icon} />
-                                <Text style={[styles.itemTitle, { color: theme.text }]}>{item.title}</Text>
+                                <IconSymbol size={24} name={item.icon} color={themeColors.tint} style={styles.icon} />
+                                <Text style={[styles.itemTitle, { color: themeColors.text }]}>{item.title}</Text>
                             </View>
-                            <IconSymbol size={20} name="chevron.right" color={theme.icon} />
+                            <IconSymbol size={20} name="chevron.right" color={themeColors.icon} />
                         </TouchableOpacity>
                     ))}
                 </View>
 
                 {/* Example Logout Button - Optional but good for Account page */}
-                <TouchableOpacity style={[styles.logoutButton, { borderColor: theme.tint }]}>
-                    <Text style={[styles.logoutText, { color: theme.tint }]}>Log Out</Text>
+                <TouchableOpacity style={[styles.logoutButton, { borderColor: themeColors.tint }]}>
+                    <Text style={[styles.logoutText, { color: themeColors.tint }]}>Log Out</Text>
                 </TouchableOpacity>
 
             </ScrollView>

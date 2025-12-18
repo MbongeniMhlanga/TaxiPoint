@@ -1,21 +1,24 @@
+import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsScreen() {
-    const { theme, setTheme, colorScheme, colors } = useTheme();
-    const isDark = colorScheme === 'dark';
+    const { theme, setTheme, colorScheme } = useTheme();
+    const currentTheme = colorScheme ?? 'light';
+    const colors = Colors[currentTheme];
+    const isDark = currentTheme === 'dark';
 
     const [notifications, setNotifications] = useState(true);
     const [loading, setLoading] = useState(false);
 
-    // Use colors from ThemeContext directly
+    // Use colors from centralized theme
     const bgColor = colors.background;
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+    const cardBg = colors.surface;
     const textColor = colors.text;
-    const sectionBg = isDark ? '#111827' : '#F9FAFB';
-    const borderColor = isDark ? '#374151' : '#E5E7EB';
+    const sectionBg = colors.secondaryBackground;
+    const borderColor = colors.border;
     const tintColor = colors.tint;
 
     const toggleTheme = (value: boolean) => {

@@ -1,22 +1,26 @@
+import { Colors } from '@/constants/theme';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 export default function SupportScreen() {
     const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const theme = colorScheme ?? 'light';
+    const colors = Colors[theme];
+    const isDark = theme === 'dark';
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const bgColor = isDark ? '#111827' : '#F9FAFB'; // gray-900 : gray-50
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
-    const textColor = isDark ? '#FFFFFF' : '#111827';
-    const subTextColor = isDark ? '#D1D5DB' : '#4B5563';
-    const inputBg = isDark ? '#111827' : '#F9FAFB';
-    const inputBorder = isDark ? '#374151' : '#D1D5DB';
+    const bgColor = colors.background;
+    const cardBg = colors.surface;
+    const textColor = colors.text;
+    const subTextColor = colors.textSecondary;
+    const inputBg = colors.secondaryBackground;
+    const inputBorder = colors.border;
+    const tintColor = colors.tint;
 
     const handleSubmit = async () => {
         if (!name || !email || !message) {
@@ -48,7 +52,7 @@ export default function SupportScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={[styles.card, { backgroundColor: cardBg }]}>
-                    <Text style={[styles.title, { color: isDark ? '#60A5FA' : '#2563EB' }]}>Support</Text>
+                    <Text style={[styles.title, { color: tintColor }]}>Support</Text>
                     <Text style={[styles.description, { color: subTextColor }]}>
                         Having issues? Fill out the form below and our support team will reach out to you.
                     </Text>
@@ -87,7 +91,7 @@ export default function SupportScreen() {
                         />
 
                         <TouchableOpacity
-                            style={[styles.button, { opacity: loading ? 0.7 : 1 }]}
+                            style={[styles.button, { backgroundColor: tintColor, opacity: loading ? 0.7 : 1 }]}
                             onPress={handleSubmit}
                             disabled={loading}
                         >
@@ -145,12 +149,11 @@ const styles = StyleSheet.create({
         height: 120,
     },
     button: {
-        backgroundColor: '#2563EB', // blue-600
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
         marginTop: 8,
-        shadowColor: '#2563EB',
+        shadowColor: Colors.light.tint,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
