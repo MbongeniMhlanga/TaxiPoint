@@ -276,12 +276,23 @@ export default function AdminDashboard() {
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <View>
-                    <ThemedText type="title" style={styles.headerTitle}>Admin Dashboard</ThemedText>
+                    <ThemedText type="title" style={styles.headerTitle}>Management Console</ThemedText>
                     <ThemedText style={{ color: colors.textSecondary }}>Welcome, {userEmail}</ThemedText>
                 </View>
-                <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <Feather name="log-out" size={20} color={colors.error} />
-                </TouchableOpacity>
+                <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        onPress={() => router.push('/(tabs)/explore')}
+                        style={[styles.headerButton, { backgroundColor: colors.secondaryBackground }]}
+                    >
+                        <Feather name="map" size={20} color={colors.tint} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleLogout}
+                        style={[styles.headerButton, { backgroundColor: colors.secondaryBackground }]}
+                    >
+                        <Feather name="log-out" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -548,9 +559,17 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
     },
-    logoutButton: {
+    headerActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    headerButton: {
         padding: 10,
         borderRadius: 12,
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     scrollContent: {
         padding: 20,

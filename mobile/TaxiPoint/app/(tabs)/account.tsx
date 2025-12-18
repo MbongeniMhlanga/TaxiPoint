@@ -62,7 +62,7 @@ export default function AccountScreen() {
                             >
                                 <View style={styles.itemLeft}>
                                     <IconSymbol size={24} name="shield.fill" color={themeColors.tint} style={styles.icon} />
-                                    <Text style={[styles.itemTitle, { color: themeColors.text }]}>Admin Dashboard</Text>
+                                    <Text style={[styles.itemTitle, { color: themeColors.text }]}>Management</Text>
                                 </View>
                                 <IconSymbol size={20} name="chevron.right" color={themeColors.icon} />
                             </TouchableOpacity>

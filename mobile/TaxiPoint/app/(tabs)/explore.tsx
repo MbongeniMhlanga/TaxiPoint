@@ -606,7 +606,7 @@ export default function ExploreScreen() {
             ]}>
             <View style={styles.modalHeader}>
               <ThemedText style={[styles.modalTitle, { color: textColor }]}>
-                Report an Incident
+                Report a Safety Concern
               </ThemedText>
               <TouchableOpacity onPress={() => setShowIncidentForm(false)}>
                 <Feather name="x" size={24} color={textColor} />
