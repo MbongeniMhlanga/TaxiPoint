@@ -1,4 +1,5 @@
 import { useAuth } from '@/context/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -6,7 +7,6 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView,
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -16,22 +16,26 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, user, isLoading, isAdmin } = useAuth();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+
+  const theme = colorScheme ?? 'light';
+  const colors = Colors[theme];
+  const isDark = theme === 'dark';
 
   React.useEffect(() => {
     if (!isLoading && user) {
       if (isAdmin) {
+        // Use replace to avoid going back to login
         router.replace('/admin/dashboard');
       } else {
-        router.replace('/(tabs)/explore');
+        router.replace('/explore');
       }
     }
   }, [user, isLoading, isAdmin]);
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.tint} />
       </View>
     );
   }
@@ -70,18 +74,8 @@ export default function LoginScreen() {
       const data = await response.json();
       console.log('Login successful with role:', data.role);
 
-      // Store in context
+      // Store in context - This will trigger the useEffect above for redirection
       login(email, data.role, data.token);
-
-      if (data.role === 'ADMIN' || data.role === 'ROLE_ADMIN') {
-        router.replace({
-          pathname: '/admin/dashboard',
-          params: { token: data.token, email: email }
-        });
-      } else {
-        // Navigate to explore screen - use relative navigation
-        router.navigate('../(tabs)/explore');
-      }
     } catch (error: any) {
       console.error('Login Network Error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -91,101 +85,75 @@ export default function LoginScreen() {
     }
   };
 
-  const theme = colorScheme ?? 'light';
-  const colors = Colors[theme];
-
   const bgColor = colors.background;
   const textColor = colors.text;
   const inputBgColor = colors.secondaryBackground;
   const borderColor = colors.border;
-  const primaryColor = colors.tint;
-  const secondaryTextColor = colors.textSecondary;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            <ThemedText type="title" style={[styles.title, { color: textColor }]}>
-              Welcome to TaxiPoint
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: secondaryTextColor }]}>Please enter your details to sign in.</ThemedText>
+        style={[styles.container, { backgroundColor: bgColor }]}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.title}>Welcome to TaxiPoint</ThemedText>
+            <ThemedText style={styles.subtitle}>Sign in to continue</ThemedText>
+          </View>
 
-            <View style={styles.formContainer}>
-              <ThemedText style={[styles.label, { color: textColor }]}>Email Address</ThemedText>
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <ThemedText style={styles.label}>Email</ThemedText>
               <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: borderColor,
-                    color: textColor,
-                    backgroundColor: inputBgColor,
-                  },
-                ]}
-                placeholder="user@example.com"
-                placeholderTextColor={isDark ? '#888' : '#ccc'}
+                style={[styles.input, { backgroundColor: inputBgColor, color: textColor, borderColor: borderColor }]}
+                placeholder="Enter your email"
+                placeholderTextColor={colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!loading}
               />
+            </View>
 
-              <View style={styles.passwordLabelContainer}>
-                <ThemedText style={[styles.label, { color: textColor }]}>Password</ThemedText>
-                <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Password recovery coming soon!')}>
-                  <ThemedText style={[styles.forgotLink, { color: primaryColor }]}>Forgot password?</ThemedText>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.passwordInput, { borderColor: borderColor, backgroundColor: inputBgColor }]}>
+            <View style={styles.inputContainer}>
+              <ThemedText style={styles.label}>Password</ThemedText>
+              <View style={[styles.passwordContainer, { backgroundColor: inputBgColor, borderColor: borderColor }]}>
                 <TextInput
-                  style={[
-                    styles.passwordTextInput,
-                    {
-                      color: textColor,
-                    },
-                  ]}
-                  placeholder="••••••••"
-                  placeholderTextColor={isDark ? '#888' : '#ccc'}
+                  style={[styles.passwordInput, { color: textColor }]}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.textSecondary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                  disabled={loading}>
-                  <ThemedText style={{ color: secondaryTextColor, fontSize: 18 }}>
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </ThemedText>
+                  style={styles.eyeIcon}>
+                  <ThemedText style={{ color: colors.tint }}>{showPassword ? 'Hide' : 'Show'}</ThemedText>
                 </TouchableOpacity>
               </View>
+            </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.loginButton,
-                  { backgroundColor: primaryColor, opacity: loading ? 0.6 : 1 },
-                ]}
-                onPress={handleLogin}
-                disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <ThemedText style={styles.loginButtonText}>Sign in →</ThemedText>
-                )}
+            <TouchableOpacity style={styles.forgotPassword}>
+              <ThemedText style={{ color: colors.tint }}>Forgot Password?</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.loginButton, { backgroundColor: colors.tint }]}
+              onPress={handleLogin}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <ThemedText style={styles.loginButtonText}>Sign In</ThemedText>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.registerContainer}>
+              <ThemedText>Don't have an account? </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <ThemedText style={{ color: colors.tint, fontWeight: 'bold' }}>Sign Up</ThemedText>
               </TouchableOpacity>
-
-              <View style={styles.footerContainer}>
-                <ThemedText style={[styles.footerText, { color: secondaryTextColor }]}>
-                  Don&apos;t have an account?
-                </ThemedText>
-                <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
-                  <ThemedText style={[styles.signupLink, { color: primaryColor }]}>Sign up</ThemedText>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </ScrollView>
@@ -200,92 +168,78 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    padding: 24,
     justifyContent: 'center',
-    paddingHorizontal: 20,
   },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
+  header: {
+    marginBottom: 48,
   },
   title: {
-    textAlign: 'left',
-    marginBottom: 10,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
   subtitle: {
-    textAlign: 'left',
-    marginBottom: 30,
-    fontSize: 14,
+    fontSize: 16,
+    opacity: 0.7,
   },
-  formContainer: {
-    gap: 18,
+  form: {
+    gap: 20,
+  },
+  inputContainer: {
+    gap: 8,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
-  },
-  passwordLabelContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  forgotLink: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    height: 56,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
+    borderWidth: 1,
   },
-  passwordInput: {
+  passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 56,
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 0,
+    paddingRight: 16,
   },
-  passwordTextInput: {
+  passwordInput: {
     flex: 1,
-    paddingVertical: 12,
+    height: '100%',
+    paddingHorizontal: 16,
     fontSize: 16,
   },
   eyeIcon: {
-    padding: 8,
+    padding: 4,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
   },
   loginButton: {
-    paddingVertical: 14,
-    borderRadius: 8,
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  footerContainer: {
+  registerContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  footerText: {
-    fontSize: 14,
-  },
-  signupLink: {
-    fontWeight: 'bold',
-    marginLeft: 5,
+    justifyContent: 'center',
+    marginTop: 24,
   },
 });
