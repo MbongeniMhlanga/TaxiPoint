@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "taxipoint",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mbongenimhlanga.TaxiPoint",

@@ -87,6 +87,7 @@ export default function ExploreScreen() {
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [voiceResults, setVoiceResults] = useState<string[]>([]);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
 
   // Request location permissions (No change)
   const requestLocationPermission = async () => {
@@ -487,10 +488,14 @@ export default function ExploreScreen() {
     </View>
   );
 
-  if (loading) {
+  if (loading || !layoutReady) {
     return (
-      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
+      <View
+        style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}
+        onLayout={() => setLayoutReady(true)}
+      >
         <ActivityIndicator size="large" color={primaryColor} />
+        <ThemedText style={{ marginTop: 12, opacity: 0.6 }}>Loading Map...</ThemedText>
       </View>
     );
   }
@@ -585,6 +590,7 @@ export default function ExploreScreen() {
           }}
           onMapReady={() => setMapReady(true)}
           showsUserLocation={true}
+          moveOnMarkerPress={false}
           showsMyLocationButton={false}>
           {displayedTaxiRanks
             .filter(rank => typeof rank.latitude === 'number' && typeof rank.longitude === 'number' && !isNaN(rank.latitude))
