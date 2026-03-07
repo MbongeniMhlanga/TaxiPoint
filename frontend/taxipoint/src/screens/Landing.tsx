@@ -7,6 +7,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../context/ThemeContext';
 import { Search, Mic, MapPin, Navigation, Plus, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 
 interface User {
   id: number;
@@ -507,14 +509,28 @@ const Landing = ({ user }: LandingProps) => {
     }));
   };
 
-  useEffect(() => {
-    const ws = new WebSocket('wss://taxipoint-backend.onrender.com/ws/incidents');
-    ws.onmessage = (event) => {
-      const incident: Incident = mapIncident(JSON.parse(event.data));
-      setIncidents((prev) => [...prev, incident]);
-    };
-    return () => ws.close();
-  }, []);
+useEffect(() => {
+  const socket = new SockJS(`${API_BASE_URL}/ws`);
+  const stompClient = new Client({
+    webSocketFactory: () => socket,
+    onConnect: () => {
+      stompClient.subscribe('/topic/incidents', (message) => {
+        const incident: Incident = mapIncident(JSON.parse(message.body));
+        setIncidents((prev) => [...prev, incident]);
+      });
+    },
+    onStompError: (frame) => {
+      console.error('STOMP error:', frame);
+    },
+  });
+
+  stompClient.activate();
+
+  // Fix: wrap deactivate in a non-async arrow function so it returns void, not Promise<void>
+  return () => {
+    stompClient.deactivate();
+  };
+}, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
