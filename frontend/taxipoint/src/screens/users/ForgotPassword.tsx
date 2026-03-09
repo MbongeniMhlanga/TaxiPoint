@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Mail, ArrowLeft, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "../../config";
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState("");
