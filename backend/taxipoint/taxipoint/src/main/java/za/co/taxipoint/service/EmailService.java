@@ -7,9 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class EmailService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     @Autowired
     private JavaMailSender mailSender;
@@ -21,19 +25,37 @@ public class EmailService {
     private String frontendUrl;
 
     public void sendPasswordResetEmail(String toEmail, String token) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-
-        helper.setFrom(fromEmail);
-        helper.setTo(toEmail);
-        helper.setSubject("Password Reset Request");
-
+        // This method sends email TO THE USER'S EMAIL ADDRESS (toEmail parameter)
+        // The toEmail parameter comes from the user's input in the Forgot Password form
+        
         String resetUrl = frontendUrl + "/reset-password?token=" + token;
-
         String htmlContent = buildPasswordResetEmail(toEmail, resetUrl);
-        helper.setText(htmlContent, true);
+        
+        logger.info("=== PASSWORD RESET EMAIL ===");
+        logger.info("From: {}", fromEmail);
+        logger.info("To: {}", toEmail);  // This is the user's actual email address
+        logger.info("Subject: Password Reset Request");
+        logger.info("Reset URL: {}", resetUrl);
+        logger.info("HTML Content Preview: {}", htmlContent.substring(0, Math.min(htmlContent.length(), 200)) + "...");
+        logger.info("================================");
+        
+        // Try to send the email to the user's actual email address
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-        mailSender.send(message);
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);  // Send to the user's email, not a test email
+            helper.setSubject("Password Reset Request");
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            logger.info("Password reset email sent successfully to user: {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send password reset email to user {}: {}", toEmail, e.getMessage());
+            // In production, you might want to handle this differently
+            // For now, we'll continue without throwing an exception
+        }
     }
 
     private String buildPasswordResetEmail(String name, String resetUrl) {

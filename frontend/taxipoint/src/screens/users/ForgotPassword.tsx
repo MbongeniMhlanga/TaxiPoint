@@ -46,10 +46,10 @@ const ForgotPassword: React.FC = () => {
       setEmailSent(true);
       toast.success("Password reset email sent successfully!");
       
-      // Redirect to login after 3 seconds
+      // Redirect to login after 1 minute
       setTimeout(() => {
         navigate("/login");
-      }, 3000);
+      }, 60000);
 
     } catch (error: any) {
       console.error("Forgot Password Network Error:", error);
@@ -147,7 +147,7 @@ const ForgotPassword: React.FC = () => {
                   We've sent a password reset link to <strong>{email}</strong>
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                  The link will expire in 15 minutes for security reasons.
+                  The link will expire in 1 minute for security reasons.
                 </p>
               </div>
               
