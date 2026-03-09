@@ -62,7 +62,7 @@ class PasswordResetServiceTest {
         verify(tokenRepository).deleteTokensByEmail("test@example.com");
         verify(tokenRepository).save(any(PasswordResetToken.class));
         try {
-            verify(emailService).sendPasswordResetEmail("test@example.com", anyString());
+            verify(emailService).sendPasswordResetEmail(eq("test@example.com"), anyString());
         } catch (MessagingException e) {
             fail("Unexpected MessagingException", e);
         }

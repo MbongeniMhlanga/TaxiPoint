@@ -5,7 +5,7 @@ services:
   backend:
     build: ./backend/taxipoint/taxipoint
     ports:
-      - '8080:8080'
+      - '2001:2001'
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://ep-small-wildflower-add11zrs-pooler.c-2.us-east-1.aws.neon.tech/taxipoint_db?sslmode=require&channel_binding=require
       SPRING_DATASOURCE_USERNAME: neondb_owner

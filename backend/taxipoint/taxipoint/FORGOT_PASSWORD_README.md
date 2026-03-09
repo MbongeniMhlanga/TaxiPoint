@@ -122,7 +122,7 @@ application.frontend.url=${FRONTEND_URL:http://localhost:3000}
 
 ### 1. Request Password Reset
 ```bash
-curl -X POST http://localhost:8080/api/users/forgot-password \
+curl -X POST http://localhost:2001/api/users/forgot-password \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com"}'
 ```
@@ -135,7 +135,7 @@ http://localhost:3000/reset-password?token=abc123-uuid-token
 
 ### 3. Reset Password
 ```bash
-curl -X POST http://localhost:8080/api/users/reset-password \
+curl -X POST http://localhost:2001/api/users/reset-password \
   -H "Content-Type: application/json" \
   -d '{
     "token": "abc123-uuid-token",

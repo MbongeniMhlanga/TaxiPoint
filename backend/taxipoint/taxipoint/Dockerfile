@@ -22,7 +22,7 @@ WORKDIR /app
 COPY --from=build /app/target/taxipoint-0.0.1-SNAPSHOT.jar app.jar
 
 # Expose the port on which your application runs
-EXPOSE 8080
+EXPOSE 2001
 
 # Define the command to run the application when the container starts
 CMD ["java", "-jar", "app.jar"]
