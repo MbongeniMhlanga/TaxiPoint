@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot password?</a>
+                <button onClick={() => navigate("/forgot-password")} className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot password?</button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />

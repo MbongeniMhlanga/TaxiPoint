@@ -6,7 +6,10 @@ import za.co.taxipoint.dto.UserDTO;
 import za.co.taxipoint.dto.UserLoginDTO;
 import za.co.taxipoint.dto.UserRegisterDTO;
 import za.co.taxipoint.dto.UserUpdateDTO;
+import za.co.taxipoint.dto.ForgotPasswordRequest;
+import za.co.taxipoint.dto.ResetPasswordRequest;
 import za.co.taxipoint.service.UserService;
+import za.co.taxipoint.service.PasswordResetService;
 
 import java.util.List;
 import java.util.Map;
@@ -23,8 +26,11 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    public UserController(UserService userService) {
+    private final PasswordResetService passwordResetService;
+    
+    public UserController(UserService userService, PasswordResetService passwordResetService) {
         this.userService = userService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -89,5 +95,27 @@ public ResponseEntity<?> updatePassword(
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            passwordResetService.requestPasswordReset(request);
+            return ResponseEntity.ok("Password reset email sent successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to process password reset request: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request);
+            return ResponseEntity.ok("Password reset successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to reset password: " + e.getMessage());
+        }
     }
 }
