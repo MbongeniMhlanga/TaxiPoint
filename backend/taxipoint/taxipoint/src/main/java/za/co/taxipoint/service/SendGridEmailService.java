@@ -17,13 +17,13 @@ public class SendGridEmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(SendGridEmailService.class);
 
-    @Value("${SPRING_MAIL_API_KEY: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}")
+    @Value("${SPRING_MAIL_API_KEY}")
     private String sendGridApiKey;
 
-    @Value("${spring.mail.from-email:taxipoint25@gmail.com}")
+    @Value("${spring.mail.from-email}")
     private String fromEmail;
 
-    @Value("${application.frontend.url:https://taxi-point.vercel.app}")
+    @Value("${application.frontend.url}")
     private String frontendUrl;
 
     public void sendPasswordResetEmail(String toEmail, String token) throws Exception {
