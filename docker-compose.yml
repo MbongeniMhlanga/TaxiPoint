@@ -1,5 +1,5 @@
 # docker-compose.yml
-#version: '3.8'
+version: '3.8'
 
 services:
   backend:
@@ -7,10 +7,56 @@ services:
     ports:
       - '2001:2001'
     environment:
+      # Application Configuration
+      SPRING_APPLICATION_NAME: taxipoint
+      SERVER_PORT: 2001
+      
+      # Database Configuration (PostgreSQL with Neon)
       SPRING_DATASOURCE_URL: jdbc:postgresql://ep-small-wildflower-add11zrs-pooler.c-2.us-east-1.aws.neon.tech/taxipoint_db?sslmode=require&channel_binding=require
       SPRING_DATASOURCE_USERNAME: neondb_owner
-      SPRING_DATASOURCE_PASSWORD: npg_X6dcTxrg4Uwy
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-npg_X6dcTxrg4Uwy}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 20000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 540000
+      SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME: 30000
+      SPRING_DATASOURCE_HIKARI_LEAK_DETECTION_THRESHOLD: 60000
+      
+      # JPA Configuration
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      
+      # JSON Configuration
+      SPRING_JACKSON_SERIALIZATION_FAIL_ON_EMPTY_BEANS: false
+      
+      # Swagger/OpenAPI Configuration
+      SPRINGDOC_API_DOCS_ENABLED: true
+      SPRINGDOC_SWAGGER_UI_ENABLED: true
+      SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-yjapyWANAzcHzMd/YbCwR5QnTuAoEPhDi28x8Kw3wQQ=}
+      JWT_EXPIRATION_MS: 3600000
+      JWT_ISSUER: taxipoint
+      JWT_AUDIENCE: taxipoint-users
+      
+      # Email Configuration (Gmail SMTP for production)
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-your-gmail-address@gmail.com}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-your-gmail-app-password}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT: 5000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT: 5000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT: 5000
+      
+      # Frontend URL Configuration
+      APPLICATION_FRONTEND_URL: ${APPLICATION_FRONTEND_URL:-https://taxi-point.vercel.app}
+      
     depends_on: []
 
   frontend:
