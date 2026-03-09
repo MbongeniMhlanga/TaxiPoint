@@ -1,6 +1,7 @@
 package za.co.taxipoint.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import za.co.taxipoint.dto.UserDTO;
 import za.co.taxipoint.dto.UserLoginDTO;
@@ -111,11 +112,27 @@ public ResponseEntity<?> updatePassword(
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             passwordResetService.resetPassword(request);
-            return ResponseEntity.ok("Password reset successfully");
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Failed to reset password: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An unexpected error occurred"));
+        }
+    }
+
+    @GetMapping("/reset-password/validate")
+    public ResponseEntity<?> validateResetToken(@RequestParam String token) {
+        try {
+            boolean isValid = passwordResetService.isTokenValid(token);
+            if (isValid) {
+                return ResponseEntity.ok(Map.of("valid", true, "message", "Token is valid"));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("valid", false, "error", "Invalid or expired token"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("valid", false, "error", "Token validation failed"));
         }
     }
 }

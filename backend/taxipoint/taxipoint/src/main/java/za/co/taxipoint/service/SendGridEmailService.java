@@ -95,7 +95,7 @@ public class SendGridEmailService {
                 "<p>Hello " + name + ",</p>" +
                 "<p>We received a request to reset your password for your TaxiPoint account. If you made this request, click the button below to reset your password:</p>" +
                 "<div class='highlight'>" +
-                "<p><strong>This link will expire in 15 minutes for security reasons.</strong></p>" +
+                "<p><strong>This link will expire in 1 minute for security reasons.</strong></p>" +
                 "</div>" +
                 "<div style='text-align: center;'>" +
                 "<a href='" + resetUrl + "' class='button'>Reset My Password</a>" +
@@ -108,7 +108,7 @@ public class SendGridEmailService {
                 "</div>" +
                 "<div class='footer'>" +
                 "<p>If you continue to have problems, please contact our support team.</p>" +
-                "<p>&copy; 2024 TaxiPoint. All rights reserved.</p>" +
+                "<p>&copy; 2025 TaxiPoint. All rights reserved.</p>" +
                 "</div>" +
                 "</div>" +
                 "</body>" +

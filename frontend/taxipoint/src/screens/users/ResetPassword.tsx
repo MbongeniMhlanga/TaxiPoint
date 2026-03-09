@@ -32,14 +32,18 @@ const ResetPassword: React.FC = () => {
 
   const validateToken = async (token: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/reset-password`, {
-        method: "POST",
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/reset-password/validate?token=${encodeURIComponent(token)}`, {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: "", confirmPassword: "" }),
       });
 
       if (response.ok) {
-        setTokenValid(true);
+        const result = await response.json();
+        if (result.valid) {
+          setTokenValid(true);
+        } else {
+          setTokenValid(false);
+        }
       } else {
         setTokenValid(false);
         const errorText = await response.text();

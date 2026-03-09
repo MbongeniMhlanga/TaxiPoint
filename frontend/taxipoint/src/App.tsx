@@ -12,6 +12,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Login from "./screens/users/Login";
 import Register from "./screens/users/Register";
 import ForgotPassword from "./screens/users/ForgotPassword";
+import ResetPassword from "./screens/users/ResetPassword";
 import UserSettings from "./screens/UserSettings";
 import Landing from "./screens/Landing";
 import UserProfile from "./screens/users/UserProfile";
@@ -109,6 +110,7 @@ const MainApp: React.FC = () => {
         />
         <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
         <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPassword />} />
+        <Route path="/reset-password" element={user ? <Navigate to="/" replace /> : <ResetPassword />} />
 
         {/* Use MainLayout to wrap protected routes that need the layout */}
         <Route
