@@ -27,7 +27,7 @@ public class PasswordResetService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailService emailService;
+    private SendGridEmailService emailService;
 
     @Transactional
     public void requestPasswordReset(ForgotPasswordRequest request) {
