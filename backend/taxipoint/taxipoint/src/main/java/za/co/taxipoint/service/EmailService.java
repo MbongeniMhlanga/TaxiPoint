@@ -18,10 +18,10 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.from-email:taxipoint25@gmail.com}")
     private String fromEmail;
 
-    @Value("${application.frontend.url:http://localhost:3000}")
+    @Value("${application.frontend.url:https://taxi-point.vercel.app}")
     private String frontendUrl;
 
     public void sendPasswordResetEmail(String toEmail, String token) throws MessagingException {
