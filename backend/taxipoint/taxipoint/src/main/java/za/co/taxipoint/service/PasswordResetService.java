@@ -1,5 +1,7 @@
 package za.co.taxipoint.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 @Service
 public class PasswordResetService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PasswordResetService.class);
 
     @Autowired
     private PasswordResetTokenRepository tokenRepository;
@@ -49,6 +53,9 @@ public class PasswordResetService {
         PasswordResetToken token = new PasswordResetToken();
         token.setEmail(email);
         tokenRepository.save(token);
+        
+        logger.info("Created new password reset token for {}: token={}, expiry={}, used={}", 
+                    email, token.getToken(), token.getExpiryDate(), token.isUsed());
 
         try {
             // Send email with the token
@@ -103,10 +110,16 @@ public class PasswordResetService {
     public boolean isTokenValid(String token) {
         Optional<PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
         if (tokenOpt.isEmpty()) {
+            logger.info("Token validation failed: Token not found: {}", token);
             return false;
         }
 
         PasswordResetToken resetToken = tokenOpt.get();
-        return !resetToken.isExpired() && !resetToken.isUsed();
+        boolean isValid = !resetToken.isExpired() && !resetToken.isUsed();
+        
+        logger.info("Token validation for {}: exists={}, expired={}, used={}, valid={}", 
+                   token, true, resetToken.isExpired(), resetToken.isUsed(), isValid);
+        
+        return isValid;
     }
 }
