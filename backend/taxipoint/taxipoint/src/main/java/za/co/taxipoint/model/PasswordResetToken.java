@@ -2,6 +2,7 @@ package za.co.taxipoint.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 import lombok.Data;
 
@@ -35,19 +36,19 @@ public class PasswordResetToken {
     @PrePersist
     protected void onCreate() {
         this.token = UUID.randomUUID().toString();
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        this.expiryDate = LocalDateTime.now().plusMinutes(5); // OTP expires in 5 minutes
+        this.createdAt = LocalDateTime.now(ZoneId.of("GMT+2"));
+        this.updatedAt = LocalDateTime.now(ZoneId.of("GMT+2"));
+        this.expiryDate = LocalDateTime.now(ZoneId.of("GMT+2")).plusMinutes(5); // OTP expires in 5 minutes
         this.used = false; // Ensure token starts as unused
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneId.of("GMT+2"));
     }
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiryDate);
+        return LocalDateTime.now(ZoneId.of("GMT+2")).isAfter(expiryDate);
     }
 
     public boolean isUsed() {

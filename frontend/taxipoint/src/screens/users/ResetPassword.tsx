@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Key, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { API_BASE_URL } from "../../config";
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -37,7 +38,7 @@ const ResetPassword: React.FC = () => {
 
   const validateToken = async (token: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/reset-password/validate?token=${encodeURIComponent(token)}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/reset-password/validate?token=${encodeURIComponent(token)}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -77,7 +78,7 @@ const ResetPassword: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/reset-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password, confirmPassword }),
