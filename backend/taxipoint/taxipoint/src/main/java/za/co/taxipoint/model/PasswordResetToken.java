@@ -38,6 +38,7 @@ public class PasswordResetToken {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         this.expiryDate = LocalDateTime.now().plusMinutes(5); // OTP expires in 5 minutes
+        this.used = false; // Ensure token starts as unused
     }
 
     @PreUpdate
