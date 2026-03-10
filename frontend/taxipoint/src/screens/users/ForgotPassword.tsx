@@ -147,7 +147,7 @@ const ForgotPassword: React.FC = () => {
                   We've sent a password reset link to <strong>{email}</strong>
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                  The link will expire in 1 minute for security reasons.
+                  The link will expire in 5 minutes for security reasons.
                 </p>
               </div>
               

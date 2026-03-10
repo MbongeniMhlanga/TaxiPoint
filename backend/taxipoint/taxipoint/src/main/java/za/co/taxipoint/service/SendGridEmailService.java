@@ -87,17 +87,21 @@ public class SendGridEmailService {
                 "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
                 "<title>Password Reset</title>" +
                 "<style>" +
-                "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }" +
+                "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }" +
                 ".container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }" +
                 ".header { text-align: center; margin-bottom: 30px; }" +
                 ".logo { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 10px; }" +
                 ".title { font-size: 20px; font-weight: bold; margin-bottom: 20px; }" +
                 ".content { margin-bottom: 30px; }" +
                 ".highlight { background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; }" +
-                ".button { display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }" +
-                ".button:hover { background-color: #1d4ed8; }" +
+                ".button { display: inline-block; background-color: #2563eb; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; font-size: 16px; text-align: center; min-width: 200px; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }" +
+                ".button:hover { background-color: #1d4ed8; text-decoration: none; }" +
                 ".footer { margin-top: 30px; font-size: 12px; color: #666; text-align: center; }" +
                 ".warning { background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; padding: 10px; margin: 20px 0; font-size: 14px; }" +
+                "@media only screen and (max-width: 600px) {" +
+                "  .container { padding: 20px; }" +
+                "  .button { padding: 14px 28px; font-size: 16px; width: 100%; max-width: 300px; display: block; margin: 20px auto; }" +
+                "}" +
                 "</style>" +
                 "</head>" +
                 "<body>" +
@@ -113,7 +117,7 @@ public class SendGridEmailService {
                 "<p><strong>This link will expire in 5 minutes for security reasons.</strong></p>" +
                 "</div>" +
                 "<div style='text-align: center;'>" +
-                "<a href='" + resetUrl + "' class='button'>Reset My Password</a>" +
+                "<a href='" + resetUrl + "' class='button' style='display: inline-block; background-color: #2563eb; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; font-size: 16px; text-align: center; min-width: 200px; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;'>Reset My Password</a>" +
                 "</div>" +
                 "<p>Or copy and paste this link into your browser:</p>" +
                 "<p style='word-break: break-all; background-color: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace;'>" + resetUrl + "</p>" +
