@@ -97,12 +97,12 @@ const ResetPassword: React.FC = () => {
         return;
       }
 
-      toast.success("Password reset successfully!");
+      // Show success message and redirect after 3 seconds
+      toast.success("Password reset successfully! Redirecting to login in 3 seconds...");
       
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         navigate("/login");
-      }, 2000);
+      }, 3000);
 
     } catch (error: any) {
       console.error("Reset Password Network Error:", error);
