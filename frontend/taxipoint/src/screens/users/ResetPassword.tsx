@@ -19,6 +19,11 @@ const ResetPassword: React.FC = () => {
 
   useEffect(() => {
     const tokenParam = searchParams.get("token");
+    console.log("=== FRONTEND TOKEN DEBUG ===");
+    console.log("URL token parameter:", tokenParam);
+    console.log("Full URL:", window.location.href);
+    console.log("============================");
+    
     if (!tokenParam) {
       toast.error("Invalid reset link");
       navigate("/login");
