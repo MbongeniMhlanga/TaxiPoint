@@ -28,7 +28,8 @@ public class SendGridEmailService {
 
     public void sendPasswordResetEmail(String toEmail, String token) throws Exception {
         String resetUrl = frontendUrl + "/reset-password?token=" + token;
-        String htmlContent = buildPasswordResetEmail(toEmail, resetUrl);
+        String name = extractNameFromEmail(toEmail);
+        String htmlContent = buildPasswordResetEmail(name, resetUrl);
         
         logger.info("=== PASSWORD RESET EMAIL (SendGrid API) ===");
         logger.info("From: {}", fromEmail);
@@ -64,6 +65,20 @@ public class SendGridEmailService {
         }
     }
 
+    private String extractNameFromEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return "User";
+        }
+        // Extract name from email (before @ symbol)
+        int atIndex = email.indexOf('@');
+        if (atIndex > 0) {
+            String name = email.substring(0, atIndex);
+            // Capitalize first letter
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
+        }
+        return email;
+    }
+
     private String buildPasswordResetEmail(String name, String resetUrl) {
         return "<!DOCTYPE html>" +
                 "<html>" +
@@ -95,7 +110,7 @@ public class SendGridEmailService {
                 "<p>Hello " + name + ",</p>" +
                 "<p>We received a request to reset your password for your TaxiPoint account. If you made this request, click the button below to reset your password:</p>" +
                 "<div class='highlight'>" +
-                "<p><strong>This link will expire in 2 minutes for security reasons.</strong></p>" +
+                "<p><strong>This link will expire in 5 minutes for security reasons.</strong></p>" +
                 "</div>" +
                 "<div style='text-align: center;'>" +
                 "<a href='" + resetUrl + "' class='button'>Reset My Password</a>" +
