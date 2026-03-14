@@ -11,31 +11,34 @@ import za.co.taxipoint.dto.ForgotPasswordRequest;
 import za.co.taxipoint.dto.ResetPasswordRequest;
 import za.co.taxipoint.service.UserService;
 import za.co.taxipoint.service.PasswordResetService;
+import za.co.taxipoint.service.RateLimitingService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = {
-    "https://taxi-point.vercel.app",
-    "http://localhost:*",
-    "http://localhost:3000",
-    "http://localhost:8081",
-    "http://10.0.2.2:*"
-})
 @RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
     private final PasswordResetService passwordResetService;
+    private final RateLimitingService rateLimitingService;
+    private final HttpServletRequest request;
     
-    public UserController(UserService userService, PasswordResetService passwordResetService) {
+    public UserController(UserService userService, 
+                          PasswordResetService passwordResetService,
+                          RateLimitingService rateLimitingService,
+                          HttpServletRequest request) {
         this.userService = userService;
         this.passwordResetService = passwordResetService;
+        this.rateLimitingService = rateLimitingService;
+        this.request = request;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody UserRegisterDTO dto) {
+    public ResponseEntity<?> register(@Valid @RequestBody UserRegisterDTO dto) {
         try {
             UserDTO createdUser = userService.registerUser(dto);
             return ResponseEntity.ok(createdUser);
@@ -50,6 +53,12 @@ public class UserController {
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserLoginDTO dto) {
+        // Rate Limiting Check
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitingService.resolveBucket(clientIp).tryConsume(1)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Too many login attempts. Please try again later.");
+        }
+
         try {
             var authResp = userService.loginUser(dto);
             return ResponseEntity.ok(authResp);
@@ -99,9 +108,15 @@ public ResponseEntity<?> updatePassword(
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest requestDto) {
+        // Rate Limiting Check
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitingService.resolveBucket(clientIp).tryConsume(1)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Too many password reset requests. Please try again later.");
+        }
+
         try {
-            passwordResetService.requestPasswordReset(request);
+            passwordResetService.requestPasswordReset(requestDto);
             return ResponseEntity.ok("Password reset email sent successfully");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Failed to process password reset request: " + e.getMessage());
@@ -109,9 +124,15 @@ public ResponseEntity<?> updatePassword(
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest requestDto) {
+        // Rate Limiting Check
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitingService.resolveBucket(clientIp).tryConsume(1)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Too many attempts. Please try again later.");
+        }
+
         try {
-            passwordResetService.resetPassword(request);
+            passwordResetService.resetPassword(requestDto);
             return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

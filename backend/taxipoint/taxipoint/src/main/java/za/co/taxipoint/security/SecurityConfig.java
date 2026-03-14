@@ -28,26 +28,49 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny()) // Prevent Clickjacking
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"))
+                        .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                )
                 .authorizeHttpRequests(authorize -> authorize
-                        // Allow registration and login without authentication
+                        // 1. PUBLIC: Anyone can use these
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/register").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/login").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/forgot-password").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/reset-password").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/reset-password/validate").permitAll()
                         
-                        // Require an ADMIN role for POST requests to /api/taxi-ranks
-                        //.requestMatchers(org.springframework.http.HttpMethod.POST, "/api/taxi-ranks")
-                        //.hasRole("ADMIN")
-                        .anyRequest().permitAll()
-
-                        // All other requests require authentication
-                        //.anyRequest().authenticated()
+                        // 2. ADMIN ONLY: Listing all users
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users").hasAuthority("ROLE_ADMIN")
+                        
+                        // 3. EVERYONE ELSE: Must be logged in
+                        .anyRequest().authenticated()
                 );
         
-        // This is the critical line that adds your JwtAuthenticationFilter to the security chain.
-        // It ensures the JWT token is processed and the user is authenticated BEFORE the
-        // role-based rules are checked. This is the fix for your 403 error.
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        // Specifically list your production and dev origins
+        configuration.setAllowedOrigins(java.util.List.of(
+            "https://taxi-point.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:8081"
+        ));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight for 1 hour
+        
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
