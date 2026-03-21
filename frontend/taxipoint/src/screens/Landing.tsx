@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { AnimatePresence } from 'framer-motion';
+import RankDetailPanel from '../components/RankDetailPanel';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
@@ -98,6 +100,7 @@ const Landing = ({ user }: LandingProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
   const [isListening, setIsListening] = useState(false);
 
   // Leaflet default icon fix
@@ -544,16 +547,6 @@ useEffect(() => {
     fetchIncidents();
   }, []);
 
-  const renderHours = (hours: Record<string, string>) => (
-    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300">
-      {Object.entries(hours).map(([day, time]) => (
-        <li key={day}><span className="font-medium">{day}:</span> {time}</li>
-      ))}
-    </ul>
-  );
-
-
-
   return (
     <div className="relative w-full h-full overflow-hidden">
       <ToastContainer position="top-center" theme={theme === 'dark' ? 'dark' : 'light'} />
@@ -584,44 +577,17 @@ useEffect(() => {
             key={`taxi-${rank.id}`}
             position={[rank.latitude, rank.longitude]}
             icon={taxiIcon}
+            eventHandlers={{
+              click: () => {
+                setSelectedRank(rank);
+                setSelectedLocation({ lat: rank.latitude, lng: rank.longitude });
+              },
+            }}
           >
-            <Popup className="custom-popup">
-              <div className="min-w-[250px] space-y-2">
-                <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
-                  <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg">
-                    <Navigation size={16} className="text-blue-600 dark:text-blue-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight">{rank.name}</h3>
-                    <p className="text-xs text-gray-500">{rank.district}</p>
-                  </div>
-                </div>
-
-                {rank.description && <p className="text-sm text-gray-700 dark:text-gray-300">{rank.description}</p>}
-
-                <div className="space-y-1 text-sm">
-                  <p className="flex items-start gap-2">
-                    <MapPin size={14} className="mt-1 flex-shrink-0 text-gray-400" />
-                    <span>{rank.address}</span>
-                  </p>
-                </div>
-
-                {rank.hours && (
-                  <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                    <p className="font-semibold mb-1">Hours</p>
-                    {renderHours(rank.hours)}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    const url = `https://www.google.com/maps/dir/?api=1&destination=${rank.latitude},${rank.longitude}`;
-                    window.open(url, '_blank');
-                  }}
-                  className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition"
-                >
-                  Navigate Here
-                </button>
+            <Popup className="custom-popup" closeButton={false}>
+              <div className="text-center p-1">
+                <p className="font-bold text-sm tracking-tight">{rank.name}</p>
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Tap for details</p>
               </div>
             </Popup>
           </Marker>
@@ -795,6 +761,20 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+      {/* Side Panel for Selected Rank */}
+      <AnimatePresence>
+        {selectedRank && (
+          <RankDetailPanel 
+            rank={selectedRank} 
+            onClose={() => setSelectedRank(null)} 
+            onNavigate={(rank) => {
+              const url = `https://www.google.com/maps/dir/?api=1&destination=${rank.latitude},${rank.longitude}`;
+              window.open(url, '_blank');
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

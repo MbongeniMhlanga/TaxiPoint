@@ -100,7 +100,7 @@ public void updatePassword(Long id, String oldPassword, String newPassword) {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
-        System.out.println("Generated token: " + token);
+       // System.out.println("Generated token: " + token);
 
         UserDTO userDTO = toDTO(user);
         userDTO.setToken(token);
