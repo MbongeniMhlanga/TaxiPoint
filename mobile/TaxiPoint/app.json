@@ -32,6 +32,7 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
+      "./withAndroidManifestPatch",
       "expo-router",
       "@react-native-voice/voice",
       "expo-location",
