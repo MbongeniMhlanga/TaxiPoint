@@ -7,9 +7,12 @@ module.exports = function withAndroidResolutionPatch(config) {
       configurations.all {
           resolutionStrategy {
               force "androidx.versionedparcelable:versionedparcelable:1.1.1"
-              force "androidx.annotation:annotation:1.2.0"
-              force "androidx.core:core:1.6.0"
-              force "androidx.appcompat:appcompat:1.3.1"
+              force "androidx.annotation:annotation:1.7.0"
+              force "androidx.core:core:1.12.0"
+              force "androidx.core:core-ktx:1.12.0"
+              force "androidx.appcompat:appcompat:1.6.1"
+              force "androidx.activity:activity:1.8.0"
+              force "androidx.fragment:fragment:1.6.1"
               force "androidx.legacy:legacy-support-v4:1.0.0"
           }
           exclude group: 'com.android.support', module: 'support-v4'
@@ -29,4 +32,5 @@ module.exports = function withAndroidResolutionPatch(config) {
     return config;
   });
 };
+
 
