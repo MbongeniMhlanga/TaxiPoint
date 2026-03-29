@@ -60,16 +60,15 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        // Specifically list your production and dev origins
-        configuration.setAllowedOrigins(java.util.List.of(
-            "https://taxi-point.vercel.app",
-            "http://localhost:3000",
-            "http://localhost:8081"
-        ));
+        
+        // Allow all origins - needed for mobile apps (Expo, React Native) and cross-origin requests
+        configuration.addAllowedOriginPattern("*");
+        
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // Cache preflight for 1 hour
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setExposedHeaders(java.util.List.of("Authorization"));
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
         
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
