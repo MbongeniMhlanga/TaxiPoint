@@ -21,7 +21,21 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+let MapView: any = View;
+let Marker: any = View;
+let PROVIDER_DEFAULT: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default || Maps.MapView || Maps;
+    Marker = Maps.Marker || Maps.default?.Marker;
+    PROVIDER_DEFAULT = Maps.PROVIDER_DEFAULT || Maps.default?.PROVIDER_DEFAULT;
+  } catch (e) {
+    console.warn('react-native-maps not available');
+  }
+}
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 // import { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
@@ -73,7 +87,7 @@ export default function ExploreScreen() {
   const borderColor = colors.border;
   const primaryColor = colors.tint;
 
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>({ latitude: -26.2044, longitude: 28.0473 });
   const [mapReady, setMapReady] = useState(false);
 
