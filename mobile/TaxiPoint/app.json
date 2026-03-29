@@ -33,6 +33,7 @@
     },
     "plugins": [
       "./withAndroidManifestPatch",
+      "./withAndroidResolutionPatch",
       "expo-router",
       "@react-native-voice/voice",
       "expo-location",
