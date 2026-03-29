@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
+import { useAuth } from '@/context/AuthContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 // import { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 type SpeechErrorEvent = any;
 type SpeechResultsEvent = any;
@@ -54,6 +56,7 @@ interface Incident {
 }
 
 export default function ExploreScreen() {
+  const { user } = useAuth();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   // Use theme-aware colors
@@ -94,6 +97,7 @@ export default function ExploreScreen() {
   const [voiceResults, setVoiceResults] = useState<string[]>([]);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
+  const [tracksView, setTracksView] = useState(true);
 
   // Request location permissions (No change)
   const requestLocationPermission = async () => {
@@ -160,14 +164,25 @@ export default function ExploreScreen() {
   // 🔑 REFACTORED: Sets both the master list and the displayed list initially
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
+      console.log('Fetching taxi ranks...');
+      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
+        headers: { 'Authorization': `Bearer ${user?.token || ''}` }
+      });
+
+      if (!res.ok) {
+        console.warn('Taxi ranks fetch failed:', res.status);
+        return;
+      }
+
       const data = await res.json();
-      const ranks = data.content || [];
+      // Handle both Page object and direct arrays
+      const ranks = data.content || (Array.isArray(data) ? data : []);
+      console.log(`Received ${ranks.length} taxi ranks`);
+
       setAllTaxiRanks(ranks);
-      setDisplayedTaxiRanks(ranks); // Display all ranks by default
+      setDisplayedTaxiRanks(ranks);
     } catch (err) {
       console.error('Error fetching taxi ranks:', err);
-      Alert.alert('Error', 'Failed to fetch taxi ranks');
     }
   };
 
@@ -213,7 +228,9 @@ export default function ExploreScreen() {
 
   const fetchIncidents = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/incidents`);
+      const res = await fetch(`${API_BASE_URL}/api/incidents`, {
+        headers: { 'Authorization': `Bearer ${user?.token || ''}` }
+      });
       if (!res.ok) throw new Error('Failed to fetch incidents');
       const data = await res.json();
       setIncidents(data);
@@ -232,7 +249,10 @@ export default function ExploreScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/incidents`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token || ''}`
+        },
         body: JSON.stringify({
           description: incidentDescription,
           reporter: user ? `${user.name || ''} ${user.surname || ''}`.trim() || 'Mobile User' : 'Mobile User',
@@ -324,39 +344,18 @@ export default function ExploreScreen() {
     const connections: WebSocket[] = [];
 
     const connectWebSockets = () => {
-      // 1. Incidents Socket
+      // Use the proper /ws endpoint
       try {
-        const incidentWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/incidents');
-        incidentWs.onmessage = (event) => {
-          const incident = JSON.parse(event.data);
-          setIncidents((prev) => {
-            const exists = prev.find(i => i.id === incident.id);
-            if (exists) return prev.map(i => i.id === incident.id ? incident : i);
-            return [incident, ...prev];
-          });
-        };
-        connections.push(incidentWs);
-      } catch (e) { console.error('WS Incidents error:', e); }
+        const socketUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
+        console.log('Connecting to WS:', socketUrl);
+        const ws = new WebSocket(socketUrl);
 
-      // 2. Taxi Ranks Socket
-      try {
-        const rankWs = new WebSocket('wss://taxipoint-backend.onrender.com/ws/ranks');
-        rankWs.onmessage = (event) => {
-          const rank = JSON.parse(event.data);
-          setAllTaxiRanks((prev) => {
-            const exists = prev.find(r => r.id === rank.id);
-            if (exists) return prev.map(r => r.id === rank.id ? rank : r);
-            return [...prev, rank];
-          });
-          // Also update displayed list if not searching
-          setDisplayedTaxiRanks(prev => {
-            const exists = prev.find(r => r.id === rank.id);
-            if (exists) return prev.map(r => r.id === rank.id ? rank : r);
-            return [...prev, rank];
-          });
-        };
-        connections.push(rankWs);
-      } catch (e) { console.error('WS Ranks error:', e); }
+        ws.onopen = () => console.log('WS Connection established');
+        ws.onerror = (e) => console.log('WS error:', e);
+        connections.push(ws);
+      } catch (e) {
+        console.warn('WS Init error:', e);
+      }
     };
 
     connectWebSockets();
@@ -364,6 +363,14 @@ export default function ExploreScreen() {
     return () => {
       connections.forEach(ws => ws.close());
     };
+  }, []);
+
+  // Ensure markers render fully then freeze them for performance/stability
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTracksView(false);
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // NEW: Animate map once ready and user location is available
@@ -609,29 +616,39 @@ export default function ExploreScreen() {
           {mapReady && (
             <>
               {displayedTaxiRanks
-                .filter(rank => typeof rank.latitude === 'number' && typeof rank.longitude === 'number' && !isNaN(rank.latitude))
-                .slice(0, 50)
+                .filter(rank => rank.latitude && rank.longitude)
+                .slice(0, 100)
                 .map((rank) => (
                   <Marker
                     key={`taxi-${rank.id}`}
-                    tracksViewChanges={false}
+                    tracksViewChanges={true}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    opacity={1}
                     coordinate={{
-                      latitude: rank.latitude,
-                      longitude: rank.longitude,
+                      latitude: parseFloat(rank.latitude.toString()),
+                      longitude: parseFloat(rank.longitude.toString()),
                     }}
                     onPress={() => setSelectedRank(rank)}>
-                    <View style={[styles.markerBox, { backgroundColor: '#3B82F6' }]}>
-                      <Feather name="map-pin" size={24} color="#FFFFFF" />
+                    <View style={styles.webStyleMarkerCircle}>
+                      <Feather name="truck" size={16} color="#FFFFFF" />
                     </View>
                   </Marker>
                 ))}
 
               {/* Incident Markers */}
               {incidents
-                .filter(incident => typeof incident.latitude === 'number' && typeof incident.longitude === 'number' && !isNaN(incident.latitude))
+                .filter(incident =>
+                  typeof incident.latitude === 'number' &&
+                  typeof incident.longitude === 'number' &&
+                  !isNaN(incident.latitude) &&
+                  !isNaN(incident.longitude)
+                )
                 .map((incident) => (
                   <Marker
                     key={`incident-${incident.id}`}
+                    tracksViewChanges={true}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    opacity={1}
                     coordinate={{
                       latitude: incident.latitude,
                       longitude: incident.longitude,
@@ -642,8 +659,8 @@ export default function ExploreScreen() {
                         `${incident.description}\n\nLocation: ${incident.formattedAddress}`
                       );
                     }}>
-                    <View style={[styles.markerBox, { backgroundColor: colors.error }]}>
-                      <Feather name="alert-triangle" size={24} color="#FFFFFF" />
+                    <View style={styles.webStyleMarkerCircleRed}>
+                      <Feather name="alert-triangle" size={16} color="#FFFFFF" />
                     </View>
                   </Marker>
                 ))}
@@ -667,17 +684,22 @@ export default function ExploreScreen() {
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: primaryColor, marginBottom: refreshing ? 0 : 12 }]}
+            style={styles.modernFab}
             onPress={() => initializeData(true)}>
-            {refreshing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Feather name="rotate-cw" size={24} color="#fff" />
-            )}
+            <LinearGradient
+              colors={['#3B82F6', '#2563EB']}
+              style={styles.fabGradient}
+            >
+              {refreshing ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Feather name="rotate-cw" size={22} color="#fff" />
+              )}
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: primaryColor, marginBottom: 12 }]}
+            style={styles.modernFab}
             onPress={() => {
               if (userLocation && mapRef.current) {
                 mapRef.current.animateToRegion({
@@ -688,23 +710,23 @@ export default function ExploreScreen() {
                 }, 1000);
               }
             }}>
-            <Feather name="crosshair" size={24} color="#fff" />
+            <LinearGradient
+              colors={['#3B82F6', '#2563EB']}
+              style={styles.fabGradient}
+            >
+              <Feather name="crosshair" size={22} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.fab, {
-              backgroundColor: colors.error,
-              transform: [{ rotate: showIncidentForm ? '45deg' : '0deg' }],
-              shadowColor: colors.error,
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-              elevation: 8,
-              width: 60,
-              height: 60,
-              borderRadius: 30
-            }]}
+            style={styles.modernFabLarge}
             onPress={() => setShowIncidentForm(!showIncidentForm)}>
-            <Feather name="plus" size={32} color="#fff" />
+            <LinearGradient
+              colors={['#EF4444', '#DC2626']}
+              style={styles.fabGradientLarge}
+            >
+              <Feather name="plus" size={30} color="#fff" style={{ transform: [{ rotate: showIncidentForm ? '45deg' : '0deg' }] }} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -942,13 +964,68 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#f0f0f0',
   },
-  map: {
-    ...StyleSheet.absoluteFillObject,
+  webStyleMarkerCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#3B82F6',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webStyleMarkerCircleRed: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EF4444',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  svgMarkerIcon: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modernFab: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 12,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    overflow: 'hidden',
+  },
+  modernFabLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    elevation: 10,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    overflow: 'hidden',
+  },
+  fabGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabGradientLarge: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   markerBox: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
