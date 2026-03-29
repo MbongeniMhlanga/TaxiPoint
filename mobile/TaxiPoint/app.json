@@ -42,7 +42,17 @@
         "expo-build-properties",
         {
           "android": {
-            "enableJetifier": true
+            "enableJetifier": true,
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/androidx.appcompat_appcompat.version",
+                "META-INF/androidx.core_core.version",
+                "META-INF/androidx.activity_activity.version",
+                "META-INF/androidx.fragment_fragment.version",
+                "META-INF/androidx.lifecycle_lifecycle-runtime.version",
+                "META-INF/androidx.versionedparcelable_versionedparcelable.version"
+              ]
+            }
           }
         }
       ],
