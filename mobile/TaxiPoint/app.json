@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "taxipoint",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mbongenimhlanga.TaxiPoint",
@@ -33,9 +33,7 @@
     },
     "plugins": [
       "./withAndroidBuildProperties",
-      "./withAndroidManifestPatch",
       "expo-router",
-      "@react-native-voice/voice",
       "expo-location",
       [
         "expo-build-properties",
