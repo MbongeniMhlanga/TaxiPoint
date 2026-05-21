@@ -35,6 +35,7 @@
       "./withAndroidBuildProperties",
       "expo-router",
       "expo-location",
+      "react-native-maps",
       [
         "expo-build-properties",
         {

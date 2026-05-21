@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { useAuth } from '@/context/AuthContext';
 import { Colors } from '@/constants/theme';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,23 +22,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-let MapView: any = View;
-let Marker: any = View;
-let PROVIDER_DEFAULT: any = null;
 
-if (Platform.OS !== 'web') {
-  try {
-    const Maps = require('react-native-maps');
-    MapView = Maps.default || Maps.MapView || Maps;
-    Marker = Maps.Marker || Maps.default?.Marker;
-    PROVIDER_DEFAULT = Maps.PROVIDER_DEFAULT || Maps.default?.PROVIDER_DEFAULT;
-  } catch (e) {
-    console.warn('react-native-maps not available');
-  }
-}
+// The map module is lazy-loaded below so the screen can fall back safely if it fails.
+
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
 // import { SpeechErrorEvent, SpeechResultsEvent } from '@react-native-voice/voice';
 type SpeechErrorEvent = any;
 type SpeechResultsEvent = any;
@@ -105,12 +94,17 @@ export default function ExploreScreen() {
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
+  const [mapModules, setMapModules] = useState<{
+    MapView: any;
+    Marker: any;
+    providerGoogle?: any;
+  } | null>(null);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
   // 🎙️ Voice Search States
   const [isVoiceListening, setIsVoiceListening] = useState(false);
-  const [voiceResults, setVoiceResults] = useState<string[]>([]);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
-  const [layoutReady, setLayoutReady] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(true);
   const [tracksView, setTracksView] = useState(true);
 
   // Request location permissions (No change)
@@ -184,7 +178,9 @@ export default function ExploreScreen() {
       });
 
       if (!res.ok) {
+        const errorMessage = getErrorMessage(res.status, await res.text(), 'taxi-ranks');
         console.warn('Taxi ranks fetch failed:', res.status);
+        Alert.alert('Taxi Ranks Unavailable', errorMessage);
         return;
       }
 
@@ -245,7 +241,9 @@ export default function ExploreScreen() {
       const res = await fetch(`${API_BASE_URL}/api/incidents`, {
         headers: { 'Authorization': `Bearer ${user?.token || ''}` }
       });
-      if (!res.ok) throw new Error('Failed to fetch incidents');
+      if (!res.ok) {
+        throw new Error(getErrorMessage(res.status, await res.text(), 'incidents'));
+      }
       const data = await res.json();
       setIncidents(data);
     } catch (err) {
@@ -275,7 +273,9 @@ export default function ExploreScreen() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to submit incident');
+      if (!res.ok) {
+        throw new Error(getErrorMessage(res.status, await res.text(), 'incidents'));
+      }
 
       Alert.alert('Success', 'Incident reported successfully!');
       setIncidentDescription('');
@@ -283,7 +283,7 @@ export default function ExploreScreen() {
       fetchIncidents();
     } catch (err) {
       console.error('Error submitting incident:', err);
-      Alert.alert('Error', 'Failed to report incident');
+      Alert.alert('Report Failed', err instanceof Error ? err.message : 'We could not submit the incident right now.');
     } finally {
       setSubmittingIncident(false);
     }
@@ -379,6 +379,49 @@ export default function ExploreScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMapModule = async () => {
+      try {
+        if (Platform.OS === 'web') {
+          setMapLoadError('Map view is not available on web.');
+          setMapModules(null);
+          return;
+        }
+
+        const maps = (await import('react-native-maps')) as any;
+        const LoadedMapView = maps.default ?? maps.MapView;
+        const LoadedMarker = maps.Marker;
+
+        if (!LoadedMapView || !LoadedMarker) {
+          throw new Error('react-native-maps did not expose the expected components');
+        }
+
+        if (isMounted) {
+          setMapModules({
+            MapView: LoadedMapView,
+            Marker: LoadedMarker,
+            providerGoogle: maps.PROVIDER_GOOGLE,
+          });
+          setMapLoadError(null);
+        }
+      } catch (error) {
+        console.error('Map module load failed:', error);
+        if (isMounted) {
+          setMapModules(null);
+          setMapLoadError('Map view could not be initialized on this device.');
+        }
+      }
+    };
+
+    void loadMapModule();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Ensure markers render fully then freeze them for performance/stability
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -459,17 +502,6 @@ export default function ExploreScreen() {
     }
   };
 
-  const stopVoiceSearch = async () => {
-    try {
-      if (Voice && typeof Voice.stop === 'function') {
-        await Voice.stop();
-      }
-      setIsVoiceListening(false);
-    } catch (e) {
-      console.error('Stop Voice Error:', e);
-    }
-  };
-
   const cancelVoiceSearch = async () => {
     try {
       if (Voice && typeof Voice.cancel === 'function') {
@@ -525,15 +557,15 @@ export default function ExploreScreen() {
 
   if (loading || !layoutReady) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}
-        onLayout={() => setLayoutReady(true)}
-      >
+      <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={primaryColor} />
         <ThemedText style={{ marginTop: 12, opacity: 0.6 }}>Loading Map...</ThemedText>
       </View>
     );
   }
+
+  const MapViewComponent: any = mapModules?.MapView;
+  const MarkerComponent: any = mapModules?.Marker;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
@@ -613,87 +645,93 @@ export default function ExploreScreen() {
 
       {/* Full Screen Map */}
       <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_DEFAULT}
-          style={StyleSheet.absoluteFillObject}
-          initialRegion={{
-            latitude: userLocation?.latitude || -26.2044,
-            longitude: userLocation?.longitude || 28.0473,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          onMapReady={() => setMapReady(true)}
-          showsUserLocation={true}
-          moveOnMarkerPress={false}
-          showsMyLocationButton={false}>
-          {mapReady && (
-            <>
-              {displayedTaxiRanks
-                .filter(rank => rank.latitude && rank.longitude)
-                .slice(0, 100)
-                .map((rank) => (
-                  <Marker
-                    key={`taxi-${rank.id}`}
-                    tracksViewChanges={true}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    opacity={1}
-                    coordinate={{
-                      latitude: parseFloat(rank.latitude.toString()),
-                      longitude: parseFloat(rank.longitude.toString()),
-                    }}
-                    onPress={() => setSelectedRank(rank)}>
-                    <View style={styles.webStyleMarkerCircle}>
-                      <Feather name="truck" size={16} color="#FFFFFF" />
-                    </View>
-                  </Marker>
-                ))}
+        {MapViewComponent && MarkerComponent ? (
+          <MapViewComponent
+            ref={mapRef}
+            provider={Platform.OS === 'android' ? mapModules?.providerGoogle : undefined}
+            style={StyleSheet.absoluteFillObject}
+            initialRegion={{
+              latitude: userLocation?.latitude || -26.2044,
+              longitude: userLocation?.longitude || 28.0473,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            }}
+            onMapReady={() => setMapReady(true)}
+            showsUserLocation={true}
+            moveOnMarkerPress={false}
+            showsMyLocationButton={false}>
+            {mapReady && (
+              <>
+                {displayedTaxiRanks
+                  .filter(rank => rank.latitude && rank.longitude)
+                  .slice(0, 30)
+                  .map((rank) => (
+                    <MarkerComponent
+                      key={`taxi-${rank.id}`}
+                      tracksViewChanges={tracksView}
+                      anchor={{ x: 0.5, y: 0.5 }}
+                      opacity={1}
+                      coordinate={{
+                        latitude: parseFloat(rank.latitude.toString()),
+                        longitude: parseFloat(rank.longitude.toString()),
+                      }}
+                      onPress={() => setSelectedRank(rank)}>
+                      <View style={styles.webStyleMarkerCircle} />
+                    </MarkerComponent>
+                  ))}
 
-              {/* Incident Markers */}
-              {incidents
-                .filter(incident =>
-                  typeof incident.latitude === 'number' &&
-                  typeof incident.longitude === 'number' &&
-                  !isNaN(incident.latitude) &&
-                  !isNaN(incident.longitude)
-                )
-                .map((incident) => (
-                  <Marker
-                    key={`incident-${incident.id}`}
-                    tracksViewChanges={true}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    opacity={1}
+                {/* Incident Markers */}
+                {incidents
+                  .filter(incident =>
+                    typeof incident.latitude === 'number' &&
+                    typeof incident.longitude === 'number' &&
+                    !isNaN(incident.latitude) &&
+                    !isNaN(incident.longitude)
+                  )
+                  .map((incident) => (
+                    <MarkerComponent
+                      key={`incident-${incident.id}`}
+                      tracksViewChanges={tracksView}
+                      anchor={{ x: 0.5, y: 0.5 }}
+                      opacity={1}
+                      coordinate={{
+                        latitude: incident.latitude,
+                        longitude: incident.longitude,
+                      }}
+                      onPress={() => {
+                        Alert.alert(
+                          'Reported Incident',
+                          `${incident.description}\n\nLocation: ${incident.formattedAddress}`
+                        );
+                      }}>
+                      <View style={styles.webStyleMarkerCircleRed} />
+                    </MarkerComponent>
+                  ))}
+
+                {/* User Location Marker */}
+                {userLocation && typeof userLocation.latitude === 'number' && typeof userLocation.longitude === 'number' && (
+                  <MarkerComponent
                     coordinate={{
-                      latitude: incident.latitude,
-                      longitude: incident.longitude,
-                    }}
-                    onPress={() => {
-                      Alert.alert(
-                        'Reported Incident',
-                        `${incident.description}\n\nLocation: ${incident.formattedAddress}`
-                      );
+                      latitude: userLocation.latitude,
+                      longitude: userLocation.longitude,
                     }}>
-                    <View style={styles.webStyleMarkerCircleRed}>
-                      <Feather name="alert-triangle" size={16} color="#FFFFFF" />
-                    </View>
-                  </Marker>
-                ))}
-
-              {/* User Location Marker */}
-              {userLocation && typeof userLocation.latitude === 'number' && typeof userLocation.longitude === 'number' && (
-                <Marker
-                  coordinate={{
-                    latitude: userLocation.latitude,
-                    longitude: userLocation.longitude,
-                  }}>
-                  <View style={[styles.markerBox, { backgroundColor: colors.success }]}>
-                    <Feather name="user" size={24} color="#FFFFFF" />
-                  </View>
-                </Marker>
-              )}
-            </>
-          )}
-        </MapView>
+                    <View style={[styles.markerBox, { backgroundColor: colors.success }]} />
+                  </MarkerComponent>
+                )}
+              </>
+            )}
+          </MapViewComponent>
+        ) : (
+          <View style={[styles.mapFallback, { backgroundColor: secondaryBgColor, borderColor }]}>
+            <Feather name="map" size={34} color={primaryColor} />
+            <ThemedText type="defaultSemiBold" style={[styles.mapFallbackTitle, { color: textColor }]}>
+              Map unavailable
+            </ThemedText>
+            <ThemedText style={[styles.mapFallbackText, { color: placeholderColor }]}>
+              {mapLoadError ?? 'We could not load the map view on this device. You can still browse taxi ranks and incidents below.'}
+            </ThemedText>
+          </View>
+        )}
 
         {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
@@ -712,25 +750,27 @@ export default function ExploreScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.modernFab}
-            onPress={() => {
-              if (userLocation && mapRef.current) {
-                mapRef.current.animateToRegion({
-                  latitude: userLocation.latitude,
-                  longitude: userLocation.longitude,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }, 1000);
-              }
-            }}>
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
-              style={styles.fabGradient}
-            >
-              <Feather name="crosshair" size={22} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+          {MapViewComponent && MarkerComponent ? (
+            <TouchableOpacity
+              style={styles.modernFab}
+              onPress={() => {
+                if (userLocation && mapRef.current) {
+                  mapRef.current.animateToRegion({
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                  }, 1000);
+                }
+              }}>
+              <LinearGradient
+                colors={['#3B82F6', '#2563EB']}
+                style={styles.fabGradient}
+              >
+                <Feather name="crosshair" size={22} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             style={styles.modernFabLarge}
@@ -977,6 +1017,28 @@ const styles = StyleSheet.create({
     flex: 1,
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#f0f0f0',
+  },
+  mapFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    borderWidth: 1,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginVertical: 12,
+  },
+  mapFallbackTitle: {
+    marginTop: 14,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  mapFallbackText: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   webStyleMarkerCircle: {
     width: 36,
@@ -1373,4 +1435,3 @@ const styles = StyleSheet.create({
     marginRight: 6,
   }
 });
-

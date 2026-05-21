@@ -18,6 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function ForgotPasswordScreen() {
@@ -33,40 +35,41 @@ export default function ForgotPasswordScreen() {
 
   const handleForgotPassword = async () => {
     if (!email || !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ email }),
       });
 
       if (!response.ok) {
-        let errorMsg = 'Failed to send reset link';
-        try {
-          const data = await response.json();
-          errorMsg = data.message || errorMsg;
-        } catch (e) {}
-        
-        Alert.alert('Request Failed', errorMsg);
+        const errorText = await response.text();
+        const message = getErrorMessage(response.status, errorText, 'forgot-password');
+        Alert.alert('Reset Failed', message);
         return;
       }
 
       setIsSent(true);
     } catch (error: any) {
       console.error('Forgot Password Error:', error);
-      Alert.alert('Connection Error', 'Failed to connect to server');
+      Alert.alert('Connection Problem', getErrorMessage(0, error, 'forgot-password'));
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {loading && <Loader message="Sending reset instructions..." />}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>

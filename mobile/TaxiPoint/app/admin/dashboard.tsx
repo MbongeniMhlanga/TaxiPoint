@@ -3,6 +3,8 @@ import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -91,6 +93,9 @@ export default function AdminDashboard() {
     const fetchTaxiRanks = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
+            if (!res.ok) {
+                throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
+            }
             const data = await res.json();
             setTaxiRanks(data.content || []);
         } catch (err) {
@@ -110,8 +115,13 @@ export default function AdminDashboard() {
             ]);
 
             if (usersRes.ok) setTotalUsers(await usersRes.json());
+            else throw new Error(getErrorMessage(usersRes.status, await usersRes.text(), 'admin'));
+
             if (incidentsRes.ok) setActiveIncidents(await incidentsRes.json());
+            else throw new Error(getErrorMessage(incidentsRes.status, await incidentsRes.text(), 'admin'));
+
             if (statsRes.ok) setUserStats(await statsRes.json());
+            else throw new Error(getErrorMessage(statsRes.status, await statsRes.text(), 'admin'));
         } catch (err) {
             console.error('Fetch stats error:', err);
         }
@@ -214,10 +224,10 @@ export default function AdminDashboard() {
                             setTaxiRanks(prev => prev.filter(r => r.id !== id));
                             Alert.alert('Success', 'Taxi rank deleted successfully');
                         } else {
-                            throw new Error('Failed to delete');
+                            throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
                         }
                     } catch (err) {
-                        Alert.alert('Error', 'Failed to delete rank');
+                        Alert.alert('Delete Failed', err instanceof Error ? err.message : 'Could not delete the taxi rank.');
                     }
                 }
             }
@@ -255,13 +265,13 @@ export default function AdminDashboard() {
                 body: JSON.stringify(payload),
             });
 
-            if (!res.ok) throw new Error('Failed to save');
+            if (!res.ok) throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
 
             Alert.alert('Success', `Taxi rank ${isEditing ? 'updated' : 'added'} successfully`);
             setShowFormModal(false);
             fetchTaxiRanks();
         } catch (err) {
-            Alert.alert('Error', 'Failed to save taxi rank. Check JSON fields formatting.');
+            Alert.alert('Save Failed', err instanceof Error ? err.message : 'We could not save that taxi rank right now.');
         } finally {
             setFormLoading(false);
         }
@@ -304,7 +314,7 @@ export default function AdminDashboard() {
     if (loading) {
         return (
             <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center' }]}>
-                <ActivityIndicator size="large" color={colors.tint} />
+                <Loader message="Loading admin dashboard..." />
             </View>
         );
     }

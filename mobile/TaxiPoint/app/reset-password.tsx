@@ -18,6 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function ResetPasswordScreen() {
@@ -57,20 +59,23 @@ export default function ResetPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (password.length < 6) {
-      Alert.alert('Short Password', 'Password must be at least 6 characters long');
+      Alert.alert('Password Too Short', 'Your password must be at least 6 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('Passwords Do Not Match', 'Please make sure both passwords are the same.');
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ token, newPassword: password, confirmPassword }),
       });
 
@@ -81,7 +86,7 @@ export default function ResetPasswordScreen() {
           errorMsg = data.message || errorMsg;
         } catch (e) {}
         
-        Alert.alert('Reset Failed', errorMsg);
+        Alert.alert('Reset Failed', getErrorMessage(response.status, errorMsg, 'reset-password'));
         return;
       }
 
@@ -90,8 +95,9 @@ export default function ResetPasswordScreen() {
       ]);
     } catch (error: any) {
       console.error('Reset Password Error:', error);
-      Alert.alert('Connection Error', 'Failed to connect to server');
+      Alert.alert('Connection Problem', getErrorMessage(0, error, 'reset-password'));
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -100,7 +106,7 @@ export default function ResetPasswordScreen() {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.tint} />
-        <ThemedText style={{ marginTop: 16 }}>Validating reset link...</ThemedText>
+        <ThemedText style={{ marginTop: 16 }}>Checking your reset link...</ThemedText>
       </View>
     );
   }
@@ -111,8 +117,8 @@ export default function ResetPasswordScreen() {
         <View style={styles.center}>
           <Feather name="x-circle" size={80} color={Colors.light.error} />
           <ThemedText type="title" style={styles.errorTitle}>Invalid Link</ThemedText>
-          <ThemedText style={styles.errorSubtitle}>
-            This password reset link is invalid or has expired.
+            <ThemedText style={styles.errorSubtitle}>
+            This password reset link is invalid or has expired. Please request a new one.
           </ThemedText>
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: colors.tint }]}
@@ -126,6 +132,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {loading && <Loader message="Updating your password..." />}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
@@ -162,7 +169,7 @@ export default function ResetPasswordScreen() {
             <View style={styles.inputContainer}>
               <ThemedText style={styles.label}>Confirm Password</ThemedText>
               <View style={[styles.inputWrapper, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-                <Feather name="check-shield" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                <Feather name="shield" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
                   placeholder="Confirm new password"

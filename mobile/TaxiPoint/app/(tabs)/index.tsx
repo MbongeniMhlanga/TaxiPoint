@@ -3,6 +3,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -36,39 +38,37 @@ export default function LoginScreen() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.tint} />
+        <Loader message="Loading your account..." />
       </View>
     );
   }
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Missing Details', 'Please enter both your email and password.');
       return;
     }
 
-    // Simple validation
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email');
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          Alert.alert('Login Failed', 'Wrong credentials, please try again');
-        } else {
-          Alert.alert('Login Failed', 'Something went wrong. Please try again later.');
-          const errorText = await response.text();
-          console.error('Login Error:', response.status, errorText);
-        }
+        const errorText = await response.text();
+        const message = getErrorMessage(response.status, errorText, 'login');
+        Alert.alert('Login Failed', message);
         return;
       }
 
@@ -79,9 +79,9 @@ export default function LoginScreen() {
       login(email, data.role, data.token, data.name, data.surname);
     } catch (error: any) {
       console.error('Login Network Error:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Connection Error', `Connection failed: ${errorMsg}`);
+      Alert.alert('Connection Problem', getErrorMessage(0, error, 'login'));
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -96,7 +96,8 @@ export default function LoginScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.container, { backgroundColor: bgColor }]}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {loading && <Loader />}
           <View style={styles.header}>
             <ThemedText type="title" style={styles.title}>Welcome to TaxiPoint</ThemedText>
             <ThemedText style={styles.subtitle}>Sign in to continue</ThemedText>

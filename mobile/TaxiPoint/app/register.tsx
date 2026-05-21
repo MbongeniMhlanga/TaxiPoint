@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config';
@@ -35,45 +38,36 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!formData.name || !formData.surname || !formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Missing Details', 'Please complete all the registration fields.');
       return;
     }
 
     if (!formData.email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email');
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Password Too Short', 'Your password must be at least 6 characters long.');
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_BASE_URL}/api/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Registration Failed:', response.status, errorText);
-
-        let errorMessage = `Error (${response.status}): Registration failed`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.message) {
-            errorMessage = errorJson.message;
-          }
-        } catch {
-          if (response.status === 404) errorMessage = 'Error (404): Endpoint not found';
-          if (response.status === 409) errorMessage = 'Error (409): User already exists';
-          if (response.status === 500) errorMessage = 'Error (500): Internal Server Error';
-        }
-
-        Alert.alert('Registration Failed', errorMessage);
+        const message = getErrorMessage(response.status, errorText, 'register');
+        Alert.alert('Registration Failed', message);
         return;
       }
 
@@ -82,8 +76,9 @@ export default function RegisterScreen() {
       router.push('/(tabs)');
     } catch (error: any) {
       console.error('Registration Error:', error);
-      Alert.alert('Connection Error', `Connection failed: ${error.message}`);
+      Alert.alert('Connection Problem', getErrorMessage(0, error, 'register'));
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -105,8 +100,9 @@ export default function RegisterScreen() {
         style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
+            {loading && <Loader message="Creating your account..." />}
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton} disabled={loading}>
-              <ThemedText style={[styles.backText, { color: primaryColor }]}>← Back</ThemedText>
+              <Ionicons name="arrow-back" size={24} color={primaryColor} />
             </TouchableOpacity>
 
             <ThemedText type="title" style={[styles.title, { color: textColor }]}>
@@ -204,6 +200,9 @@ export default function RegisterScreen() {
                   </ThemedText>
                 </TouchableOpacity>
               </View>
+              <ThemedText style={[styles.passwordHelp, { color: secondaryTextColor }]}>
+                Use at least 6 characters. A mix of letters and numbers is recommended.
+              </ThemedText>
 
               {/* Register Button */}
               <TouchableOpacity
@@ -213,11 +212,7 @@ export default function RegisterScreen() {
                 ]}
                 onPress={handleRegister}
                 disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <ThemedText style={styles.registerButtonText}>Create Account →</ThemedText>
-                )}
+                <ThemedText style={styles.registerButtonText}>Create Account →</ThemedText>
               </TouchableOpacity>
 
               <View style={styles.footerContainer}>
@@ -303,6 +298,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
+  },
+  passwordHelp: {
+    marginTop: -2,
+    fontSize: 12,
+    lineHeight: 18,
   },
   eyeIcon: {
     padding: 8,

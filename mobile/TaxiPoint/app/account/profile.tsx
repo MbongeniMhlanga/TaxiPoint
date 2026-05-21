@@ -3,6 +3,8 @@ import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Loader } from '@/components/loader';
+import { getErrorMessage } from '@/utils/errorMessage';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -134,7 +136,7 @@ export default function ProfileScreen() {
 
     const handleUpdateProfile = async () => {
         if (!name.trim() || !surname.trim() || !email.trim()) {
-            Alert.alert("Error", "Please fill in all mandatory fields (Name, Surname, Email).");
+            Alert.alert("Missing Details", "Please complete your name, surname, and email.");
             return;
         }
 
@@ -155,17 +157,20 @@ export default function ProfileScreen() {
                 }),
             });
 
-            if (!profileRes.ok) throw new Error("Profile update failed");
+            if (!profileRes.ok) {
+                const profileErrorText = await profileRes.text();
+                throw new Error(getErrorMessage(profileRes.status, profileErrorText, 'profile'));
+            }
 
             // 2. Handle Password Change (if current password is provided)
             if (currentPassword) {
                 if (newPassword !== confirmPassword) {
-                    Alert.alert("Error", "New passwords do not match.");
+                    Alert.alert("Passwords Do Not Match", "Please make sure both new passwords are the same.");
                     setLoading(false);
                     return;
                 }
                 if (newPassword.length < 6) {
-                    Alert.alert("Error", "New password must be at least 6 characters.");
+                    Alert.alert("Password Too Short", "Your new password must be at least 6 characters long.");
                     setLoading(false);
                     return;
                 }
@@ -183,8 +188,8 @@ export default function ProfileScreen() {
                 });
 
                 if (!passRes.ok) {
-                    const errData = await passRes.json();
-                    throw new Error(errData.message || "Password change failed");
+                    const errData = await passRes.text();
+                    throw new Error(getErrorMessage(passRes.status, errData, 'profile'));
                 }
             }
 
@@ -202,7 +207,7 @@ export default function ProfileScreen() {
             setConfirmPassword("");
 
         } catch (e: any) {
-            Alert.alert("Update Failed", e.message || "An error occurred while updating your profile.");
+            Alert.alert("Update Failed", e.message || getErrorMessage(0, e, 'profile'));
         } finally {
             setLoading(false);
         }
@@ -219,6 +224,7 @@ export default function ProfileScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={[styles.container, { backgroundColor: bgColor }]}
         >
+            {loading && <Loader message="Saving your profile..." />}
             <Stack.Screen options={{ title: 'Edit Profile' }} />
 
             <ScrollView

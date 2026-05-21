@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { getErrorMessage } from '@/utils/errorMessage';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
@@ -135,7 +136,7 @@ export default function TaxiRanksScreen() {
             setTaxiRanks(data.content || []);
         } catch (err: any) {
             console.error('Error fetching taxi ranks:', err);
-            Alert.alert('Error', 'Failed to fetch taxi ranks');
+            Alert.alert('Load Failed', getErrorMessage(0, err, 'taxi-ranks'));
         } finally {
             setLoading(false);
             setRefreshing(false);
