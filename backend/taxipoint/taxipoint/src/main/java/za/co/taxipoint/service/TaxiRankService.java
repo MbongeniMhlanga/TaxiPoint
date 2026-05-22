@@ -24,12 +24,16 @@ public class TaxiRankService {
     private TaxiRankRepository taxiRankRepository;
      private final GeometryFactory geometryFactory = new GeometryFactory();
 
-    public Page<TaxiRank> listTaxiRanks(Optional<String> district, int page, int size) {
+    public Page<TaxiRank> listTaxiRanks(Optional<String> district, boolean includeInactive, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         if (district.isPresent()) {
-            return taxiRankRepository.findByDistrictIgnoreCaseContaining(district.get(), pageable);
+            return includeInactive
+                    ? taxiRankRepository.findByDistrictIgnoreCaseContaining(district.get(), pageable)
+                    : taxiRankRepository.findByActiveTrueAndDistrictIgnoreCaseContaining(district.get(), pageable);
         }
-        return taxiRankRepository.findAll(pageable);
+        return includeInactive
+                ? taxiRankRepository.findAll(pageable)
+                : taxiRankRepository.findActive(pageable);
     }
 
  public List<TaxiRank> searchByText(String query) {
@@ -45,7 +49,8 @@ public class TaxiRankService {
     }
 
     public Optional<TaxiRank> getById(UUID id) {
-        return taxiRankRepository.findById(id);
+        return taxiRankRepository.findById(id)
+                .filter(rank -> rank.getActive() == null || Boolean.TRUE.equals(rank.getActive()));
     }
 
     public TaxiRank createTaxiRank(TaxiRank taxiRank) {
@@ -62,6 +67,9 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         rank.setCurrency(dto.getCurrency() != null && !dto.getCurrency().isBlank()
                 ? dto.getCurrency().trim().toUpperCase()
                 : Optional.ofNullable(rank.getCurrency()).orElse("ZAR"));
+        rank.setActive(dto.getActive() == null
+                ? (rank.getActive() == null || Boolean.TRUE.equals(rank.getActive()))
+                : dto.getActive());
 
         // Update routesServed safely
         if (dto.getRoutesServed() != null) {
@@ -107,6 +115,7 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         rank.setCurrency(dto.getCurrency() != null && !dto.getCurrency().isBlank()
                 ? dto.getCurrency().trim().toUpperCase()
                 : "ZAR");
+        rank.setActive(dto.getActive() == null || dto.getActive());
         rank.setFacilities(dto.getFacilities());
         rank.setRouteFares(dto.getRouteFares());
 
@@ -131,6 +140,7 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         dto.setHours(rank.getHours());
         dto.setPhone(rank.getPhone());
         dto.setCurrency(Optional.ofNullable(rank.getCurrency()).orElse("ZAR"));
+        dto.setActive(rank.getActive() == null || Boolean.TRUE.equals(rank.getActive()));
         dto.setRouteFares(rank.getRouteFares());
         dto.setFacilities(rank.getFacilities());
 
@@ -151,6 +161,7 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         final String normalizedDestination = requestedDestination.toLowerCase();
 
         return taxiRankRepository.findById(rankId)
+                .filter(rank -> rank.getActive() == null || Boolean.TRUE.equals(rank.getActive()))
                 .flatMap(rank -> {
                     Map<String, Double> routeFares = rank.getRouteFares();
                     if (routeFares == null || routeFares.isEmpty()) {

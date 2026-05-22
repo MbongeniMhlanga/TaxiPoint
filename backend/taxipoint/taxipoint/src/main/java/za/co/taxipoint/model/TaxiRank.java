@@ -55,6 +55,9 @@ public class TaxiRank {
     @Column(length = 8)
     private String currency = "ZAR";
 
+    @Column(nullable = false)
+    private Boolean active = true;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> facilities;
@@ -69,6 +72,9 @@ public class TaxiRank {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (active == null) {
+            active = true;
+        }
     }
 
     @PreUpdate

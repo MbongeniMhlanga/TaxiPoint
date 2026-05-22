@@ -30,6 +30,7 @@ public class TaxiRankController {
             @RequestParam Optional<Double> lat,
             @RequestParam Optional<Double> lng,
             @RequestParam Optional<Double> radius_m,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -56,7 +57,7 @@ public class TaxiRankController {
         }
 
         // Standard list with optional suburb filter
-        Page<TaxiRank> ranks = taxiRankService.listTaxiRanks(suburb, page, size);
+        Page<TaxiRank> ranks = taxiRankService.listTaxiRanks(suburb, includeInactive, page, size);
         Page<TaxiRankDTO> dtoPage = ranks.map(taxiRankService::toDTO);
         return ResponseEntity.ok(dtoPage);
     }

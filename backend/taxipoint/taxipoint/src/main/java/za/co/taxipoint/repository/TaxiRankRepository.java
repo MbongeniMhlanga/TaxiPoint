@@ -13,6 +13,12 @@ import java.util.UUID;
 
 public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
 
+    @Query("SELECT t FROM TaxiRank t WHERE COALESCE(t.active, true) = true")
+    Page<TaxiRank> findActive(Pageable pageable);
+
+    @Query("SELECT t FROM TaxiRank t WHERE COALESCE(t.active, true) = true AND LOWER(t.district) LIKE LOWER(CONCAT('%', :district, '%'))")
+    Page<TaxiRank> findByActiveTrueAndDistrictIgnoreCaseContaining(@Param("district") String district, Pageable pageable);
+
     Page<TaxiRank> findByDistrictIgnoreCaseContaining(String district, Pageable pageable);
 
     @Query("SELECT t FROM TaxiRank t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
@@ -31,6 +37,7 @@ public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
                 CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
                 :radius
             )
+            AND COALESCE(active, true) = true
             ORDER BY distance_meters
             """, nativeQuery = true)
     List<TaxiRank> findNearbyWithDistance(
@@ -47,6 +54,7 @@ public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
                 CAST(ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) AS geography),
                 :radius
             )
+            AND COALESCE(active, true) = true
     """, nativeQuery = true)
     List<TaxiRank> findNearby(
             @Param("lat") Double lat,
@@ -54,9 +62,10 @@ public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
             @Param("radius") Double radius
     );
 
-    @Query("SELECT t FROM TaxiRank t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+    @Query("SELECT t FROM TaxiRank t WHERE COALESCE(t.active, true) = true AND (" +
+            "LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(t.address) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(CAST(t.routesServed as string)) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR LOWER(t.district) LIKE LOWER(CONCAT('%', :query, '%'))")
+            "OR LOWER(t.district) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<TaxiRank> searchByNameOrAddressOrRoutesOrDistrict(@Param("query") String query);
 }
