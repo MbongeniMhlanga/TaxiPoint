@@ -68,7 +68,7 @@ const Register: React.FC = () => {
 
             await response.json();
             toast.success("Registration successful! Please login.");
-            navigate("/login");
+            navigate("/login", { replace: true });
 
         } catch (error: any) {
             console.error("Registration Error:", error);
@@ -226,7 +226,11 @@ const Register: React.FC = () => {
 
                     <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
                         Already have an account?{" "}
-                        <button onClick={() => navigate("/login")} className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/login")}
+                            className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
+                        >
                             Log in
                         </button>
                     </p>

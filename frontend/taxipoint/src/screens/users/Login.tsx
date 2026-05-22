@@ -77,7 +77,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       toast.success("Login successful!");
       onLogin(data);
-      navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing");
+      navigate(data.role === "ROLE_ADMIN" ? "/admin" : "/landing", { replace: true });
 
     } catch (error: any) {
       console.error("Login Network Error:", error);
@@ -173,7 +173,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                <button onClick={() => navigate("/forgot-password")} className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot password?</button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                >
+                  Forgot password?
+                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -230,7 +236,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <p className="text-center text-gray-600 dark:text-gray-400">
             Don't have an account?{" "}
-            <button onClick={() => navigate("/register")} className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
+            >
               Sign up
             </button>
           </p>
