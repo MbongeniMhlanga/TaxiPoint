@@ -45,6 +45,11 @@ public class CorrectionController {
         return ResponseEntity.ok(correctionService.getPendingSubmissions());
     }
 
+    @GetMapping("/mine")
+    public ResponseEntity<List<CorrectionSubmissionDTO>> getMyCorrections(Authentication authentication) {
+        return ResponseEntity.ok(correctionService.getMySubmissions(authentication.getName()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<CorrectionSubmissionDTO> getCorrection(@PathVariable UUID id) {
         return correctionService.getById(id)

@@ -13,4 +13,5 @@ import java.util.UUID;
 public interface CorrectionSubmissionRepository extends JpaRepository<CorrectionSubmission, UUID> {
     List<CorrectionSubmission> findByStatusInOrderByCreatedAtDesc(Collection<CorrectionStatus> statuses);
     List<CorrectionSubmission> findByRankIdOrderByCreatedAtDesc(UUID rankId);
+    List<CorrectionSubmission> findBySubmittedByEmailOrderByCreatedAtDesc(String submittedByEmail);
 }

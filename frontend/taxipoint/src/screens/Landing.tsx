@@ -769,6 +769,7 @@ useEffect(() => {
         {selectedRank && (
           <RankDetailPanel 
             rank={selectedRank} 
+            user={user}
             onClose={() => setSelectedRank(null)} 
             onNavigate={(rank) => {
               const url = `https://www.google.com/maps/dir/?api=1&destination=${rank.latitude},${rank.longitude}`;

@@ -1,0 +1,6 @@
+ALTER TABLE IF EXISTS taxi_ranks
+    ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+
+UPDATE taxi_ranks
+SET active = TRUE
+WHERE active IS NULL;

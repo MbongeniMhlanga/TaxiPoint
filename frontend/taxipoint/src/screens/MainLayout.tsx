@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import { Menu, X, Sun, Moon, LayoutDashboard, Map as MapIcon, Info, HelpCircle, Settings, User as UserIcon } from 'lucide-react';
+import { Menu, X, Sun, Moon, LayoutDashboard, Map as MapIcon, Info, HelpCircle, Settings, User as UserIcon, History } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
@@ -34,6 +34,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   const navItems = [
     { name: 'Home', icon: <MapIcon size={20} />, path: '/landing' },
+    { name: 'Corrections', icon: <History size={20} />, path: '/corrections' },
     { name: 'About', icon: <Info size={20} />, path: '/about' },
     { name: 'Support', icon: <HelpCircle size={20} />, path: '/support' },
     ...(user.role === 'ROLE_ADMIN' ? [{ name: 'Admin', icon: <LayoutDashboard size={20} />, path: '/admin' }] : []),

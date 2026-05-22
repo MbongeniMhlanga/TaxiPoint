@@ -94,6 +94,13 @@ public class CorrectionService {
                 .toList();
     }
 
+    public List<CorrectionSubmissionDTO> getMySubmissions(String email) {
+        return submissionRepository.findBySubmittedByEmailOrderByCreatedAtDesc(email)
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
     public Optional<CorrectionSubmissionDTO> getById(UUID id) {
         return submissionRepository.findById(id).map(this::toDTO);
     }

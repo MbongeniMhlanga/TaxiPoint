@@ -2,9 +2,10 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, MapPin, Navigation, Clock, Phone, 
-  Info, ChevronRight, Share2, Heart, 
+  Info, ChevronRight, Share2, Heart, AlertTriangle,
   Coffee, Shield, Sparkles, Wifi 
 } from 'lucide-react';
+import CorrectionModal from './CorrectionModal';
 
 interface TaxiRank {
   id: string;
@@ -25,13 +26,16 @@ interface TaxiRank {
 
 interface RankDetailPanelProps {
   rank: TaxiRank | null;
+  user: { token: string } | null;
   onClose: () => void;
   onNavigate: (rank: TaxiRank) => void;
 }
 
-const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavigate }) => {
-  if (!rank) return null;
+const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, user, onClose, onNavigate }) => {
   const [selectedDestination, setSelectedDestination] = React.useState<string | null>(null);
+  const [isCorrectionOpen, setIsCorrectionOpen] = React.useState(false);
+
+  if (!rank) return null;
 
   const facilityIcons: Record<string, any> = {
     'wifi': <Wifi size={18} />,
@@ -143,6 +147,15 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavi
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsCorrectionOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/20 transition"
+          >
+            <AlertTriangle size={18} />
+            Suggest a correction
+          </button>
 
           {/* Description Card */}
           {rank.description && (
@@ -265,6 +278,13 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavi
              Always verify route information with rank officials on-site.
            </p>
         </div>
+
+        <CorrectionModal
+          isOpen={isCorrectionOpen}
+          rank={rank}
+          user={user}
+          onClose={() => setIsCorrectionOpen(false)}
+        />
       </motion.div>
     </AnimatePresence>
   );

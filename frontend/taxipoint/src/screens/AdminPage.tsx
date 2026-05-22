@@ -3,7 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter } from 'lucide-react';
+import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter, CheckCircle2, XCircle } from 'lucide-react';
 import ThemeToggle from "../components/ThemeToggle"; // Assuming we want theme toggle here too
 import { API_BASE_URL } from "../config";
 
@@ -24,6 +24,26 @@ interface TaxiRank {
   phone: string;
   currency?: string;
   facilities: Record<string, any>;
+}
+
+interface CorrectionSubmission {
+  id: string;
+  rankId?: string | null;
+  rankNameSnapshot?: string | null;
+  correctionType: string;
+  description: string;
+  details?: Record<string, any> | null;
+  status: string;
+  confirmationsCount: number;
+  rejectionsCount: number;
+  autoApproved: boolean;
+  submittedByUserId?: number | null;
+  submittedByEmail?: string | null;
+  submittedByName?: string | null;
+  reviewedByEmail?: string | null;
+  reviewNotes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface TaxiRankForm {
@@ -74,6 +94,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [rankToDelete, setRankToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
+  const [pendingCorrections, setPendingCorrections] = useState<CorrectionSubmission[]>([]);
+  const [reviewNotesDrafts, setReviewNotesDrafts] = useState<Record<string, string>>({});
 
   // Statistics state
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -88,12 +110,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   // Fetch all taxi ranks
   const fetchTaxiRanks = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
+      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000&includeInactive=true`);
       if (!res.ok) throw new Error("Failed to fetch taxi ranks");
       const data = await res.json();
       setTaxiRanks(data.content || []);
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const fetchPendingCorrections = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/pending`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch correction submissions");
+      }
+
+      const data = await res.json();
+      setPendingCorrections(data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch pending corrections:', err);
     }
   };
 
@@ -134,6 +173,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   useEffect(() => {
     fetchTaxiRanks();
     fetchStatistics();
+    fetchPendingCorrections();
   }, []);
 
   const handleChange = (
@@ -203,6 +243,60 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     setRouteFareDraft((prev) =>
       prev.route === route ? { route: "", fare: "" } : prev
     );
+  };
+
+  const formatCorrectionType = (type: string) => {
+    const labels: Record<string, string> = {
+      WRONG_ROUTE_NUMBER: 'Wrong route number',
+      MISSING_ROUTE: 'Missing route',
+      WRONG_FARE: 'Wrong fare',
+      RANK_CLOSED: 'Rank closed',
+      MISSING_RANK: 'Missing rank',
+      ROUTE_CHANGE: 'Route change',
+      OTHER: 'Other',
+    };
+    return labels[type] ?? type;
+  };
+
+  const formatCorrectionStatus = (status: string) => {
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
+  const reviewCorrection = async (submissionId: string, decision: 'APPROVE' | 'REJECT') => {
+    if (!user.token) {
+      toast.error("Authentication token missing. Log in again.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submissions/${submissionId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          decision,
+          reviewNotes: reviewNotesDrafts[submissionId] || "",
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to review correction");
+      }
+
+      toast.success(`Correction ${decision.toLowerCase()}d successfully.`);
+      setReviewNotesDrafts((prev) => {
+        const next = { ...prev };
+        delete next[submissionId];
+        return next;
+      });
+      fetchPendingCorrections();
+      fetchTaxiRanks();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to review correction.");
+    }
   };
 
   const handleEdit = (rank: TaxiRank) => {
@@ -514,6 +608,116 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#00C49F]"></div>Admins ({userStats.admins})</div>
               </div>
             </div>
+          </div>
+
+          {/* Correction Review Queue */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Correction Review Queue</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Review commuter submissions before they go live.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-semibold">
+                {pendingCorrections.length} pending
+              </span>
+            </div>
+
+            {pendingCorrections.length > 0 ? (
+              <div className="space-y-4">
+                {pendingCorrections.map((submission) => (
+                  <div
+                    key={submission.id}
+                    className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-4 space-y-3"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                            {formatCorrectionType(submission.correctionType)}
+                          </span>
+                          <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                            {formatCorrectionStatus(submission.status)}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                          {submission.rankNameSnapshot || 'Unknown rank'}
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {submission.description}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Submitted by {submission.submittedByName || submission.submittedByEmail || 'Unknown user'}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold">
+                          {submission.confirmationsCount} confirmations
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold">
+                          {submission.rejectionsCount} rejections
+                        </span>
+                        {submission.autoApproved ? (
+                          <span className="px-2 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold">
+                            Auto-approved
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {submission.details && Object.keys(submission.details).length > 0 ? (
+                      <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                          Details
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(submission.details).slice(0, 4).map(([key, value]) => (
+                            <span
+                              key={key}
+                              className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs"
+                            >
+                              {key}: {Array.isArray(value) ? value.join(', ') : String(value)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <textarea
+                      value={reviewNotesDrafts[submission.id] || ''}
+                      onChange={(e) => setReviewNotesDrafts((prev) => ({ ...prev, [submission.id]: e.target.value }))}
+                      placeholder="Review notes (optional)"
+                      className="w-full p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[90px]"
+                    />
+
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => reviewCorrection(submission.id, 'APPROVE')}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition"
+                      >
+                        <CheckCircle2 size={18} />
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => reviewCorrection(submission.id, 'REJECT')}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition"
+                      >
+                        <XCircle size={18} />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
+                No correction submissions are waiting for review right now.
+              </div>
+            )}
           </div>
 
           {/* Management Section Header */}

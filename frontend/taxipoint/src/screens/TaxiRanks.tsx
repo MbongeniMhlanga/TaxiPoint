@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Phone, Clock, Navigation, X } from 'lucide-react';
+import { MapPin, Phone, Clock, Navigation, X, AlertTriangle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { toast } from 'react-toastify';
+import CorrectionModal from '../components/CorrectionModal';
+import { useLocation } from 'react-router-dom';
 
 interface User {
     id: number;
@@ -36,20 +38,33 @@ interface TaxiRank {
 const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
     const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
     const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+    const [isCorrectionOpen, setIsCorrectionOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const location = useLocation() as { state?: { preloadedTaxiRanks?: TaxiRank[] } };
 
     useEffect(() => {
+        const preloadedRanks = location.state?.preloadedTaxiRanks;
+        if (Array.isArray(preloadedRanks)) {
+            setTaxiRanks(preloadedRanks);
+            setLoading(false);
+            return;
+        }
+
         fetchTaxiRanks();
     }, []);
 
     const fetchTaxiRanks = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
-                headers: { Authorization: `Bearer ${user.token}` },
-            });
+            const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
+
+            if (!res.ok) {
+                throw new Error(`Failed to fetch taxi ranks (${res.status})`);
+            }
+
             const data = await res.json();
-            setTaxiRanks(data.content || []);
+            const ranks = Array.isArray(data) ? data : (data.content || data.items || []);
+            setTaxiRanks(ranks);
         } catch (err: any) {
             console.error(err);
             toast.error('Failed to fetch taxi ranks');
@@ -306,6 +321,15 @@ const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
                                     </div>
                                 )}
 
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCorrectionOpen(true)}
+                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/20 transition"
+                                >
+                                    <AlertTriangle size={18} />
+                                    Suggest a correction
+                                </button>
+
                                 {/* Navigate Button */}
                                 <button
                                     onClick={() => {
@@ -322,6 +346,13 @@ const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <CorrectionModal
+                isOpen={isCorrectionOpen && !!selectedRank}
+                rank={selectedRank}
+                user={user}
+                onClose={() => setIsCorrectionOpen(false)}
+            />
         </div>
     );
 };
