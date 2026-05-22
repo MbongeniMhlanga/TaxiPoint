@@ -59,6 +59,8 @@ interface CorrectionSubmission {
     confirmationsCount: number;
     rejectionsCount: number;
     autoApproved: boolean;
+    submittedByName?: string | null;
+    submittedByEmail?: string | null;
     reviewNotes?: string | null;
     createdAt?: string | null;
 }
@@ -71,7 +73,6 @@ interface TaxiRankForm {
     longitude: string;
     district: string;
     routesServed: string;
-    routeFares: string;
     currency: string;
     hours: string;
     phone: string;
@@ -114,17 +115,15 @@ export default function AdminDashboard() {
         longitude: '0',
         district: '',
         routesServed: '',
-        routeFares: '{}',
         currency: 'ZAR',
         hours: '{}',
         phone: '',
         facilities: '{}',
     });
-    const [showReviewModal, setShowReviewModal] = useState(false);
-    const [reviewTarget, setReviewTarget] = useState<CorrectionSubmission | null>(null);
-    const [reviewDecision, setReviewDecision] = useState<ReviewDecision | null>(null);
-    const [reviewNotes, setReviewNotes] = useState('');
-    const [reviewLoading, setReviewLoading] = useState(false);
+    const [routeFareMap, setRouteFareMap] = useState<Record<string, number>>({});
+    const [routeFareDraft, setRouteFareDraft] = useState<{ route: string; fare: string }>({ route: '', fare: '' });
+    const [showRoutePicker, setShowRoutePicker] = useState(false);
+    const [reviewNotesDrafts, setReviewNotesDrafts] = useState<Record<string, string>>({});
 
     const fetchTaxiRanks = async () => {
         try {
@@ -161,6 +160,64 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error('Fetch stats error:', err);
         }
+    };
+
+    const routeOptions = Array.from(
+        new Set(
+            form.routesServed
+                .split(',')
+                .map((route) => route.trim())
+                .filter(Boolean)
+        )
+    );
+
+    const saveRouteFareDraft = () => {
+        const route = routeFareDraft.route.trim();
+        const fareValue = routeFareDraft.fare.trim();
+
+        if (!route) {
+            Alert.alert('Missing route', 'Please choose a destination or route.');
+            return;
+        }
+
+        if (!fareValue) {
+            Alert.alert('Missing fare', 'Please enter a fare amount.');
+            return;
+        }
+
+        if (routeOptions.length > 0 && !routeOptions.includes(route)) {
+            Alert.alert('Invalid route', 'Please choose a route from the routes you already entered.');
+            return;
+        }
+
+        const amount = Number(fareValue);
+        if (!Number.isFinite(amount)) {
+            Alert.alert('Invalid fare', 'Please enter a valid fare amount.');
+            return;
+        }
+
+        setRouteFareMap((prev) => ({
+            ...prev,
+            [route]: amount,
+        }));
+        setRouteFareDraft({ route: '', fare: '' });
+    };
+
+    const editRouteFare = (route: string) => {
+        const fare = routeFareMap[route];
+        setRouteFareDraft({ route, fare: String(fare) });
+    };
+
+    const removeRouteFare = (route: string) => {
+        setRouteFareMap((prev) => {
+            const next = { ...prev };
+            delete next[route];
+            return next;
+        });
+
+        setRouteFareDraft((prev) =>
+            prev.route === route ? { route: '', fare: '' } : prev
+        );
     };
 
     const fetchPendingCorrections = async () => {
@@ -264,12 +321,13 @@ export default function AdminDashboard() {
             longitude: String(rank.longitude),
             district: rank.district,
             routesServed: Array.isArray(rank.routesServed) ? rank.routesServed.join(', ') : '',
-            routeFares: JSON.stringify(rank.routeFares || {}),
             currency: rank.currency || 'ZAR',
             hours: JSON.stringify(rank.hours || {}),
             phone: rank.phone || '',
             facilities: JSON.stringify(rank.facilities || {}),
         });
+        setRouteFareMap(rank.routeFares || {});
+        setRouteFareDraft({ route: '', fare: '' });
         setShowFormModal(true);
     };
 
@@ -313,35 +371,22 @@ export default function AdminDashboard() {
         return labels[type] ?? type;
     };
 
-    const openReviewModal = (submission: CorrectionSubmission, decision: ReviewDecision) => {
-        setReviewTarget(submission);
-        setReviewDecision(decision);
-        setReviewNotes(decision === 'APPROVE' ? 'Approved from mobile admin.' : 'Rejected from mobile admin.');
-        setShowReviewModal(true);
-    };
+    const reviewCorrection = async (submissionId: string, decision: ReviewDecision) => {
+        if (!token) {
+            Alert.alert('Error', 'Authentication token missing. Log in again.');
+            return;
+        }
 
-    const closeReviewModal = () => {
-        if (reviewLoading) return;
-        setShowReviewModal(false);
-        setReviewTarget(null);
-        setReviewDecision(null);
-        setReviewNotes('');
-    };
-
-    const submitReview = async () => {
-        if (!reviewTarget || !reviewDecision || !token) return;
-
-        setReviewLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/submissions/${reviewTarget.id}`, {
+            const res = await fetch(`${API_BASE_URL}/api/submissions/${submissionId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    decision: reviewDecision,
-                    reviewNotes: reviewNotes.trim(),
+                    decision,
+                    reviewNotes: reviewNotesDrafts[submissionId] || '',
                 }),
             });
 
@@ -349,13 +394,15 @@ export default function AdminDashboard() {
                 throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
             }
 
-            Alert.alert('Success', `Correction ${reviewDecision === 'APPROVE' ? 'approved' : 'rejected'} successfully.`);
-            closeReviewModal();
+            Alert.alert('Success', `Correction ${decision === 'APPROVE' ? 'approved' : 'rejected'} successfully.`);
+            setReviewNotesDrafts((prev) => {
+                const next = { ...prev };
+                delete next[submissionId];
+                return next;
+            });
             await fetchPendingCorrections();
         } catch (err) {
             Alert.alert('Review Failed', err instanceof Error ? err.message : 'Could not update that correction.');
-        } finally {
-            setReviewLoading(false);
         }
     };
 
@@ -367,15 +414,15 @@ export default function AdminDashboard() {
                     description: form.description,
                     address: form.address,
                     latitude: Number(form.latitude),
-                    longitude: Number(form.longitude),
-                    district: form.district,
-                    routesServed: form.routesServed.split(',').map(r => r.trim()).filter(r => r),
-                    routeFares: JSON.parse(form.routeFares || '{}'),
-                    currency: form.currency || 'ZAR',
-                    hours: JSON.parse(form.hours),
-                    facilities: JSON.parse(form.facilities),
-                    phone: form.phone,
-                };
+                longitude: Number(form.longitude),
+                district: form.district,
+                routesServed: form.routesServed.split(',').map(r => r.trim()).filter(r => r),
+                routeFares: routeFareMap,
+                currency: form.currency || 'ZAR',
+                hours: JSON.parse(form.hours),
+                facilities: JSON.parse(form.facilities),
+                phone: form.phone,
+            };
 
             const url = isEditing
                 ? `${API_BASE_URL}/api/taxi-ranks/${currentRankId}`
@@ -396,6 +443,8 @@ export default function AdminDashboard() {
 
             Alert.alert('Success', `Taxi rank ${isEditing ? 'updated' : 'added'} successfully`);
             setShowFormModal(false);
+            setRouteFareMap({});
+            setRouteFareDraft({ route: '', fare: '' });
             fetchTaxiRanks();
         } catch (err) {
             Alert.alert('Save Failed', err instanceof Error ? err.message : 'We could not save that taxi rank right now.');
@@ -592,6 +641,9 @@ export default function AdminDashboard() {
                                     <ThemedText style={{ color: colors.text, marginTop: 8, lineHeight: 20 }}>
                                         {submission.description}
                                     </ThemedText>
+                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                        Submitted by {submission.submittedByName || submission.submittedByEmail || 'Unknown user'}
+                                    </ThemedText>
                                     <View style={styles.correctionMetaRow}>
                                         <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>{submission.confirmationsCount} confirmations</ThemedText>
                                         <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>{submission.rejectionsCount} rejections</ThemedText>
@@ -602,17 +654,36 @@ export default function AdminDashboard() {
                                             Notes: {submission.reviewNotes}
                                         </ThemedText>
                                     ) : null}
+                                    <View style={styles.reviewNoteField}>
+                                        <ThemedText style={styles.reviewNoteLabel}>Review notes</ThemedText>
+                                        <TextInput
+                                            value={reviewNotesDrafts[submission.id] ?? ''}
+                                            onChangeText={(value) => setReviewNotesDrafts((prev) => ({ ...prev, [submission.id]: value }))}
+                                            placeholder="Add a short note for the record..."
+                                            placeholderTextColor={colors.textSecondary}
+                                            multiline
+                                            textAlignVertical="top"
+                                            style={[
+                                                styles.reviewNoteInput,
+                                                {
+                                                    color: colors.text,
+                                                    backgroundColor: colors.background,
+                                                    borderColor: colors.border,
+                                                },
+                                            ]}
+                                        />
+                                    </View>
                                     <View style={styles.correctionActionsRow}>
                                         <TouchableOpacity
                                             style={[styles.correctionActionButton, { backgroundColor: '#DCFCE7' }]}
-                                            onPress={() => openReviewModal(submission, 'APPROVE')}
+                                            onPress={() => reviewCorrection(submission.id, 'APPROVE')}
                                         >
                                             <Feather name="check" size={16} color="#166534" />
                                             <ThemedText style={{ color: '#166534', fontWeight: '800' }}>Approve</ThemedText>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={[styles.correctionActionButton, { backgroundColor: '#FEE2E2' }]}
-                                            onPress={() => openReviewModal(submission, 'REJECT')}
+                                            onPress={() => reviewCorrection(submission.id, 'REJECT')}
                                         >
                                             <Feather name="x" size={16} color="#991B1B" />
                                             <ThemedText style={{ color: '#991B1B', fontWeight: '800' }}>Reject</ThemedText>
@@ -639,12 +710,13 @@ export default function AdminDashboard() {
                                 longitude: '0',
                                 district: '',
                                 routesServed: '',
-                                routeFares: '{}',
                                 currency: 'ZAR',
                                 hours: '{}',
                                 phone: '',
                                 facilities: '{}',
                             });
+                            setRouteFareMap({});
+                            setRouteFareDraft({ route: '', fare: '' });
                             setShowFormModal(true);
                         }}
                     >
@@ -766,18 +838,89 @@ export default function AdminDashboard() {
                                 </View>
 
                                 <View style={styles.inputGroup}>
-                                    <ThemedText style={styles.label}>Route Fares (JSON)</ThemedText>
-                                    <TextInput
-                                        style={[styles.input, styles.monoInput, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, color: colors.text }]}
-                                        value={form.routeFares}
-                                        onChangeText={(val) => setForm(f => ({ ...f, routeFares: val }))}
-                                        placeholder='{"M1": 15, "M2": 20}'
-                                        placeholderTextColor={colors.textSecondary}
-                                        multiline
-                                    />
-                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
-                                        Optional. Map each route to a fare using JSON.
+                                    <View style={styles.sectionHeader}>
+                                        <ThemedText style={styles.label}>Route Fares</ThemedText>
+                                        <TouchableOpacity
+                                            onPress={saveRouteFareDraft}
+                                            style={[styles.addButton, { backgroundColor: colors.tint, paddingVertical: 8, paddingHorizontal: 12 }]}
+                                        >
+                                            <Feather name="plus" size={16} color="#fff" />
+                                            <ThemedText style={styles.addButtonText}>
+                                                {routeFareMap[routeFareDraft.route] !== undefined ? 'Update Fare' : 'Add Fare'}
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
+                                        Optional. Choose from the routes above and pair each one with a fare, or leave the section empty if you do not have fares yet.
                                     </ThemedText>
+
+                                    {routeOptions.length === 0 ? (
+                                        <View style={[styles.emptyFareHint, { borderColor: colors.border, backgroundColor: colors.secondaryBackground }]}>
+                                            <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                                Enter routes first, then choose one from the dropdown below.
+                                            </ThemedText>
+                                        </View>
+                                    ) : (
+                                        <View style={{ gap: 12 }}>
+                                            <View style={styles.routeFareDraftRow}>
+                                                <TouchableOpacity
+                                                    onPress={() => setShowRoutePicker(true)}
+                                                    style={[styles.routePickerButton, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+                                                >
+                                                    <ThemedText style={{ color: routeFareDraft.route ? colors.text : colors.textSecondary }}>
+                                                        {routeFareDraft.route || 'Select destination / route'}
+                                                    </ThemedText>
+                                                    <Feather name="chevron-down" size={18} color={colors.textSecondary} />
+                                                </TouchableOpacity>
+                                                <TextInput
+                                                    style={[styles.routeFareInput, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, color: colors.text }]}
+                                                    value={routeFareDraft.fare}
+                                                    onChangeText={(val) => setRouteFareDraft((prev) => ({ ...prev, fare: val }))}
+                                                    placeholder="Fare"
+                                                    placeholderTextColor={colors.textSecondary}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
+
+                                            <View style={[styles.savedFaresBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                                                <View style={styles.sectionHeader}>
+                                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700' }}>Saved fares</ThemedText>
+                                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>{Object.keys(routeFareMap).length} saved</ThemedText>
+                                                </View>
+
+                                                {Object.keys(routeFareMap).length > 0 ? (
+                                                    <View style={{ gap: 10 }}>
+                                                        {Object.entries(routeFareMap).map(([route, fare]) => (
+                                                            <View key={route} style={[styles.savedFareItem, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+                                                                <View>
+                                                                    <ThemedText style={{ color: colors.text, fontWeight: '700' }}>{route}</ThemedText>
+                                                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>R{Math.round(Number(fare))}</ThemedText>
+                                                                </View>
+                                                                <View style={styles.savedFareActions}>
+                                                                    <TouchableOpacity
+                                                                        onPress={() => editRouteFare(route)}
+                                                                        style={[styles.savedFareActionButton, { backgroundColor: colors.tint + '20' }]}
+                                                                    >
+                                                                        <ThemedText style={{ color: colors.tint, fontWeight: '700', fontSize: 12 }}>Edit</ThemedText>
+                                                                    </TouchableOpacity>
+                                                                    <TouchableOpacity
+                                                                        onPress={() => removeRouteFare(route)}
+                                                                        style={[styles.savedFareActionButton, { backgroundColor: colors.error + '20' }]}
+                                                                    >
+                                                                        <ThemedText style={{ color: colors.error, fontWeight: '700', fontSize: 12 }}>Remove</ThemedText>
+                                                                    </TouchableOpacity>
+                                                                </View>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                ) : (
+                                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                                        No fares added yet. Add one route and fare at a time.
+                                                    </ThemedText>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )}
                                 </View>
 
                                 <View style={styles.inputGroup}>
@@ -826,83 +969,37 @@ export default function AdminDashboard() {
             </Modal>
 
             <Modal
-                visible={showReviewModal}
+                visible={showRoutePicker}
                 transparent
                 animationType="fade"
-                onRequestClose={closeReviewModal}
+                onRequestClose={() => setShowRoutePicker(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.reviewModalCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <View style={styles.modalHeader}>
-                            <View style={{ flex: 1 }}>
-                                <ThemedText type="subtitle">
-                                    {reviewDecision === 'APPROVE' ? 'Approve correction' : 'Reject correction'}
-                                </ThemedText>
-                                <ThemedText style={{ color: colors.textSecondary, marginTop: 4 }} numberOfLines={1}>
-                                    {reviewTarget?.rankNameSnapshot ?? 'Taxi rank'}
-                                </ThemedText>
-                            </View>
-                            <TouchableOpacity onPress={closeReviewModal} style={[styles.actionButton, { backgroundColor: colors.secondaryBackground }]}>
-                                <Feather name="x" size={18} color={colors.text} />
+                <View style={styles.routePickerOverlay}>
+                    <View style={[styles.routePickerSheet, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <View style={styles.routePickerHeader}>
+                            <ThemedText type="subtitle">Choose a route</ThemedText>
+                            <TouchableOpacity onPress={() => setShowRoutePicker(false)}>
+                                <Feather name="x" size={20} color={colors.text} />
                             </TouchableOpacity>
                         </View>
-
-                        <ScrollView contentContainerStyle={styles.reviewModalContent}>
-                            <View style={[styles.reviewSummary, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
-                                <ThemedText style={{ color: colors.textSecondary, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                                    {reviewTarget ? formatCorrectionType(reviewTarget.correctionType) : 'Correction'}
-                                </ThemedText>
-                                <ThemedText style={{ color: colors.text, marginTop: 6, lineHeight: 20 }}>
-                                    {reviewTarget?.description}
-                                </ThemedText>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <ThemedText style={[styles.label, { color: colors.text }]}>Review notes</ThemedText>
-                                <TextInput
-                                    value={reviewNotes}
-                                    onChangeText={setReviewNotes}
-                                    placeholder="Add a short note for the record..."
-                                    placeholderTextColor={colors.textSecondary}
-                                    multiline
-                                    textAlignVertical="top"
-                                    style={[
-                                        styles.input,
-                                        styles.reviewNotesInput,
-                                        {
-                                            color: colors.text,
-                                            backgroundColor: colors.secondaryBackground,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                />
-                            </View>
-
-                            <View style={styles.reviewActionsRow}>
+                        <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+                            {routeOptions.map((route) => (
                                 <TouchableOpacity
-                                    onPress={closeReviewModal}
-                                    style={[styles.reviewSecondaryButton, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+                                    key={route}
+                                    onPress={() => {
+                                        setRouteFareDraft((prev) => ({ ...prev, route }));
+                                        setShowRoutePicker(false);
+                                    }}
+                                    style={[styles.routePickerOption, { borderBottomColor: colors.border }]}
                                 >
-                                    <ThemedText style={{ color: colors.text, fontWeight: '700' }}>Cancel</ThemedText>
+                                    <ThemedText style={{ color: colors.text, fontWeight: '600' }}>{route}</ThemedText>
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={submitReview}
-                                    disabled={reviewLoading}
-                                    style={[styles.reviewPrimaryButton, { backgroundColor: reviewDecision === 'APPROVE' ? '#16A34A' : '#DC2626', opacity: reviewLoading ? 0.75 : 1 }]}
-                                >
-                                    {reviewLoading ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <ThemedText style={styles.submitButtonText}>
-                                            {reviewDecision === 'APPROVE' ? 'Approve' : 'Reject'}
-                                        </ThemedText>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
+                            ))}
                         </ScrollView>
                     </View>
                 </View>
             </Modal>
+
         </SafeAreaView>
     );
 }
@@ -1125,6 +1222,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 6,
     },
+    reviewNoteField: {
+        gap: 8,
+        marginTop: 4,
+    },
+    reviewNoteLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6B7280',
+    },
     reviewModalCard: {
         width: '92%',
         maxHeight: '80%',
@@ -1145,6 +1251,15 @@ const styles = StyleSheet.create({
         minHeight: 110,
         textAlignVertical: 'top',
     },
+    reviewNoteInput: {
+        minHeight: 110,
+        textAlignVertical: 'top',
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 14,
+    },
     reviewActionsRow: {
         flexDirection: 'row',
         gap: 10,
@@ -1163,6 +1278,82 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    emptyFareHint: {
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderRadius: 14,
+        padding: 14,
+    },
+    routeFareDraftRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    routePickerButton: {
+        flex: 1,
+        minHeight: 48,
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    routeFareInput: {
+        width: 110,
+        minHeight: 48,
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        fontSize: 16,
+    },
+    savedFaresBox: {
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: 14,
+        gap: 12,
+    },
+    savedFareItem: {
+        borderWidth: 1,
+        borderRadius: 14,
+        padding: 12,
+        gap: 10,
+    },
+    savedFareActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    savedFareActionButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+    },
+    routePickerOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        padding: 16,
+    },
+    routePickerSheet: {
+        borderWidth: 1,
+        borderRadius: 20,
+        overflow: 'hidden',
+        maxHeight: '65%',
+    },
+    routePickerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    routePickerOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
     },
     modalOverlay: {
         flex: 1,

@@ -108,6 +108,7 @@ export default function ExploreScreen() {
   const [allTaxiRanks, setAllTaxiRanks] = useState<TaxiRank[]>([]);
   const [displayedTaxiRanks, setDisplayedTaxiRanks] = useState<TaxiRank[]>([]);
   const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -297,6 +298,10 @@ export default function ExploreScreen() {
 
     return matchedKey ? fares[matchedKey] : undefined;
   };
+
+  useEffect(() => {
+    setSelectedDestination(null);
+  }, [selectedRank?.id]);
 
   const parseGoogleDuration = (value: unknown) => {
     if (typeof value === 'string') {
@@ -1465,22 +1470,66 @@ export default function ExploreScreen() {
 
                   {selectedRank.routesServed && selectedRank.routesServed.length > 0 && (
                     <View style={styles.section}>
-                      <ThemedText style={[styles.sectionHeader, { color: textColor }]}>Routes Served</ThemedText>
-                      <View style={styles.routesContainer}>
-                        {selectedRank.routesServed.map((route, idx) => (
-                          <View key={idx} style={[styles.routeBadge, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
-                            <Feather name="truck" size={12} color={primaryColor} />
-                            <View style={{ flex: 1 }}>
-                              <ThemedText style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</ThemedText>
-                              {formatFare(getRouteFare(selectedRank, route), selectedRank.currency) ? (
-                                <ThemedText style={[styles.routeFareText, { color: placeholderColor }]}>
-                                  {formatFare(getRouteFare(selectedRank, route), selectedRank.currency)}
-                                </ThemedText>
-                              ) : null}
-                            </View>
+                      <ThemedText style={[styles.sectionHeader, { color: textColor }]}>Destinations Served</ThemedText>
+
+                      {selectedDestination ? (
+                        <View style={[styles.selectedRouteCard, { backgroundColor: secondaryBgColor, borderColor: borderColor }]}>
+                          <View style={{ flex: 1 }}>
+                            <ThemedText style={[styles.selectedRouteLabel, { color: primaryColor }]}>Selected Route</ThemedText>
+                            <ThemedText style={[styles.selectedRouteTitle, { color: textColor }]}>{selectedDestination}</ThemedText>
                           </View>
-                        ))}
+                          {formatFare(getRouteFare(selectedRank, selectedDestination), selectedRank.currency) ? (
+                            <View style={[styles.selectedFarePill, { backgroundColor: bgColor }]}>
+                              <ThemedText style={[styles.selectedFareText, { color: primaryColor }]}>
+                                {formatFare(getRouteFare(selectedRank, selectedDestination), selectedRank.currency)}
+                              </ThemedText>
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
+
+                      <View style={styles.routeListContainer}>
+                        {selectedRank.routesServed.map((route, idx) => {
+                          const routeFare = formatFare(getRouteFare(selectedRank, route), selectedRank.currency);
+                          const isSelected = selectedDestination === route;
+
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => setSelectedDestination(route)}
+                              style={[
+                                styles.routeRow,
+                                {
+                                  backgroundColor: isSelected ? secondaryBgColor : bgColor,
+                                  borderColor: isSelected ? primaryColor : borderColor,
+                                },
+                              ]}
+                              activeOpacity={0.8}
+                            >
+                              <View style={styles.routeRowLeft}>
+                                <View style={[styles.routeRowIcon, { backgroundColor: primaryColor + '15' }]}>
+                                  <Feather name="map-pin" size={16} color={primaryColor} />
+                                </View>
+                                <ThemedText style={[styles.routeRowTitle, { color: textColor }]}>{route}</ThemedText>
+                              </View>
+                              <View style={styles.routeRowRight}>
+                                {routeFare ? (
+                                  <ThemedText style={[styles.routeRowFare, { color: primaryColor }]}>{routeFare}</ThemedText>
+                                ) : null}
+                                <Feather name="chevron-right" size={18} color={placeholderColor} />
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
+
+                      {selectedDestination ? (
+                        <ThemedText style={[styles.routeCompareText, { color: placeholderColor }]}>
+                          {formatFare(getRouteFare(selectedRank, selectedDestination), selectedRank.currency)
+                            ? 'Tap another destination to compare fares.'
+                            : 'No fare recorded at the moment.'}
+                        </ThemedText>
+                      ) : null}
                     </View>
                   )}
 
@@ -2112,6 +2161,81 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 4,
+  },
+  routeListContainer: {
+    gap: 10,
+    marginTop: 4,
+  },
+  selectedRouteCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    gap: 12,
+  },
+  selectedRouteLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  selectedRouteTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  selectedFarePill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  selectedFareText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  routeRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  routeRowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeRowTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  routeRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 10,
+  },
+  routeRowFare: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  routeCompareText: {
+    marginTop: 10,
+    fontSize: 12,
   },
   routeBadge: {
     flexDirection: 'row',
