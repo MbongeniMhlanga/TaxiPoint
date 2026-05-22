@@ -26,8 +26,10 @@ interface TaxiRank {
     longitude: number;
     district: string;
     routesServed: string[];
+    routeFares?: Record<string, number>;
     hours: Record<string, string>;
     phone: string;
+    currency?: string;
     facilities: Record<string, any>;
 }
 
@@ -61,6 +63,33 @@ const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
         rank.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
         rank.address.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const formatFare = (fare: number | undefined, currency?: string) => {
+        if (typeof fare !== 'number' || !Number.isFinite(fare)) {
+            return null;
+        }
+
+        const code = currency?.trim().toUpperCase() || 'ZAR';
+        return code === 'ZAR' ? `R${Math.round(fare)}` : `${code} ${Math.round(fare)}`;
+    };
+
+    const getRouteFare = (rank: TaxiRank, route: string) => {
+        const fares = rank.routeFares ?? {};
+        const exactFare = fares[route];
+        if (typeof exactFare === 'number') {
+            return exactFare;
+        }
+
+        const matchedKey = Object.keys(fares).find((key) => {
+            const normalizedKey = key.toLowerCase();
+            const normalizedRoute = route.toLowerCase();
+            return normalizedKey === normalizedRoute ||
+                normalizedKey.includes(normalizedRoute) ||
+                normalizedRoute.includes(normalizedKey);
+        });
+
+        return matchedKey ? fares[matchedKey] : undefined;
+    };
 
     const renderHours = (hours: Record<string, string>) => {
         if (!hours || Object.keys(hours).length === 0) return <p className="text-sm text-gray-500">Not available</p>;
@@ -263,9 +292,14 @@ const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
                                             {selectedRank.routesServed.map((route, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium"
+                                                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium inline-flex items-center gap-2"
                                                 >
                                                     {route}
+                                                    {formatFare(getRouteFare(selectedRank, route), selectedRank.currency) ? (
+                                                        <span className="text-[11px] font-semibold bg-white/70 dark:bg-gray-900/60 px-2 py-0.5 rounded-full">
+                                                            {formatFare(getRouteFare(selectedRank, route), selectedRank.currency)}
+                                                        </span>
+                                                    ) : null}
                                                 </span>
                                             ))}
                                         </div>

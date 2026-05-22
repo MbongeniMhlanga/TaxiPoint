@@ -15,8 +15,10 @@ interface TaxiRank {
   longitude: number;
   district: string;
   routesServed: string[];
+  routeFares?: Record<string, number>;
   hours: Record<string, string>;
   phone: string;
+  currency?: string;
   facilities: Record<string, any>;
   distanceMeters?: number;
 }
@@ -29,6 +31,7 @@ interface RankDetailPanelProps {
 
 const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavigate }) => {
   if (!rank) return null;
+  const [selectedDestination, setSelectedDestination] = React.useState<string | null>(null);
 
   const facilityIcons: Record<string, any> = {
     'wifi': <Wifi size={18} />,
@@ -36,6 +39,33 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavi
     'shops': <Coffee size={18} />,
     'security': <Shield size={18} />,
     'default': <Sparkles size={18} />
+  };
+
+  const formatFare = (fare: number | undefined) => {
+    if (typeof fare !== 'number' || !Number.isFinite(fare)) {
+      return null;
+    }
+
+    const currency = rank.currency?.trim().toUpperCase() || 'ZAR';
+    return currency === 'ZAR' ? `R${Math.round(fare)}` : `${currency} ${Math.round(fare)}`;
+  };
+
+  const getRouteFare = (destination: string) => {
+    const fares = rank.routeFares ?? {};
+    const exactFare = fares[destination];
+    if (typeof exactFare === 'number') {
+      return exactFare;
+    }
+
+    const matchedKey = Object.keys(fares).find((key) => {
+      const normalizedKey = key.toLowerCase();
+      const normalizedDestination = destination.toLowerCase();
+      return normalizedKey === normalizedDestination ||
+        normalizedKey.includes(normalizedDestination) ||
+        normalizedDestination.includes(normalizedKey);
+    });
+
+    return matchedKey ? fares[matchedKey] : undefined;
   };
 
   return (
@@ -130,9 +160,46 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavi
           {rank.routesServed && rank.routesServed.length > 0 && (
             <section>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Destinations Served</h3>
+              {selectedDestination ? (
+                <div className="mb-3 p-4 rounded-2xl border border-blue-100 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-900/20">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-blue-500 dark:text-blue-300 mb-1">
+                        Selected Route
+                      </p>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">
+                        {selectedDestination}
+                      </p>
+                    </div>
+                    {formatFare(getRouteFare(selectedDestination)) ? (
+                      <span className="px-3 py-1 rounded-full bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-300 text-sm font-bold shadow-sm">
+                        {formatFare(getRouteFare(selectedDestination))}
+                      </span>
+                    ) : null}
+                  </div>
+                  {formatFare(getRouteFare(selectedDestination)) ? (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                      Tap another destination to compare fares.
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                      No fare recorded at the moment.
+                    </p>
+                  )}
+                </div>
+              ) : null}
               <div className="grid grid-cols-1 gap-2">
                 {rank.routesServed.map((destination, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/30 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition border border-transparent hover:border-blue-100 dark:hover:border-blue-800 group">
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedDestination(destination)}
+                    className={`flex items-center justify-between p-3 rounded-xl transition border group text-left ${
+                      selectedDestination === destination
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 shadow-sm'
+                        : 'bg-gray-50 dark:bg-gray-800/30 border-transparent hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-100 dark:hover:border-blue-800'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600">
                         <MapPin size={16} />
@@ -141,8 +208,15 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, onClose, onNavi
                         {destination}
                       </span>
                     </div>
-                    <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition" />
-                  </div>
+                    <div className="flex items-center gap-2">
+                      {formatFare(getRouteFare(destination)) ? (
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                          {formatFare(getRouteFare(destination))}
+                        </span>
+                      ) : null}
+                      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition" />
+                    </div>
+                  </button>
                 ))}
               </div>
             </section>

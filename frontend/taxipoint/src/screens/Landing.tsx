@@ -35,8 +35,10 @@ interface TaxiRank {
   longitude: number;
   district: string;
   routesServed: string[];
+  routeFares?: Record<string, number>;
   hours: Record<string, string>;
   phone: string;
+  currency?: string;
   facilities: Record<string, any>;
   distanceMeters?: number;
 }

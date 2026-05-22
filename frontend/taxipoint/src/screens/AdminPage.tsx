@@ -19,8 +19,10 @@ interface TaxiRank {
   longitude: number;
   district: string;
   routesServed: string[];
+  routeFares?: Record<string, number>;
   hours: Record<string, string>;
   phone: string;
+  currency?: string;
   facilities: Record<string, any>;
 }
 
@@ -35,6 +37,11 @@ interface TaxiRankForm {
   hours: string;
   phone: string;
   facilities: string;
+}
+
+interface RouteFareEntry {
+  route: string;
+  fare: string;
 }
 
 interface AdminPageProps {
@@ -58,6 +65,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     phone: "",
     facilities: "{}",
   });
+  const [routeFareEntries, setRouteFareEntries] = useState<RouteFareEntry[]>([
+    { route: "", fare: "" }
+  ]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRankId, setCurrentRankId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -134,6 +144,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const addRouteFareRow = () => {
+    setRouteFareEntries((prev) => [...prev, { route: "", fare: "" }]);
+  };
+
+  const updateRouteFareRow = (index: number, field: keyof RouteFareEntry, value: string) => {
+    setRouteFareEntries((prev) =>
+      prev.map((entry, currentIndex) =>
+        currentIndex === index ? { ...entry, [field]: value } : entry
+      )
+    );
+  };
+
+  const routeOptions = Array.from(
+    new Set([
+      ...form.routesServed
+        .split(",")
+        .map((route) => route.trim())
+        .filter(Boolean),
+      ...routeFareEntries.map((entry) => entry.route.trim()).filter(Boolean),
+    ])
+  );
+
+  const removeRouteFareRow = (index: number) => {
+    setRouteFareEntries((prev) => {
+      const next = prev.filter((_, currentIndex) => currentIndex !== index);
+      return next.length > 0 ? next : [{ route: "", fare: "" }];
+    });
+  };
+
   const handleEdit = (rank: TaxiRank) => {
     setIsEditing(true);
     setCurrentRankId(rank.id);
@@ -149,6 +188,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       phone: rank.phone,
       facilities: JSON.stringify(rank.facilities),
     });
+    setRouteFareEntries(
+      rank.routeFares && Object.keys(rank.routeFares).length > 0
+        ? Object.entries(rank.routeFares).map(([route, fare]) => ({
+            route,
+            fare: String(fare),
+          }))
+        : [{ route: "", fare: "" }]
+    );
     setShowFormModal(true);
   };
 
@@ -167,6 +214,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       phone: "",
       facilities: "{}",
     });
+    setRouteFareEntries([{ route: "", fare: "" }]);
     setShowFormModal(false);
   };
 
@@ -194,7 +242,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         district: form.district,
-        routesServed: form.routesServed.split(",").map((r) => r.trim()),
+        routesServed: form.routesServed
+          .split(",")
+          .map((r) => r.trim())
+          .filter(Boolean),
+        routeFares: Object.fromEntries(
+          routeFareEntries
+            .map(({ route, fare }) => ({
+              route: route.trim(),
+              fare: fare.trim(),
+            }))
+            .map(({ route, fare }) => {
+              if (!route && !fare) {
+                return null;
+              }
+
+              if (!route) {
+                throw new Error("Route fares cannot contain blank route names.");
+              }
+
+              if (!fare) {
+                throw new Error(`Please enter a fare for route "${route}".`);
+              }
+
+              const amount = Number(fare);
+              if (!Number.isFinite(amount)) {
+                throw new Error(`Invalid fare value for route "${route}".`);
+              }
+
+              return [route, amount] as const;
+            })
+            .filter((entry): entry is readonly [string, number] => entry !== null)
+        ),
         hours: JSON.parse(form.hours),
         facilities: JSON.parse(form.facilities),
         phone: form.phone,
@@ -227,7 +306,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       fetchTaxiRanks();
     } catch (err: any) {
       console.error(err);
-      toast.error("Error: Check Hours and Facilities JSON fields.");
+      toast.error(err instanceof Error ? err.message : "Error: Check JSON fields for hours, facilities, or route fares.");
     } finally {
       setIsLoading(false);
     }
@@ -484,7 +563,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                          {Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}
+                          <div className="space-y-1">
+                            <div>{Array.isArray(rank.routesServed) ? rank.routesServed.join(", ") : ""}</div>
+                            {rank.routeFares && Object.keys(rank.routeFares).length > 0 ? (
+                              <div className="text-xs text-blue-600 dark:text-blue-400">
+                                {Object.entries(rank.routeFares)
+                                  .slice(0, 3)
+                                  .map(([route, fare]) => `${route}: R${Math.round(Number(fare))}`)
+                                  .join(" • ")}
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
                           <button
@@ -555,6 +644,61 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Routes (comma sep)</label>
                   <input name="routesServed" value={form.routesServed} onChange={handleChange} className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                </div>
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between gap-4 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Route Fares</label>
+                    <button
+                      type="button"
+                      onClick={addRouteFareRow}
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      + Add fare
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Optional. Choose from the routes above and pair each one with a fare, or leave the section empty if you do not have fares yet.
+                  </p>
+                  {routeOptions.length === 0 ? (
+                    <div className="mb-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      Enter routes first, then map fares to those routes using the dropdowns below.
+                    </div>
+                  ) : null}
+                  <div className="space-y-3">
+                    {routeFareEntries.map((entry, index) => (
+                      <div key={`${index}-${entry.route}`} className="grid grid-cols-1 md:grid-cols-[1fr_160px_auto] gap-3 items-center">
+                        <select
+                          value={entry.route}
+                          onChange={(e) => updateRouteFareRow(index, "route", e.target.value)}
+                          disabled={routeOptions.length === 0}
+                          className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition disabled:opacity-60"
+                        >
+                          <option value="">Select destination / route</option>
+                          {routeOptions.map((route) => (
+                            <option key={route} value={route}>
+                              {route}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={entry.fare}
+                          onChange={(e) => updateRouteFareRow(index, "fare", e.target.value)}
+                          placeholder="Fare"
+                          className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeRouteFareRow(index)}
+                          className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-semibold transition md:justify-self-start"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
