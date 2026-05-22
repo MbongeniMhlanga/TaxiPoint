@@ -21,5 +21,9 @@ const plugins = (expo.plugins || []).map((plugin) => {
 
 module.exports = {
   ...expo,
+  extra: {
+    ...(expo.extra || {}),
+    googleMapsApiKey,
+  },
   plugins,
 };

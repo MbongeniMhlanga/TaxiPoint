@@ -5,6 +5,7 @@ import { Colors } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
@@ -58,6 +59,26 @@ interface Incident {
   formattedAddress: string;
 }
 
+interface RouteStep {
+  instruction: string;
+  distance: number;
+  duration: number;
+}
+
+interface ActiveRoute {
+  destination: TaxiRank;
+  coordinates: { latitude: number; longitude: number }[];
+  distance: number;
+  duration: number;
+  steps: RouteStep[];
+}
+
+interface GooglePlaceSuggestion {
+  placeId: string;
+  title: string;
+  subtitle: string;
+}
+
 export default function ExploreScreen() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
@@ -89,6 +110,8 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
+  const [placeSuggestions, setPlaceSuggestions] = useState<GooglePlaceSuggestion[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
@@ -97,9 +120,13 @@ export default function ExploreScreen() {
   const [mapModules, setMapModules] = useState<{
     MapView: any;
     Marker: any;
+    Polyline?: any;
     providerGoogle?: any;
   } | null>(null);
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+  const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   // 🎙️ Voice Search States
   const [isVoiceListening, setIsVoiceListening] = useState(false);
@@ -165,6 +192,360 @@ export default function ExploreScreen() {
     }
 
     return matrix[b.length][a.length];
+  };
+
+  const decodePolyline = (encoded: string) => {
+    let index = 0;
+    let latitude = 0;
+    let longitude = 0;
+    const coordinates: { latitude: number; longitude: number }[] = [];
+
+    while (index < encoded.length) {
+      let shift = 0;
+      let result = 0;
+      let byte: number;
+
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+
+      const deltaLatitude = (result & 1) ? ~(result >> 1) : (result >> 1);
+      latitude += deltaLatitude;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+
+      const deltaLongitude = (result & 1) ? ~(result >> 1) : (result >> 1);
+      longitude += deltaLongitude;
+
+      coordinates.push({
+        latitude: latitude / 1e5,
+        longitude: longitude / 1e5,
+      });
+    }
+
+    return coordinates;
+  };
+
+  const formatDistance = (meters: number) => {
+    if (!Number.isFinite(meters)) {
+      return '0 m';
+    }
+
+    if (meters >= 1000) {
+      return `${(meters / 1000).toFixed(1)} km`;
+    }
+
+    return `${Math.round(meters)} m`;
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (!Number.isFinite(seconds)) {
+      return '0 min';
+    }
+
+    const totalMinutes = Math.max(1, Math.round(seconds / 60));
+    if (totalMinutes < 60) {
+      return `${totalMinutes} min`;
+    }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+  };
+
+  const parseGoogleDuration = (value: unknown) => {
+    if (typeof value === 'string') {
+      const seconds = Number.parseFloat(value.replace('s', ''));
+      return Number.isFinite(seconds) ? seconds : 0;
+    }
+
+    return 0;
+  };
+
+  const buildRouteInstruction = (step: any) => {
+    const instruction = step?.navigationInstruction?.instructions;
+    if (typeof instruction === 'string' && instruction.trim().length > 0) {
+      return instruction.trim();
+    }
+
+    const maneuver = String(step?.navigationInstruction?.maneuver ?? '')
+      .replace(/_/g, ' ')
+      .toLowerCase();
+
+    if (!maneuver) {
+      return 'Continue';
+    }
+
+    return maneuver.charAt(0).toUpperCase() + maneuver.slice(1);
+  };
+
+  const createAutocompleteSessionToken = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const placeAutocompleteSessionTokenRef = useRef(createAutocompleteSessionToken());
+  const suppressAutocompleteRef = useRef(false);
+
+  const getGoogleMapsApiKey = () =>
+    Constants.expoConfig?.extra?.googleMapsApiKey ||
+    (Constants.expoConfig as any)?.extra?.googleMapsApiKey ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    null;
+
+  const fetchGooglePlaceAutocomplete = async (query: string) => {
+    const googleMapsApiKey = getGoogleMapsApiKey();
+    if (!googleMapsApiKey || query.trim().length < 2) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    setPlacesLoading(true);
+    try {
+      const response = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleMapsApiKey,
+          'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters',
+        },
+        body: JSON.stringify({
+          input: query,
+          includeQueryPredictions: false,
+          languageCode: 'en-US',
+          regionCode: 'za',
+          sessionToken: placeAutocompleteSessionTokenRef.current,
+          locationBias: userLocation
+            ? {
+                circle: {
+                  center: {
+                    latitude: userLocation.latitude,
+                    longitude: userLocation.longitude,
+                  },
+                  radius: 50000,
+                },
+              }
+            : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Autocomplete request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const suggestions = (data?.suggestions ?? [])
+        .map((suggestion: any) => suggestion?.placePrediction)
+        .filter(Boolean)
+        .map((prediction: any) => ({
+          placeId: prediction.placeId,
+          title: prediction.text?.text ?? prediction.structuredFormat?.mainText?.text ?? 'Suggested place',
+          subtitle: prediction.structuredFormat?.secondaryText?.text ?? prediction.text?.text ?? '',
+        }))
+        .slice(0, 5);
+
+      setPlaceSuggestions(suggestions);
+    } catch (error) {
+      console.error('Google autocomplete failed:', error);
+      setPlaceSuggestions([]);
+    } finally {
+      setPlacesLoading(false);
+    }
+  };
+
+  const selectGooglePlaceSuggestion = async (suggestion: GooglePlaceSuggestion) => {
+    const googleMapsApiKey = getGoogleMapsApiKey();
+    if (!googleMapsApiKey) {
+      Alert.alert('Search Unavailable', 'Google Maps is not configured for place details right now.');
+      return;
+    }
+
+    suppressAutocompleteRef.current = true;
+    setSearchQuery(suggestion.title);
+    setShowSearchResults(false);
+    setPlaceSuggestions([]);
+
+    try {
+      const response = await fetch(`https://places.googleapis.com/v1/places/${suggestion.placeId}`, {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': googleMapsApiKey,
+          'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Place details request failed with status ${response.status}`);
+      }
+
+      const place = await response.json();
+      const latitude = place?.location?.latitude;
+      const longitude = place?.location?.longitude;
+
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        throw new Error('Place details did not include coordinates');
+      }
+
+      const routeTarget: TaxiRank = {
+        id: place.id || suggestion.placeId,
+        name: place.displayName?.text || suggestion.title,
+        description: '',
+        address: place.formattedAddress || suggestion.subtitle || suggestion.title,
+        latitude,
+        longitude,
+        district: 'Google Place',
+        routesServed: [],
+        hours: {},
+        phone: '',
+        facilities: {},
+      };
+
+      setSelectedRank(routeTarget);
+      suppressAutocompleteRef.current = true;
+      placeAutocompleteSessionTokenRef.current = createAutocompleteSessionToken();
+
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(
+          {
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          900
+        );
+      }
+    } catch (error) {
+      console.error('Place details load failed:', error);
+      Alert.alert('Place Unavailable', 'We could not load that place right now.');
+    }
+  };
+
+  const clearRoute = () => {
+    setActiveRoute(null);
+    setRouteError(null);
+  };
+
+  const showRouteInApp = async (destination: TaxiRank) => {
+    if (!userLocation) {
+      Alert.alert('Location Needed', 'Please enable location so TaxiPoint can calculate your route.');
+      return;
+    }
+
+    setRouteLoading(true);
+    setRouteError(null);
+
+    try {
+      const googleMapsApiKey =
+        Constants.expoConfig?.extra?.googleMapsApiKey ||
+        (Constants.expoConfig as any)?.extra?.googleMapsApiKey;
+
+      if (!googleMapsApiKey) {
+        throw new Error('Missing Google Maps API key in app configuration');
+      }
+
+      const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleMapsApiKey,
+          'X-Goog-FieldMask': [
+            'routes.duration',
+            'routes.distanceMeters',
+            'routes.polyline.encodedPolyline',
+            'routes.legs.steps.distanceMeters',
+            'routes.legs.steps.duration',
+            'routes.legs.steps.navigationInstruction.instructions',
+            'routes.legs.steps.navigationInstruction.maneuver',
+          ].join(','),
+        },
+        body: JSON.stringify({
+          origin: {
+            location: {
+              latLng: {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              },
+            },
+          },
+          destination: {
+            location: {
+              latLng: {
+                latitude: destination.latitude,
+                longitude: destination.longitude,
+              },
+            },
+          },
+          travelMode: 'DRIVE',
+          polylineEncoding: 'ENCODED_POLYLINE',
+          polylineQuality: 'OVERVIEW',
+          languageCode: 'en-US',
+          computeAlternativeRoutes: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Route request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const route = data?.routes?.[0];
+
+      if (!route?.polyline?.encodedPolyline) {
+        throw new Error('No route geometry returned');
+      }
+
+      const coordinates = decodePolyline(route.polyline.encodedPolyline);
+      const steps = (route?.legs ?? []).flatMap((leg: any) =>
+        (leg?.steps ?? []).map((step: any) => ({
+          instruction: buildRouteInstruction(step),
+          distance: step?.distanceMeters ?? 0,
+          duration: parseGoogleDuration(step?.duration ?? step?.staticDuration),
+        }))
+      );
+
+      setActiveRoute({
+        destination,
+        coordinates,
+        distance: route?.distanceMeters ?? 0,
+        duration: parseGoogleDuration(route?.duration),
+        steps,
+      });
+      setSelectedRank(null);
+      setShowSearchResults(false);
+      setSearchQuery(destination.name);
+
+      if (mapReady && mapRef.current && coordinates.length > 1) {
+        setTimeout(() => {
+          try {
+            mapRef.current?.fitToCoordinates(coordinates, {
+              edgePadding: { top: 120, right: 80, bottom: 280, left: 80 },
+              animated: true,
+            });
+          } catch (fitError) {
+            console.warn('Route fit error:', fitError);
+          }
+        }, 200);
+      }
+    } catch (error) {
+      console.error('Route load failed:', error);
+      setRouteError('We could not load in-app directions right now.');
+      Alert.alert('Route Unavailable', 'We could not load directions inside the app right now. Please try again.');
+    } finally {
+      setRouteLoading(false);
+    }
   };
 
   // ...existing code...
@@ -235,6 +616,38 @@ export default function ExploreScreen() {
     setFilteredSuggestions(matches.slice(0, 5));
     setShowSearchResults(true);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const timer = setTimeout(() => {
+      if (suppressAutocompleteRef.current) {
+        suppressAutocompleteRef.current = false;
+        return;
+      }
+
+      const query = searchQuery.trim();
+      void searchTaxiRanks(query);
+
+      if (!query) {
+        setPlaceSuggestions([]);
+        setPlacesLoading(false);
+        placeAutocompleteSessionTokenRef.current = createAutocompleteSessionToken();
+        return;
+      }
+
+      void fetchGooglePlaceAutocomplete(query).then(() => {
+        if (cancelled) {
+          setPlaceSuggestions([]);
+        }
+      });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, userLocation]);
 
   const fetchIncidents = async () => {
     try {
@@ -402,6 +815,7 @@ export default function ExploreScreen() {
           setMapModules({
             MapView: LoadedMapView,
             Marker: LoadedMarker,
+            Polyline: maps.Polyline,
             providerGoogle: maps.PROVIDER_GOOGLE,
           });
           setMapLoadError(null);
@@ -566,6 +980,7 @@ export default function ExploreScreen() {
 
   const MapViewComponent: any = mapModules?.MapView;
   const MarkerComponent: any = mapModules?.Marker;
+  const PolylineComponent: any = mapModules?.Polyline;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top', 'left', 'right']}>
@@ -582,13 +997,22 @@ export default function ExploreScreen() {
             placeholder="Where to?"
             placeholderTextColor={placeholderColor}
             value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              searchTaxiRanks(text);
-            }}
+            onChangeText={setSearchQuery}
           />
+          {placesLoading ? (
+            <ActivityIndicator size="small" color={iconColor} style={{ marginRight: 10 }} />
+          ) : null}
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchQuery(''); searchTaxiRanks(''); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery('');
+                setFilteredSuggestions([]);
+                setPlaceSuggestions([]);
+                setShowSearchResults(false);
+                setDisplayedTaxiRanks(allTaxiRanks);
+                placeAutocompleteSessionTokenRef.current = createAutocompleteSessionToken();
+              }}
+            >
               <Feather name="x" size={18} color={placeholderColor} style={{ marginRight: 12 }} />
             </TouchableOpacity>
           )}
@@ -609,16 +1033,46 @@ export default function ExploreScreen() {
           )}
         </View>
         {/* Suggestions Dropdown */}
-        {showSearchResults && filteredSuggestions.length > 0 && (
+        {showSearchResults && (placeSuggestions.length > 0 || filteredSuggestions.length > 0) && (
           <View style={[styles.suggestionsDropdown, { backgroundColor: secondaryBgColor, borderColor: borderColor, borderWidth: 1 }]}>
+            {placeSuggestions.length > 0 && (
+              <View style={{ marginBottom: filteredSuggestions.length > 0 ? 10 : 0 }}>
+                <ThemedText style={[styles.suggestionsSectionTitle, { color: placeholderColor }]}>
+                  Places
+                </ThemedText>
+                {placeSuggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion.placeId}
+                    onPress={() => {
+                      void selectGooglePlaceSuggestion(suggestion);
+                    }}
+                    style={[styles.suggestionItem, { borderBottomColor: borderColor }]}
+                  >
+                    <ThemedText style={{ color: textColor, fontWeight: '600' }}>{suggestion.title}</ThemedText>
+                    <ThemedText style={{ fontSize: 12, color: textColor, opacity: 0.8 }}>{suggestion.subtitle}</ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {filteredSuggestions.length > 0 && (
+              <View>
+                <ThemedText style={[styles.suggestionsSectionTitle, { color: placeholderColor }]}>
+                  Taxi Ranks
+                </ThemedText>
+              </View>
+            )}
+
             {filteredSuggestions.map((rank) => (
-              <TouchableOpacity
-                key={rank.id}
-                onPress={() => {
-                  setSearchQuery(rank.name);
-                  setDisplayedTaxiRanks([rank]);
-                  setSelectedRank(rank);
-                  setShowSearchResults(false);
+                <TouchableOpacity
+                  key={rank.id}
+                  onPress={() => {
+                    suppressAutocompleteRef.current = true;
+                    setSearchQuery(rank.name);
+                    setDisplayedTaxiRanks([rank]);
+                    setSelectedRank(rank);
+                    setShowSearchResults(false);
+                    setPlaceSuggestions([]);
                   if (mapRef.current) {
                     mapRef.current.animateToRegion({
                       latitude: rank.latitude,
@@ -660,6 +1114,16 @@ export default function ExploreScreen() {
             showsUserLocation={true}
             moveOnMarkerPress={false}
             showsMyLocationButton={false}>
+            {activeRoute && PolylineComponent && activeRoute.coordinates.length > 1 && (
+              <PolylineComponent
+                coordinates={activeRoute.coordinates}
+                strokeWidth={5}
+                strokeColor={primaryColor}
+                lineCap="round"
+                lineJoin="round"
+              />
+            )}
+
             {mapReady && (
               <>
                 {displayedTaxiRanks
@@ -734,7 +1198,7 @@ export default function ExploreScreen() {
         )}
 
         {/* Floating Action Buttons */}
-        <View style={styles.fabContainer}>
+        <View style={[styles.fabContainer, activeRoute ? styles.fabContainerLifted : null]}>
           <TouchableOpacity
             style={styles.modernFab}
             onPress={() => initializeData(true)}>
@@ -783,6 +1247,67 @@ export default function ExploreScreen() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {activeRoute && (
+          <View style={[styles.routePanel, { backgroundColor: bgColor, borderColor }]}>
+            <View style={styles.routePanelHeader}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <ThemedText type="defaultSemiBold" style={[styles.routePanelTitle, { color: textColor }]}>
+                  In-App Directions
+                </ThemedText>
+                <ThemedText style={[styles.routePanelSubtitle, { color: placeholderColor }]}>
+                  {activeRoute.destination.name}
+                </ThemedText>
+              </View>
+              <TouchableOpacity onPress={clearRoute} style={[styles.routeCloseButton, { backgroundColor: secondaryBgColor }]}>
+                <Feather name="x" size={18} color={textColor} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.routeStatsRow}>
+              <View style={[styles.routeStatChip, { backgroundColor: secondaryBgColor }]}>
+                <Feather name="map-pin" size={14} color={primaryColor} />
+                <ThemedText style={[styles.routeStatText, { color: textColor }]}>
+                  {formatDistance(activeRoute.distance)}
+                </ThemedText>
+              </View>
+              <View style={[styles.routeStatChip, { backgroundColor: secondaryBgColor }]}>
+                <Feather name="clock" size={14} color={primaryColor} />
+                <ThemedText style={[styles.routeStatText, { color: textColor }]}>
+                  {formatDuration(activeRoute.duration)}
+                </ThemedText>
+              </View>
+            </View>
+
+            {routeError ? (
+              <ThemedText style={[styles.routeErrorText, { color: colors.error }]}>
+                {routeError}
+              </ThemedText>
+            ) : null}
+
+            <ScrollView
+              style={styles.routeStepsScroll}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              {activeRoute.steps.slice(0, 6).map((step, index) => (
+                <View key={`${activeRoute.destination.id}-step-${index}`} style={styles.routeStepRow}>
+                  <View style={[styles.routeStepIndex, { backgroundColor: primaryColor }]}>
+                    <ThemedText style={styles.routeStepIndexText}>{index + 1}</ThemedText>
+                  </View>
+                  <View style={styles.routeStepContent}>
+                    <ThemedText style={[styles.routeStepText, { color: textColor }]}>
+                      {step.instruction}
+                    </ThemedText>
+                    <ThemedText style={[styles.routeStepMeta, { color: placeholderColor }]}>
+                      {formatDistance(step.distance)} • {formatDuration(step.duration)}
+                    </ThemedText>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* Incident Form Modal */}
@@ -931,12 +1456,7 @@ export default function ExploreScreen() {
                   <TouchableOpacity
                     style={styles.navigateButton}
                     onPress={() => {
-                      const url = Platform.select({
-                        ios: `maps:0,0?q=${selectedRank.latitude},${selectedRank.longitude}(${selectedRank.name})`,
-                        android: `geo:0,0?q=${selectedRank.latitude},${selectedRank.longitude}(${selectedRank.name})`,
-                        default: `https://www.google.com/maps/search/?api=1&query=${selectedRank.latitude},${selectedRank.longitude}`
-                      });
-                      Linking.openURL(url!);
+                      void showRouteInApp(selectedRank);
                     }}
                   >
                     <LinearGradient
@@ -945,8 +1465,14 @@ export default function ExploreScreen() {
                       end={{ x: 1, y: 0 }}
                       style={styles.navigateButtonGradient}
                     >
-                      <Feather name="navigation" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                      <ThemedText style={styles.navigateButtonText}>Get Directions</ThemedText>
+                      {routeLoading ? (
+                        <ActivityIndicator color="#FFFFFF" style={{ marginRight: 8 }} />
+                      ) : (
+                        <Feather name="navigation" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      )}
+                      <ThemedText style={styles.navigateButtonText}>
+                        {routeLoading ? 'Loading Route...' : 'Show Route in App'}
+                      </ThemedText>
                     </LinearGradient>
                   </TouchableOpacity>
                 </ScrollView>
@@ -1004,6 +1530,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+  },
+  suggestionsSectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginTop: 2,
   },
   suggestionItem: {
     paddingVertical: 10,
@@ -1241,6 +1775,9 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 2000,
   },
+  fabContainerLifted: {
+    bottom: 280,
+  },
   fab: {
     height: 56,
     borderRadius: 28,
@@ -1400,6 +1937,97 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600'
+  },
+  routePanel: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    zIndex: 2100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  routePanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  routePanelTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  routePanelSubtitle: {
+    marginTop: 2,
+    fontSize: 13,
+  },
+  routeCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  routeStatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  routeStatText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  routeErrorText: {
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  routeStepsScroll: {
+    maxHeight: 170,
+  },
+  routeStepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  routeStepIndex: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  routeStepIndexText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  routeStepContent: {
+    flex: 1,
+  },
+  routeStepText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  routeStepMeta: {
+    marginTop: 2,
+    fontSize: 12,
   },
   routesContainer: {
     flexDirection: 'row',
