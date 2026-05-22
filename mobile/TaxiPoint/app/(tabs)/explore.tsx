@@ -43,8 +43,10 @@ interface TaxiRank {
   longitude: number;
   district: string;
   routesServed: string[];
+  routeFares?: Record<string, number>;
   hours: Record<string, string>;
   phone: string;
+  currency?: string;
   facilities: Record<string, any>;
   distanceMeters?: number;
 }
@@ -260,6 +262,38 @@ export default function ExploreScreen() {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return minutes > 0 ? `${hours} hr ${minutes} min` : `${hours} hr`;
+  };
+
+  const formatFare = (fare: number | undefined, currency?: string) => {
+    if (typeof fare !== 'number' || !Number.isFinite(fare)) {
+      return null;
+    }
+
+    if (!currency || currency.toUpperCase() === 'ZAR') {
+      return `R${Math.round(fare)}`;
+    }
+
+    return `${currency.toUpperCase()} ${Math.round(fare)}`;
+  };
+
+  const getRouteFare = (rank: TaxiRank, route: string) => {
+    const fares = rank.routeFares ?? {};
+    const exactFare = fares[route];
+    if (typeof exactFare === 'number') {
+      return exactFare;
+    }
+
+    const matchedKey = Object.keys(fares).find((key) => {
+      const normalizedKey = key.toLowerCase();
+      const normalizedRoute = route.toLowerCase();
+      return (
+        normalizedKey === normalizedRoute ||
+        normalizedKey.includes(normalizedRoute) ||
+        normalizedRoute.includes(normalizedKey)
+      );
+    });
+
+    return matchedKey ? fares[matchedKey] : undefined;
   };
 
   const parseGoogleDuration = (value: unknown) => {
@@ -1428,7 +1462,14 @@ export default function ExploreScreen() {
                         {selectedRank.routesServed.map((route, idx) => (
                           <View key={idx} style={[styles.routeBadge, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
                             <Feather name="truck" size={12} color={primaryColor} />
-                            <ThemedText style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</ThemedText>
+                            <View style={{ flex: 1 }}>
+                              <ThemedText style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</ThemedText>
+                              {formatFare(getRouteFare(selectedRank, route), selectedRank.currency) ? (
+                                <ThemedText style={[styles.routeFareText, { color: placeholderColor }]}>
+                                  {formatFare(getRouteFare(selectedRank, route), selectedRank.currency)}
+                                </ThemedText>
+                              ) : null}
+                            </View>
                           </View>
                         ))}
                       </View>
@@ -2047,6 +2088,11 @@ const styles = StyleSheet.create({
   routeBadgeText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  routeFareText: {
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: '500',
   },
   section: {
     marginBottom: 20,

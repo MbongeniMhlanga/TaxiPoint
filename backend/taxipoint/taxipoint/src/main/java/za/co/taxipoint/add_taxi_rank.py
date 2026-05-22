@@ -29,16 +29,18 @@ def add_taxi_rank():
         "longitude": 28.0473,
         "district": "Johannesburg",
         "routes_served": ["Route1", "Route2", "Route3"],
+        "route_fares": {"Route1": 35, "Route2": 45, "Route3": 55},
         "hours": {"Mon-Fri": "6am-10pm", "Sat-Sun": "7am-9pm"},
         "phone": "0123456789",
+        "currency": "ZAR",
         "facilities": {"wifi": True, "restrooms": True, "parking": False}
     }
 
     # Insert statement (ID is auto-generated)
     insert_query = """
     INSERT INTO taxi_ranks 
-    (name, description, address, latitude, longitude, district, routes_served, hours, phone, facilities)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    (name, description, address, latitude, longitude, district, routes_served, route_fares, hours, phone, currency, facilities)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING id;
     """
 
@@ -51,8 +53,10 @@ def add_taxi_rank():
         taxi_rank["longitude"],
         taxi_rank["district"],
         Json(taxi_rank["routes_served"]),
+        Json(taxi_rank["route_fares"]),
         Json(taxi_rank["hours"]),
         taxi_rank["phone"],
+        taxi_rank["currency"],
         Json(taxi_rank["facilities"])
     ))
 

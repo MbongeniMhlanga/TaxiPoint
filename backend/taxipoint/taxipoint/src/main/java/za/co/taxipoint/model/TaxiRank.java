@@ -43,10 +43,17 @@ public class TaxiRank {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
+    private Map<String, Double> routeFares;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private Map<String, String> hours;
 
     @Column(length = 20)
     private String phone;
+
+    @Column(length = 8)
+    private String currency = "ZAR";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

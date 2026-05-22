@@ -6,11 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
+import za.co.taxipoint.dto.TaxiFareQuoteDTO;
 import za.co.taxipoint.dto.TaxiRankDTO;
 import za.co.taxipoint.model.TaxiRank;
 import za.co.taxipoint.repository.TaxiRankRepository;
 import org.locationtech.jts.geom.Point;
 
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,10 +59,17 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         rank.setDescription(dto.getDescription());
         rank.setDistrict(dto.getDistrict());
         rank.setPhone(dto.getPhone());
+        rank.setCurrency(dto.getCurrency() != null && !dto.getCurrency().isBlank()
+                ? dto.getCurrency().trim().toUpperCase()
+                : Optional.ofNullable(rank.getCurrency()).orElse("ZAR"));
 
         // Update routesServed safely
         if (dto.getRoutesServed() != null) {
             rank.setRoutesServed(dto.getRoutesServed());
+        }
+
+        if (dto.getRouteFares() != null) {
+            rank.setRouteFares(dto.getRouteFares());
         }
 
         // Update hours safely
@@ -95,7 +104,11 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         rank.setRoutesServed(dto.getRoutesServed());
         rank.setHours(dto.getHours());
         rank.setPhone(dto.getPhone());
+        rank.setCurrency(dto.getCurrency() != null && !dto.getCurrency().isBlank()
+                ? dto.getCurrency().trim().toUpperCase()
+                : "ZAR");
         rank.setFacilities(dto.getFacilities());
+        rank.setRouteFares(dto.getRouteFares());
 
         if (dto.getLatitude() != null && dto.getLongitude() != null) {
             Point location = geometryFactory.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
@@ -117,6 +130,8 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         dto.setRoutesServed(rank.getRoutesServed());
         dto.setHours(rank.getHours());
         dto.setPhone(rank.getPhone());
+        dto.setCurrency(Optional.ofNullable(rank.getCurrency()).orElse("ZAR"));
+        dto.setRouteFares(rank.getRouteFares());
         dto.setFacilities(rank.getFacilities());
 
         if (rank.getLocation() != null) {
@@ -125,6 +140,47 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         }
 
         return dto;
+    }
+
+    public Optional<TaxiFareQuoteDTO> findFareQuote(UUID rankId, String destination) {
+        if (destination == null || destination.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        final String requestedDestination = destination.trim();
+        final String normalizedDestination = requestedDestination.toLowerCase();
+
+        return taxiRankRepository.findById(rankId)
+                .flatMap(rank -> {
+                    Map<String, Double> routeFares = rank.getRouteFares();
+                    if (routeFares == null || routeFares.isEmpty()) {
+                        return Optional.empty();
+                    }
+
+                    Map.Entry<String, Double> matchedFare = routeFares.entrySet().stream()
+                            .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                            .filter(entry -> {
+                                String routeName = entry.getKey().trim().toLowerCase();
+                                return routeName.equals(normalizedDestination)
+                                        || routeName.contains(normalizedDestination)
+                                        || normalizedDestination.contains(routeName);
+                            })
+                            .findFirst()
+                            .orElse(null);
+
+                    if (matchedFare == null) {
+                        return Optional.empty();
+                    }
+
+                    TaxiFareQuoteDTO quote = new TaxiFareQuoteDTO();
+                    quote.setRankId(rank.getId().toString());
+                    quote.setRankName(rank.getName());
+                    quote.setRequestedDestination(requestedDestination);
+                    quote.setMatchedDestination(matchedFare.getKey());
+                    quote.setFare(matchedFare.getValue());
+                    quote.setCurrency(Optional.ofNullable(rank.getCurrency()).orElse("ZAR"));
+                    return Optional.of(quote);
+                });
     }
 
     // Inside TaxiRankService

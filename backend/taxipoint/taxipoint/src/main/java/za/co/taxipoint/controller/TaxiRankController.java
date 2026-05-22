@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import za.co.taxipoint.dto.TaxiFareQuoteDTO;
 import za.co.taxipoint.dto.TaxiRankDTO;
 import za.co.taxipoint.model.TaxiRank;
 import za.co.taxipoint.service.TaxiRankService;
@@ -102,7 +103,7 @@ public class TaxiRankController {
     }
 
    @GetMapping("/taxi-ranks/nearby")
-public ResponseEntity<List<TaxiRankDTO>> getNearbyTaxiRanks(
+    public ResponseEntity<List<TaxiRankDTO>> getNearbyTaxiRanks(
         @RequestParam double lat,
         @RequestParam double lng,
         @RequestParam(defaultValue = "5000") double radius_m
@@ -116,5 +117,19 @@ public ResponseEntity<List<TaxiRankDTO>> getNearbyTaxiRanks(
         return ResponseEntity.status(500).body(Collections.emptyList());
     }
 }
+
+    @GetMapping("/taxi-ranks/{id}/fare")
+    public ResponseEntity<TaxiFareQuoteDTO> getTaxiRankFare(
+            @PathVariable UUID id,
+            @RequestParam String destination
+    ) {
+        if (destination == null || destination.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return taxiRankService.findFareQuote(id, destination)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
 }
