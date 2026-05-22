@@ -18,6 +18,7 @@ interface TaxiRank {
   name: string;
   district?: string;
   address?: string;
+  routesServed?: string[];
 }
 
 interface UserLike {
@@ -44,8 +45,10 @@ const correctionOptions: { value: CorrectionType; label: string; description: st
 const emptyForm = {
   correctionType: 'WRONG_FARE' as CorrectionType,
   description: '',
-  route: '',
-  correctedRoute: '',
+  routeSelection: '',
+  routeManual: '',
+  correctedRouteSelection: '',
+  correctedRouteManual: '',
   fare: '',
   name: '',
   address: '',
@@ -58,6 +61,8 @@ const emptyForm = {
 const CorrectionModal: React.FC<CorrectionModalProps> = ({ isOpen, rank, user, onClose }) => {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const routeOptions = Array.from(new Set((rank?.routesServed ?? []).filter(Boolean)));
+  const OTHER_ROUTE_VALUE = '__other__';
 
   useEffect(() => {
     if (isOpen) {
@@ -74,27 +79,81 @@ const CorrectionModal: React.FC<CorrectionModalProps> = ({ isOpen, rank, user, o
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const resolveRouteValue = (selection: string, manual: string) => {
+    if (!selection.trim()) return '';
+    if (selection === OTHER_ROUTE_VALUE) {
+      return manual.trim();
+    }
+    return selection.trim();
+  };
+
+  const renderRouteSelector = (
+    selectionField: 'routeSelection' | 'correctedRouteSelection',
+    manualField: 'routeManual' | 'correctedRouteManual',
+    selectionPlaceholder: string,
+    manualPlaceholder: string,
+  ) => {
+    const selectionValue = form[selectionField];
+    const showManualInput = selectionValue === OTHER_ROUTE_VALUE || routeOptions.length === 0;
+
+    return (
+      <div className="space-y-2">
+        {routeOptions.length > 0 ? (
+          <select
+            value={selectionValue}
+            onChange={(e) => updateField(selectionField, e.target.value)}
+            className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="">{selectionPlaceholder}</option>
+            {routeOptions.map((route) => (
+              <option key={route} value={route}>
+                {route}
+              </option>
+            ))}
+            <option value={OTHER_ROUTE_VALUE}>Other / not listed</option>
+          </select>
+        ) : (
+          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-3 text-sm text-gray-500 dark:text-gray-400">
+            No routes are listed for this rank yet. Please type the route name manually.
+          </div>
+        )}
+
+        {showManualInput ? (
+          <input
+            value={form[manualField]}
+            onChange={(e) => updateField(manualField, e.target.value)}
+            placeholder={manualPlaceholder}
+            className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+        ) : null}
+      </div>
+    );
+  };
+
   const buildDetails = () => {
+    const selectedRoute = resolveRouteValue(form.routeSelection, form.routeManual);
+    const correctedRoute = resolveRouteValue(form.correctedRouteSelection, form.correctedRouteManual);
+
     switch (form.correctionType) {
       case 'WRONG_ROUTE_NUMBER':
         return {
-          route: form.route.trim(),
-          correctedRoute: form.correctedRoute.trim(),
+          route: selectedRoute,
+          correctedRoute,
         };
       case 'MISSING_ROUTE':
         return {
-          route: form.route.trim(),
+          route: selectedRoute,
           fare: form.fare ? Number(form.fare) : undefined,
         };
       case 'WRONG_FARE':
         return {
-          route: form.route.trim(),
+          route: selectedRoute,
           fare: form.fare ? Number(form.fare) : undefined,
         };
       case 'ROUTE_CHANGE':
         return {
-          oldRoute: form.route.trim(),
-          newRoute: form.correctedRoute.trim(),
+          oldRoute: selectedRoute,
+          newRoute: correctedRoute,
           fare: form.fare ? Number(form.fare) : undefined,
         };
       case 'RANK_CLOSED':
@@ -129,8 +188,18 @@ const CorrectionModal: React.FC<CorrectionModalProps> = ({ isOpen, rank, user, o
       return;
     }
 
-    if ((form.correctionType === 'WRONG_ROUTE_NUMBER' || form.correctionType === 'MISSING_ROUTE' || form.correctionType === 'WRONG_FARE' || form.correctionType === 'ROUTE_CHANGE') && !form.route.trim()) {
-      toast.error('Please select or type the route or destination.');
+    const selectedRoute = resolveRouteValue(form.routeSelection, form.routeManual);
+    const correctedRoute = resolveRouteValue(form.correctedRouteSelection, form.correctedRouteManual);
+
+    if (
+      (
+        form.correctionType === 'WRONG_ROUTE_NUMBER' ||
+        form.correctionType === 'MISSING_ROUTE' ||
+        form.correctionType === 'WRONG_FARE' ||
+        form.correctionType === 'ROUTE_CHANGE'
+      ) && !selectedRoute
+    ) {
+      toast.error('Please select a route from the dropdown, or choose Other and type it in.');
       return;
     }
 
@@ -139,8 +208,8 @@ const CorrectionModal: React.FC<CorrectionModalProps> = ({ isOpen, rank, user, o
       return;
     }
 
-    if ((form.correctionType === 'WRONG_ROUTE_NUMBER' || form.correctionType === 'ROUTE_CHANGE') && !form.correctedRoute.trim()) {
-      toast.error('Please enter the corrected route.');
+    if ((form.correctionType === 'WRONG_ROUTE_NUMBER' || form.correctionType === 'ROUTE_CHANGE') && !correctedRoute) {
+      toast.error('Please select the corrected route, or choose Other and type it in.');
       return;
     }
 
@@ -188,65 +257,61 @@ const CorrectionModal: React.FC<CorrectionModalProps> = ({ isOpen, rank, user, o
       case 'WRONG_ROUTE_NUMBER':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={form.route}
-              onChange={(e) => updateField('route', e.target.value)}
-              placeholder="Wrong route number"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            <input
-              value={form.correctedRoute}
-              onChange={(e) => updateField('correctedRoute', e.target.value)}
-              placeholder="Correct route number"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Wrong route</p>
+              {renderRouteSelector('routeSelection', 'routeManual', 'Select the wrong route', 'Type the wrong route number')}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Correct route</p>
+              {renderRouteSelector('correctedRouteSelection', 'correctedRouteManual', 'Select the correct route', 'Type the correct route number')}
+            </div>
           </div>
         );
       case 'MISSING_ROUTE':
       case 'WRONG_FARE':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={form.route}
-              onChange={(e) => updateField('route', e.target.value)}
-              placeholder="Route / destination"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            <input
-              type="number"
-              step="1"
-              min="0"
-              value={form.fare}
-              onChange={(e) => updateField('fare', e.target.value)}
-              placeholder="Fare amount"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Route / destination</p>
+              {renderRouteSelector('routeSelection', 'routeManual', 'Select a route or destination', 'Type the route or destination')}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Fare</p>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={form.fare}
+                onChange={(e) => updateField('fare', e.target.value)}
+                placeholder="Fare amount"
+                className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
           </div>
         );
       case 'ROUTE_CHANGE':
         return (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              value={form.route}
-              onChange={(e) => updateField('route', e.target.value)}
-              placeholder="Old route"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            <input
-              value={form.correctedRoute}
-              onChange={(e) => updateField('correctedRoute', e.target.value)}
-              placeholder="New route"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-            <input
-              type="number"
-              step="1"
-              min="0"
-              value={form.fare}
-              onChange={(e) => updateField('fare', e.target.value)}
-              placeholder="Updated fare (optional)"
-              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Old route</p>
+              {renderRouteSelector('routeSelection', 'routeManual', 'Select the old route', 'Type the old route')}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">New route</p>
+              {renderRouteSelector('correctedRouteSelection', 'correctedRouteManual', 'Select the new route', 'Type the new route')}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Updated fare</p>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={form.fare}
+                onChange={(e) => updateField('fare', e.target.value)}
+                placeholder="Updated fare (optional)"
+                className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
           </div>
         );
       case 'MISSING_RANK':
