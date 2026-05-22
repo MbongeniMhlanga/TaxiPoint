@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -96,6 +96,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [pendingCorrections, setPendingCorrections] = useState<CorrectionSubmission[]>([]);
   const [reviewNotesDrafts, setReviewNotesDrafts] = useState<Record<string, string>>({});
+  const authExpiredRef = useRef(false);
 
   // Statistics state
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -126,6 +127,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       });
 
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          if (!authExpiredRef.current) {
+            authExpiredRef.current = true;
+            toast.error("Your admin session expired. Please log in again.");
+            onLogout();
+          }
+          return;
+        }
         throw new Error("Failed to fetch correction submissions");
       }
 
@@ -139,6 +148,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   // Fetch statistics
   const fetchStatistics = async () => {
     try {
+      const handleAuthFailure = (status: number) => {
+        if (status === 401 || status === 403) {
+          if (!authExpiredRef.current) {
+            authExpiredRef.current = true;
+            toast.error("Your admin session expired. Please log in again.");
+            onLogout();
+          }
+          return true;
+        }
+
+        return false;
+      };
+
       // Fetch total users
       const usersRes = await fetch(`${API_BASE_URL}/api/stats/users/count`, {
         headers: { Authorization: `Bearer ${user.token}` },
@@ -146,6 +168,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       if (usersRes.ok) {
         const count = await usersRes.json();
         setTotalUsers(count);
+      } else if (handleAuthFailure(usersRes.status)) {
+        return;
       }
 
       // Fetch active incidents
@@ -155,6 +179,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       if (incidentsRes.ok) {
         const count = await incidentsRes.json();
         setActiveIncidents(count);
+      } else if (handleAuthFailure(incidentsRes.status)) {
+        return;
       }
 
       // Fetch user statistics
@@ -164,6 +190,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       if (statsRes.ok) {
         const stats = await statsRes.json();
         setUserStats(stats);
+      } else if (handleAuthFailure(statsRes.status)) {
+        return;
       }
     } catch (err: any) {
       console.error('Failed to fetch statistics:', err);
