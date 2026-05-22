@@ -1,8 +1,4 @@
 // Configuration for API Base URL
-// In development, we use an empty string to allow the Vite Proxy to handle requests (and spoof CORS).
-// In production, we assume the frontend is deployed to the allowed origin (https://taxi-point.vercel.app)
-// and make direct requests to the backend.
+// The frontend points directly at the deployed Render backend in all environments.
 
-export const API_BASE_URL = import.meta.env.PROD
-    ? "https://taxipoint-backend.onrender.com"
-    : "http://localhost:2001";
+export const API_BASE_URL = "https://taxipoint-backend.onrender.com";
