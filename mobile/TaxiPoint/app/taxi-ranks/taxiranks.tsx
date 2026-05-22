@@ -1,5 +1,7 @@
 import { API_BASE_URL } from '@/config';
+import CorrectionModal from '@/components/correction-modal';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { Feather } from '@expo/vector-icons';
@@ -35,14 +37,18 @@ interface TaxiRank {
     longitude: number;
     district: string;
     routesServed: string[];
+    routeFares?: Record<string, number>;
     hours: Record<string, string>;
     phone: string;
+    currency?: string;
     facilities: Record<string, any>;
 }
 
 export default function TaxiRanksScreen() {
+    const { user } = useAuth();
     const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
     const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+    const [showCorrectionModal, setShowCorrectionModal] = useState(false);
 
     // 🎙️ Voice Search States
     const [isVoiceListening, setIsVoiceListening] = useState(false);
@@ -100,7 +106,6 @@ export default function TaxiRanksScreen() {
         }
     };
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const router = useRouter();
     const colorScheme = useColorScheme();
@@ -129,7 +134,6 @@ export default function TaxiRanksScreen() {
     const fetchTaxiRanks = async (isRefresh = false) => {
         try {
             if (!isRefresh) setLoading(true);
-            else setRefreshing(true);
             const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`);
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
@@ -139,7 +143,6 @@ export default function TaxiRanksScreen() {
             Alert.alert('Load Failed', getErrorMessage(0, err, 'taxi-ranks'));
         } finally {
             setLoading(false);
-            setRefreshing(false);
         }
     };
 
@@ -170,6 +173,22 @@ export default function TaxiRanksScreen() {
         ));
     };
 
+    const formatFare = (fare?: number, currency?: string) => {
+        if (fare == null || Number.isNaN(fare)) return '';
+        if (!currency || currency.toUpperCase() === 'ZAR') {
+            return `R${Number(fare).toFixed(Number.isInteger(fare) ? 0 : 2)}`;
+        }
+        return `${currency.toUpperCase()} ${Number(fare).toFixed(Number.isInteger(fare) ? 0 : 2)}`;
+    };
+
+    const getRouteFare = (rank: TaxiRank, route: string) => {
+        const fares = rank.routeFares ?? {};
+        const direct = fares[route];
+        if (direct != null) return direct;
+        const matched = Object.entries(fares).find(([key]) => key.trim().toLowerCase() === route.trim().toLowerCase());
+        return matched ? matched[1] : undefined;
+    };
+
     const renderItem = ({ item }: { item: TaxiRank }) => (
         <TouchableOpacity
             style={[styles.card, { backgroundColor: cardBg, borderColor }]}
@@ -197,7 +216,14 @@ export default function TaxiRanksScreen() {
                     <View style={styles.cardRoutesContainer}>
                         {item.routesServed.slice(0, 4).map((route, idx) => (
                             <View key={idx} style={[styles.routeBadge, { backgroundColor: primaryColor + '15', borderColor: primaryColor }]}>
-                                <Text style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.routeBadgeText, { color: primaryColor }]}>{route}</Text>
+                                    {formatFare(getRouteFare(item, route), item.currency) ? (
+                                        <Text style={[styles.routeFareText, { color: subTextColor }]}>
+                                            {formatFare(getRouteFare(item, route), item.currency)}
+                                        </Text>
+                                    ) : null}
+                                </View>
                             </View>
                         ))}
                         {item.routesServed.length > 4 && (
@@ -284,7 +310,10 @@ export default function TaxiRanksScreen() {
                         visible={!!selectedRank}
                         animationType="slide"
                         transparent={true}
-                        onRequestClose={() => setSelectedRank(null)}
+                        onRequestClose={() => {
+                            setSelectedRank(null);
+                            setShowCorrectionModal(false);
+                        }}
                     >
                         <View style={styles.modalOverlay}>
                             <View style={[styles.modalContent, { backgroundColor: cardBg }]}>
@@ -297,7 +326,10 @@ export default function TaxiRanksScreen() {
                                             style={styles.modalHeader}
                                         >
                                             <TouchableOpacity
-                                                onPress={() => setSelectedRank(null)}
+                                                onPress={() => {
+                                                    setSelectedRank(null);
+                                                    setShowCorrectionModal(false);
+                                                }}
                                                 style={styles.closeModalButton}
                                             >
                                                 <Feather name="x" size={20} color="#FFFFFF" />
@@ -365,12 +397,27 @@ export default function TaxiRanksScreen() {
                                                     <View style={styles.tagsContainer}>
                                                         {selectedRank.routesServed.map((route, idx) => (
                                                             <View key={idx} style={[styles.tag, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.3)' : '#DBEAFE' }]}>
-                                                                <Text style={{ color: isDark ? '#93C5FD' : '#1D4ED8', fontSize: 12, fontWeight: '500' }}>{route}</Text>
+                                                                <View style={{ flex: 1 }}>
+                                                                    <Text style={{ color: isDark ? '#93C5FD' : '#1D4ED8', fontSize: 12, fontWeight: '500' }}>{route}</Text>
+                                                                    {formatFare(getRouteFare(selectedRank, route), selectedRank.currency) ? (
+                                                                        <Text style={{ color: subTextColor, fontSize: 11, marginTop: 2 }}>
+                                                                            {formatFare(getRouteFare(selectedRank, route), selectedRank.currency)}
+                                                                        </Text>
+                                                                    ) : null}
+                                                                </View>
                                                             </View>
                                                         ))}
                                                     </View>
                                                 </View>
                                             ) : null}
+
+                                            <TouchableOpacity
+                                                style={[styles.secondaryButton, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+                                                onPress={() => setShowCorrectionModal(true)}
+                                            >
+                                                <Feather name="alert-circle" size={18} color={primaryColor} style={{ marginRight: 8 }} />
+                                                <Text style={{ color: textColor, fontWeight: '700' }}>Suggest a correction</Text>
+                                            </TouchableOpacity>
 
                                             <TouchableOpacity
                                                 style={styles.navigateButton}
@@ -400,6 +447,13 @@ export default function TaxiRanksScreen() {
                             </View>
                         </View>
                     </Modal>
+
+                    <CorrectionModal
+                        isVisible={showCorrectionModal && !!selectedRank}
+                        rank={selectedRank}
+                        user={user}
+                        onClose={() => setShowCorrectionModal(false)}
+                    />
                 </View>
             </LinearGradient>
         </SafeAreaView>
@@ -499,6 +553,10 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
     },
+    routeFareText: {
+        fontSize: 10,
+        marginTop: 2,
+    },
     moreRoutesText: {
         fontSize: 11,
         alignSelf: 'center',
@@ -519,6 +577,15 @@ const styles = StyleSheet.create({
     viewDetailsText: {
         fontWeight: '600',
         fontSize: 14,
+    },
+    secondaryButton: {
+        minHeight: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
     },
 
     // Modal Styles

@@ -32,9 +32,35 @@ interface TaxiRank {
     longitude: number;
     district: string;
     routesServed: string[];
+    routeFares?: Record<string, number>;
+    currency?: string;
     hours: Record<string, string>;
     phone: string;
     facilities: Record<string, any>;
+}
+
+type CorrectionType =
+    | 'WRONG_ROUTE_NUMBER'
+    | 'MISSING_ROUTE'
+    | 'WRONG_FARE'
+    | 'RANK_CLOSED'
+    | 'MISSING_RANK'
+    | 'ROUTE_CHANGE'
+    | 'OTHER';
+
+type ReviewDecision = 'APPROVE' | 'REJECT';
+
+interface CorrectionSubmission {
+    id: string;
+    rankNameSnapshot?: string | null;
+    correctionType: CorrectionType;
+    description: string;
+    status: string;
+    confirmationsCount: number;
+    rejectionsCount: number;
+    autoApproved: boolean;
+    reviewNotes?: string | null;
+    createdAt?: string | null;
 }
 
 interface TaxiRankForm {
@@ -45,6 +71,8 @@ interface TaxiRankForm {
     longitude: string;
     district: string;
     routesServed: string;
+    routeFares: string;
+    currency: string;
     hours: string;
     phone: string;
     facilities: string;
@@ -55,7 +83,6 @@ export default function AdminDashboard() {
     const params = useLocalSearchParams();
     const { user, logout: logoutFromContext } = useAuth();
     const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
     const theme = colorScheme ?? 'light';
     const colors = Colors[theme];
 
@@ -71,6 +98,8 @@ export default function AdminDashboard() {
     const [activeIncidents, setActiveIncidents] = useState(0);
     const [userStats, setUserStats] = useState({ users: 0, admins: 0, total: 0 });
     const [searchTerm, setSearchTerm] = useState('');
+    const [pendingCorrections, setPendingCorrections] = useState<CorrectionSubmission[]>([]);
+    const [correctionsLoading, setCorrectionsLoading] = useState(true);
 
     // Modal State
     const [showFormModal, setShowFormModal] = useState(false);
@@ -85,10 +114,17 @@ export default function AdminDashboard() {
         longitude: '0',
         district: '',
         routesServed: '',
+        routeFares: '{}',
+        currency: 'ZAR',
         hours: '{}',
         phone: '',
         facilities: '{}',
     });
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewTarget, setReviewTarget] = useState<CorrectionSubmission | null>(null);
+    const [reviewDecision, setReviewDecision] = useState<ReviewDecision | null>(null);
+    const [reviewNotes, setReviewNotes] = useState('');
+    const [reviewLoading, setReviewLoading] = useState(false);
 
     const fetchTaxiRanks = async () => {
         try {
@@ -127,15 +163,42 @@ export default function AdminDashboard() {
         }
     };
 
+    const fetchPendingCorrections = async () => {
+        if (!token) {
+            setPendingCorrections([]);
+            setCorrectionsLoading(false);
+            return;
+        }
+
+        try {
+            setCorrectionsLoading(true);
+            const res = await fetch(`${API_BASE_URL}/api/submissions/pending`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!res.ok) {
+                throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
+            }
+
+            const data = await res.json();
+            setPendingCorrections(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Fetch pending corrections error:', err);
+            setPendingCorrections([]);
+        } finally {
+            setCorrectionsLoading(false);
+        }
+    };
+
     const onRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([fetchTaxiRanks(), fetchStatistics()]);
+        await Promise.all([fetchTaxiRanks(), fetchStatistics(), fetchPendingCorrections()]);
         setRefreshing(false);
     };
 
     const initialize = async () => {
         setLoading(true);
-        await Promise.all([fetchTaxiRanks(), fetchStatistics()]);
+        await Promise.all([fetchTaxiRanks(), fetchStatistics(), fetchPendingCorrections()]);
         setLoading(false);
     };
 
@@ -201,6 +264,8 @@ export default function AdminDashboard() {
             longitude: String(rank.longitude),
             district: rank.district,
             routesServed: Array.isArray(rank.routesServed) ? rank.routesServed.join(', ') : '',
+            routeFares: JSON.stringify(rank.routeFares || {}),
+            currency: rank.currency || 'ZAR',
             hours: JSON.stringify(rank.hours || {}),
             phone: rank.phone || '',
             facilities: JSON.stringify(rank.facilities || {}),
@@ -234,21 +299,83 @@ export default function AdminDashboard() {
         ]);
     };
 
+    const formatCorrectionType = (type: CorrectionType) => {
+        const labels: Record<CorrectionType, string> = {
+            WRONG_ROUTE_NUMBER: 'Wrong route number',
+            MISSING_ROUTE: 'Missing route',
+            WRONG_FARE: 'Wrong fare',
+            RANK_CLOSED: 'Rank closed',
+            MISSING_RANK: 'Missing rank',
+            ROUTE_CHANGE: 'Route change',
+            OTHER: 'Other',
+        };
+
+        return labels[type] ?? type;
+    };
+
+    const openReviewModal = (submission: CorrectionSubmission, decision: ReviewDecision) => {
+        setReviewTarget(submission);
+        setReviewDecision(decision);
+        setReviewNotes(decision === 'APPROVE' ? 'Approved from mobile admin.' : 'Rejected from mobile admin.');
+        setShowReviewModal(true);
+    };
+
+    const closeReviewModal = () => {
+        if (reviewLoading) return;
+        setShowReviewModal(false);
+        setReviewTarget(null);
+        setReviewDecision(null);
+        setReviewNotes('');
+    };
+
+    const submitReview = async () => {
+        if (!reviewTarget || !reviewDecision || !token) return;
+
+        setReviewLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/submissions/${reviewTarget.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    decision: reviewDecision,
+                    reviewNotes: reviewNotes.trim(),
+                }),
+            });
+
+            if (!res.ok) {
+                throw new Error(getErrorMessage(res.status, await res.text(), 'admin'));
+            }
+
+            Alert.alert('Success', `Correction ${reviewDecision === 'APPROVE' ? 'approved' : 'rejected'} successfully.`);
+            closeReviewModal();
+            await fetchPendingCorrections();
+        } catch (err) {
+            Alert.alert('Review Failed', err instanceof Error ? err.message : 'Could not update that correction.');
+        } finally {
+            setReviewLoading(false);
+        }
+    };
+
     const handleSubmit = async () => {
         setFormLoading(true);
         try {
-            const payload = {
-                name: form.name,
-                description: form.description,
-                address: form.address,
-                latitude: Number(form.latitude),
-                longitude: Number(form.longitude),
-                district: form.district,
-                routesServed: form.routesServed.split(',').map(r => r.trim()).filter(r => r),
-                hours: JSON.parse(form.hours),
-                facilities: JSON.parse(form.facilities),
-                phone: form.phone,
-            };
+                const payload = {
+                    name: form.name,
+                    description: form.description,
+                    address: form.address,
+                    latitude: Number(form.latitude),
+                    longitude: Number(form.longitude),
+                    district: form.district,
+                    routesServed: form.routesServed.split(',').map(r => r.trim()).filter(r => r),
+                    routeFares: JSON.parse(form.routeFares || '{}'),
+                    currency: form.currency || 'ZAR',
+                    hours: JSON.parse(form.hours),
+                    facilities: JSON.parse(form.facilities),
+                    phone: form.phone,
+                };
 
             const url = isEditing
                 ? `${API_BASE_URL}/api/taxi-ranks/${currentRankId}`
@@ -423,6 +550,80 @@ export default function AdminDashboard() {
                     </View>
                 </View>
 
+                <View style={[styles.card, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+                    <View style={styles.sectionHeader}>
+                        <ThemedText type="subtitle">Correction Review Queue</ThemedText>
+                        <TouchableOpacity
+                            onPress={fetchPendingCorrections}
+                            style={[styles.addButton, { backgroundColor: colors.tint, paddingVertical: 8, paddingHorizontal: 12 }]}
+                        >
+                            <Feather name="refresh-cw" size={16} color="#fff" />
+                            <ThemedText style={styles.addButtonText}>Refresh</ThemedText>
+                        </TouchableOpacity>
+                    </View>
+
+                    {correctionsLoading ? (
+                        <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                            <ActivityIndicator color={colors.tint} />
+                        </View>
+                    ) : pendingCorrections.length === 0 ? (
+                        <ThemedText style={{ color: colors.textSecondary, marginTop: 6 }}>
+                            No pending corrections right now.
+                        </ThemedText>
+                    ) : (
+                        <View style={{ gap: 12, marginTop: 6 }}>
+                            {pendingCorrections.map((submission) => (
+                                <View key={submission.id} style={[styles.correctionCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                                    <View style={styles.correctionTopRow}>
+                                        <View style={{ flex: 1 }}>
+                                            <ThemedText style={{ color: colors.text, fontSize: 16, fontWeight: '800' }} numberOfLines={1}>
+                                                {submission.rankNameSnapshot ?? 'Taxi rank'}
+                                            </ThemedText>
+                                            <ThemedText style={{ color: colors.textSecondary, marginTop: 2 }}>
+                                                {formatCorrectionType(submission.correctionType)}
+                                            </ThemedText>
+                                        </View>
+                                        <View style={[styles.statusChip, { backgroundColor: submission.status === 'FLAGGED' ? '#FEF3C7' : '#DBEAFE' }]}>
+                                            <ThemedText style={{ color: submission.status === 'FLAGGED' ? '#92400E' : '#1D4ED8', fontSize: 11, fontWeight: '800' }}>
+                                                {submission.status}
+                                            </ThemedText>
+                                        </View>
+                                    </View>
+                                    <ThemedText style={{ color: colors.text, marginTop: 8, lineHeight: 20 }}>
+                                        {submission.description}
+                                    </ThemedText>
+                                    <View style={styles.correctionMetaRow}>
+                                        <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>{submission.confirmationsCount} confirmations</ThemedText>
+                                        <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>{submission.rejectionsCount} rejections</ThemedText>
+                                        {submission.autoApproved ? <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>Auto-approved</ThemedText> : null}
+                                    </View>
+                                    {submission.reviewNotes ? (
+                                        <ThemedText style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+                                            Notes: {submission.reviewNotes}
+                                        </ThemedText>
+                                    ) : null}
+                                    <View style={styles.correctionActionsRow}>
+                                        <TouchableOpacity
+                                            style={[styles.correctionActionButton, { backgroundColor: '#DCFCE7' }]}
+                                            onPress={() => openReviewModal(submission, 'APPROVE')}
+                                        >
+                                            <Feather name="check" size={16} color="#166534" />
+                                            <ThemedText style={{ color: '#166534', fontWeight: '800' }}>Approve</ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.correctionActionButton, { backgroundColor: '#FEE2E2' }]}
+                                            onPress={() => openReviewModal(submission, 'REJECT')}
+                                        >
+                                            <Feather name="x" size={16} color="#991B1B" />
+                                            <ThemedText style={{ color: '#991B1B', fontWeight: '800' }}>Reject</ThemedText>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+
                 {/* Management Header */}
                 <View style={styles.sectionHeader}>
                     <ThemedText type="subtitle">Rank Management</ThemedText>
@@ -438,6 +639,8 @@ export default function AdminDashboard() {
                                 longitude: '0',
                                 district: '',
                                 routesServed: '',
+                                routeFares: '{}',
+                                currency: 'ZAR',
                                 hours: '{}',
                                 phone: '',
                                 facilities: '{}',
@@ -563,6 +766,32 @@ export default function AdminDashboard() {
                                 </View>
 
                                 <View style={styles.inputGroup}>
+                                    <ThemedText style={styles.label}>Route Fares (JSON)</ThemedText>
+                                    <TextInput
+                                        style={[styles.input, styles.monoInput, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={form.routeFares}
+                                        onChangeText={(val) => setForm(f => ({ ...f, routeFares: val }))}
+                                        placeholder='{"M1": 15, "M2": 20}'
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline
+                                    />
+                                    <ThemedText style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
+                                        Optional. Map each route to a fare using JSON.
+                                    </ThemedText>
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <ThemedText style={styles.label}>Currency</ThemedText>
+                                    <TextInput
+                                        style={[styles.input, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, color: colors.text }]}
+                                        value={form.currency}
+                                        onChangeText={(val) => setForm(f => ({ ...f, currency: val.toUpperCase() }))}
+                                        placeholder="ZAR"
+                                        placeholderTextColor={colors.textSecondary}
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
                                     <ThemedText style={styles.label}>Hours (JSON)</ThemedText>
                                     <TextInput
                                         style={[styles.input, styles.monoInput, { backgroundColor: colors.secondaryBackground, borderColor: colors.border, color: colors.text }]}
@@ -593,6 +822,85 @@ export default function AdminDashboard() {
                             </ScrollView>
                         </View>
                     </KeyboardAvoidingView>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={showReviewModal}
+                transparent
+                animationType="fade"
+                onRequestClose={closeReviewModal}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.reviewModalCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <View style={styles.modalHeader}>
+                            <View style={{ flex: 1 }}>
+                                <ThemedText type="subtitle">
+                                    {reviewDecision === 'APPROVE' ? 'Approve correction' : 'Reject correction'}
+                                </ThemedText>
+                                <ThemedText style={{ color: colors.textSecondary, marginTop: 4 }} numberOfLines={1}>
+                                    {reviewTarget?.rankNameSnapshot ?? 'Taxi rank'}
+                                </ThemedText>
+                            </View>
+                            <TouchableOpacity onPress={closeReviewModal} style={[styles.actionButton, { backgroundColor: colors.secondaryBackground }]}>
+                                <Feather name="x" size={18} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView contentContainerStyle={styles.reviewModalContent}>
+                            <View style={[styles.reviewSummary, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
+                                <ThemedText style={{ color: colors.textSecondary, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                                    {reviewTarget ? formatCorrectionType(reviewTarget.correctionType) : 'Correction'}
+                                </ThemedText>
+                                <ThemedText style={{ color: colors.text, marginTop: 6, lineHeight: 20 }}>
+                                    {reviewTarget?.description}
+                                </ThemedText>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <ThemedText style={[styles.label, { color: colors.text }]}>Review notes</ThemedText>
+                                <TextInput
+                                    value={reviewNotes}
+                                    onChangeText={setReviewNotes}
+                                    placeholder="Add a short note for the record..."
+                                    placeholderTextColor={colors.textSecondary}
+                                    multiline
+                                    textAlignVertical="top"
+                                    style={[
+                                        styles.input,
+                                        styles.reviewNotesInput,
+                                        {
+                                            color: colors.text,
+                                            backgroundColor: colors.secondaryBackground,
+                                            borderColor: colors.border,
+                                        },
+                                    ]}
+                                />
+                            </View>
+
+                            <View style={styles.reviewActionsRow}>
+                                <TouchableOpacity
+                                    onPress={closeReviewModal}
+                                    style={[styles.reviewSecondaryButton, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}
+                                >
+                                    <ThemedText style={{ color: colors.text, fontWeight: '700' }}>Cancel</ThemedText>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={submitReview}
+                                    disabled={reviewLoading}
+                                    style={[styles.reviewPrimaryButton, { backgroundColor: reviewDecision === 'APPROVE' ? '#16A34A' : '#DC2626', opacity: reviewLoading ? 0.75 : 1 }]}
+                                >
+                                    {reviewLoading ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <ThemedText style={styles.submitButtonText}>
+                                            {reviewDecision === 'APPROVE' ? 'Approve' : 'Reject'}
+                                        </ThemedText>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
+                    </View>
                 </View>
             </Modal>
         </SafeAreaView>
@@ -781,6 +1089,80 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 8,
+    },
+    correctionCard: {
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: 14,
+        gap: 10,
+    },
+    statusChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+    },
+    correctionTopRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+    },
+    correctionMetaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    correctionActionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 4,
+    },
+    correctionActionButton: {
+        flex: 1,
+        minHeight: 44,
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    reviewModalCard: {
+        width: '92%',
+        maxHeight: '80%',
+        borderRadius: 24,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    reviewModalContent: {
+        padding: 20,
+        gap: 16,
+    },
+    reviewSummary: {
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: 14,
+    },
+    reviewNotesInput: {
+        minHeight: 110,
+        textAlignVertical: 'top',
+    },
+    reviewActionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    reviewSecondaryButton: {
+        flex: 1,
+        minHeight: 48,
+        borderRadius: 14,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    reviewPrimaryButton: {
+        flex: 1,
+        minHeight: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     modalOverlay: {
         flex: 1,

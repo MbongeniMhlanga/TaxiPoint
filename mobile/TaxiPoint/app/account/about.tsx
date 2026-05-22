@@ -15,8 +15,8 @@ export default function AboutScreen() {
 
     // Theme colors
     const backgroundColors = isDark
-        ? [colors.background, colors.secondaryBackground, colors.background]
-        : [colors.background, '#EFF6FF', '#FAF5FF']; // Finer gradients for light mode
+        ? [colors.background, colors.secondaryBackground, colors.background] as const
+        : [colors.background, '#EFF6FF', '#FAF5FF'] as const; // Finer gradients for light mode
 
     const cardBg = colors.surface;
     const textColor = colors.text;
@@ -28,37 +28,37 @@ export default function AboutScreen() {
             icon: MapPin,
             title: 'Real-Time Locations',
             description: 'Find taxi ranks instantly with live location data.',
-            colors: ['#3B82F6', '#2563EB'], // blue-500 to blue-600
+            colors: ['#3B82F6', '#2563EB'] as const, // blue-500 to blue-600
         },
         {
             icon: Users,
             title: 'Community Driven',
             description: 'Built by commuters, for commuters.',
-            colors: ['#A855F7', '#9333EA'], // purple-500 to purple-600
+            colors: ['#A855F7', '#9333EA'] as const, // purple-500 to purple-600
         },
         {
             icon: Shield,
             title: 'Safety First',
             description: 'Report and view incidents in real-time.',
-            colors: ['#22C55E', '#16A34A'], // green-500 to green-600
+            colors: ['#22C55E', '#16A34A'] as const, // green-500 to green-600
         },
         {
             icon: Zap,
             title: 'Lightning Fast',
             description: 'Optimized performance for instant info.',
-            colors: ['#EAB308', '#CA8A04'], // yellow-500 to yellow-600
+            colors: ['#EAB308', '#CA8A04'] as const, // yellow-500 to yellow-600
         },
         {
             icon: Heart,
             title: 'Made with Care',
             description: 'Designed for the SA commuting community.',
-            colors: ['#EF4444', '#DC2626'], // red-500 to red-600
+            colors: ['#EF4444', '#DC2626'] as const, // red-500 to red-600
         },
         {
             icon: TrendingUp,
             title: 'Always Improving',
             description: 'Regular updates based on your feedback.',
-            colors: ['#6366F1', '#4F46E5'], // indigo-500 to indigo-600
+            colors: ['#6366F1', '#4F46E5'] as const, // indigo-500 to indigo-600
         },
     ];
 

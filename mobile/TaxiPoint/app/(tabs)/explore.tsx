@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import CorrectionModal from '@/components/correction-modal';
 import { API_BASE_URL } from '@/config';
 import { useAuth } from '@/context/AuthContext';
 import { Colors } from '@/constants/theme';
@@ -119,6 +120,7 @@ export default function ExploreScreen() {
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidentDescription, setIncidentDescription] = useState('');
   const [submittingIncident, setSubmittingIncident] = useState(false);
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [mapModules, setMapModules] = useState<{
     MapView: any;
     Marker: any;
@@ -1410,7 +1412,10 @@ export default function ExploreScreen() {
         visible={!!selectedRank}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSelectedRank(null)}
+        onRequestClose={() => {
+          setSelectedRank(null);
+          setShowCorrectionModal(false);
+        }}
       >
         <View style={styles.rankModalOverlay}>
           <View style={[styles.rankModalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
@@ -1423,7 +1428,10 @@ export default function ExploreScreen() {
                   style={styles.rankModalHeader}
                 >
                   <TouchableOpacity
-                    onPress={() => setSelectedRank(null)}
+                    onPress={() => {
+                      setSelectedRank(null);
+                      setShowCorrectionModal(false);
+                    }}
                     style={styles.closeRankModalButton}
                   >
                     <Feather name="x" size={20} color="#FFFFFF" />
@@ -1495,6 +1503,14 @@ export default function ExploreScreen() {
                   ) : null}
 
                   <TouchableOpacity
+                    style={[styles.secondaryActionButton, { borderColor: borderColor, backgroundColor: secondaryBgColor }]}
+                    onPress={() => setShowCorrectionModal(true)}
+                  >
+                    <Feather name="alert-circle" size={18} color={primaryColor} style={{ marginRight: 8 }} />
+                    <ThemedText style={[styles.secondaryActionText, { color: textColor }]}>Suggest a correction</ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
                     style={styles.navigateButton}
                     onPress={() => {
                       void showRouteInApp(selectedRank);
@@ -1522,6 +1538,13 @@ export default function ExploreScreen() {
           </View>
         </View>
       </Modal>
+
+      <CorrectionModal
+        isVisible={showCorrectionModal && !!selectedRank}
+        rank={selectedRank}
+        user={user}
+        onClose={() => setShowCorrectionModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -1978,6 +2001,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600'
+  },
+  secondaryActionButton: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  secondaryActionText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   routePanel: {
     position: 'absolute',

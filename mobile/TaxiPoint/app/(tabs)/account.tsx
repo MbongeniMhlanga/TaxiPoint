@@ -38,6 +38,11 @@ export default function AccountScreen() {
             route: '/account/settings',
         },
         {
+            title: 'Corrections',
+            icon: 'clock.fill' as const,
+            route: '/account/corrections',
+        },
+        {
             title: 'Support',
             icon: 'questionmark.circle.fill' as const,
             route: '/account/support',
