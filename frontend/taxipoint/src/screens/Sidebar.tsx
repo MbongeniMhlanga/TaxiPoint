@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import type { User } from "../App"; // adjust path if needed
 import { LogOut, Settings, Info, HelpCircle, User as UserIcon, Home, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 
 interface SidebarProps {
@@ -11,6 +12,12 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
 
   return (
     <div className="h-screen w-64 bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col p-4 border-r border-gray-200 dark:border-gray-800">
@@ -71,12 +78,23 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
       {/* Logout at bottom */}
       <button
-        onClick={onLogout}
+        onClick={() => setShowLogoutConfirm(true)}
         className="flex items-center space-x-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 p-2 rounded-lg transition w-full mt-auto"
       >
         <LogOut size={18} />
         <span>Logout</span>
       </button>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Log out of TaxiPoint?"
+        message="You'll be signed out and returned to the login screen."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        tone="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 };

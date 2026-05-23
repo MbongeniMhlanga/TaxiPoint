@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import "../../lib/popup/react-toastify.css";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";

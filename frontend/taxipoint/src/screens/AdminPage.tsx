@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import "../lib/popup/react-toastify.css";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter, CheckCircle2, XCircle } from 'lucide-react';
@@ -92,6 +93,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [rankToDelete, setRankToDelete] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
   const [pendingCorrections, setPendingCorrections] = useState<CorrectionSubmission[]>([]);
@@ -465,6 +467,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     }
   };
 
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
   // --- Statistics Logic ---
   const totalRanks = taxiRanks.length;
   const districtData = taxiRanks.reduce((acc: any, rank) => {
@@ -503,7 +510,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
             </div>
             <ThemeToggle />
             <button
-              onClick={onLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition"
               title="Logout"
             >
@@ -995,32 +1002,30 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
         </div>
       )}
 
-      {/* Delete Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-100 dark:border-gray-700 animate-scaleIn">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 mb-4 mx-auto">
-              <Trash2 size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">Confirm Deletion</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 text-center text-sm">Are you sure you want to delete this taxi rank? This action cannot be undone.</p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg shadow-red-600/20 transition"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showDeleteModal}
+        title="Delete this taxi rank?"
+        message="This action cannot be undone. The rank will be removed from the dashboard and public views."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        tone="danger"
+        onConfirm={handleDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setRankToDelete(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Log out of TaxiPoint?"
+        message="You'll be signed out and returned to the login screen."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        tone="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 };

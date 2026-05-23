@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Menu, X, Sun, Moon, LayoutDashboard, Map as MapIcon, Info, HelpCircle, Settings, User as UserIcon, History } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface User {
   id: number;
@@ -30,6 +31,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
 
   const navItems = [
@@ -46,6 +48,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   // Helper to determine active state
   const isActive = (path: string) => location.pathname === path;
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    setIsSidebarOpen(false);
+    onLogout();
+  };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -135,7 +143,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           </button>
 
           <button
-            onClick={onLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 hover:text-red-700 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
@@ -237,7 +245,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 <span className="text-lg font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
               <button
-                onClick={() => { onLogout(); setIsSidebarOpen(false); }}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="flex items-center gap-4 w-full px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 text-red-600"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
@@ -247,6 +255,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Log out of TaxiPoint?"
+        message="You'll be signed out of your account and taken back to the login screen."
+        confirmLabel="Log out"
+        cancelLabel="Stay signed in"
+        tone="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
 
       {/* Main Content Area */}
       <div className="h-full w-full pt-16 md:pt-0 md:pl-72 relative transition-all duration-300">

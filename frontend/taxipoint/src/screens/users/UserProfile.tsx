@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import '../../lib/popup/react-toastify.css';
 import { API_BASE_URL } from "../../config";
 
 interface UserProfileProps {

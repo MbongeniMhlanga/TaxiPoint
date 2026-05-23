@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import "../../lib/popup/react-toastify.css";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Key, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import { motion } from "framer-motion";

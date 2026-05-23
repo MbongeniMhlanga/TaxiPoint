@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import "./lib/popup/react-toastify.css";
 
 // Import your MainLayout component
 import MainLayout from "./screens/MainLayout";

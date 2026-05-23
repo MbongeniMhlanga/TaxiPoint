@@ -5,7 +5,7 @@ import RankDetailPanel from '../components/RankDetailPanel';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import '../lib/popup/react-toastify.css';
 import { useTheme } from '../context/ThemeContext';
 import { Search, Mic, MapPin, Navigation, Plus, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';

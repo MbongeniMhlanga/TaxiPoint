@@ -1,8 +1,15 @@
+import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      'react-toastify': path.resolve(__dirname, './src/lib/popup/react-toastify.tsx'),
+      'react-toastify/dist/ReactToastify.css': path.resolve(__dirname, './src/lib/popup/react-toastify.css'),
+    },
+  },
   define: {
     global: 'globalThis',
   },

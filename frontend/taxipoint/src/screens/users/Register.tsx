@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import "../../lib/popup/react-toastify.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import ThemeToggle from "../../components/ThemeToggle";
