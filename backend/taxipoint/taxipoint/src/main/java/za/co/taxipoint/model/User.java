@@ -46,9 +46,18 @@ public class User {
 
 
     @Column
-private Boolean notifications = true;
+    private Boolean notifications = true;
 
-@Column
-private Boolean darkMode = false;
+    @Column(name = "sound_alerts")
+    private Boolean soundAlerts = true;
+
+    @Column(name = "auto_refresh")
+    private Boolean autoRefresh = true;
+
+    @Column(name = "location_sharing")
+    private Boolean locationSharing = false;
+
+    @Column(name = "dark_mode")
+    private Boolean darkMode = false;
 
 }
