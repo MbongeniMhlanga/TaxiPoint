@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { AnimatePresence } from 'framer-motion';
 import RankDetailPanel from '../components/RankDetailPanel';
@@ -19,11 +19,14 @@ interface User {
   surname: string;
   role: string;
   token: string;
+  locationSharing?: boolean;
+  locationPromptSeen?: boolean;
 }
 
 interface LandingProps {
   user: User;
   onLogout: () => void;
+  onUpdateUser: (user: User) => void;
 }
 
 interface TaxiRank {
@@ -91,8 +94,9 @@ const ZoomControls = () => {
   );
 };
 
-const Landing = ({ user }: LandingProps) => {
+const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const { theme } = useTheme();
+  const locationEnabled = user.locationSharing ?? false;
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [incidentDescription, setIncidentDescription] = useState('');
@@ -103,8 +107,10 @@ const Landing = ({ user }: LandingProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<TaxiRank[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const locationWatchRef = useRef<number | null>(null);
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -157,6 +163,42 @@ const Landing = ({ user }: LandingProps) => {
     iconSize: [52, 52],
     iconAnchor: [26, 52],
     popupAnchor: [0, -52],
+  });
+
+  const userLocationIcon = L.divIcon({
+    html: `
+      <div style="
+        position: relative;
+        width: 28px;
+        height: 28px;
+      ">
+        <div style="
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          background: rgba(59, 130, 246, 0.18);
+          animation: userPulse 1.8s ease-in-out infinite;
+        "></div>
+        <div style="
+          position: absolute;
+          inset: 5px;
+          border-radius: 9999px;
+          background: #2563EB;
+          border: 3px solid white;
+          box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+        "></div>
+        <style>
+          @keyframes userPulse {
+            0%, 100% { transform: scale(0.85); opacity: 0.55; }
+            50% { transform: scale(1.15); opacity: 1; }
+          }
+        </style>
+      </div>
+    `,
+    className: '',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
   });
 
   // Modern Incident Icon with gradient and pulse animation
@@ -230,6 +272,30 @@ const Landing = ({ user }: LandingProps) => {
     }
   };
 
+  const persistLocationPreference = async (nextValue: boolean) => {
+    const updatedUser = {
+      ...user,
+      locationSharing: nextValue,
+      locationPromptSeen: true,
+    };
+
+    onUpdateUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    try {
+      await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ locationSharing: nextValue }),
+      });
+    } catch (error) {
+      console.error('Failed to sync location preference:', error);
+    }
+  };
+
   // --- Fallback: All Taxi Ranks ---
   const fetchTaxiRanks = async () => {
     try {
@@ -248,7 +314,7 @@ const Landing = ({ user }: LandingProps) => {
     if (!query.trim()) {
       setFilteredSuggestions([]);
       setShowSuggestions(false);
-      if (navigator.geolocation) {
+      if (locationEnabled && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude),
           () => fetchTaxiRanks()
@@ -309,6 +375,11 @@ const Landing = ({ user }: LandingProps) => {
 
   const submitIncident = async () => {
     if (!incidentDescription.trim()) return;
+
+    if (!locationEnabled) {
+      toast.error('Enable location sharing in Settings to report incidents.');
+      return;
+    }
 
     const tempId = `temp-${Date.now()}`;
     const tempIncident: Incident = {
@@ -483,6 +554,11 @@ const Landing = ({ user }: LandingProps) => {
   };
 
   const handleNearMe = () => {
+    if (!locationEnabled) {
+      toast.info('Enable location sharing in Settings to use this feature.');
+      return;
+    }
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -542,16 +618,96 @@ useEffect(() => {
 }, []);
 
   useEffect(() => {
-    if (navigator.geolocation) {
+    if (!locationEnabled) {
+      setShowIncidentForm(false);
+      setCurrentLocation(null);
+      if (locationWatchRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+        locationWatchRef.current = null;
+      }
+    }
+
+    const requestInitialLocation = () => {
+      if (!navigator.geolocation) {
+        fetchTaxiRanks();
+        fetchIncidents();
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
-        (pos) => fetchNearbyTaxiRanks(pos.coords.latitude, pos.coords.longitude),
-        () => fetchTaxiRanks()
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          setCurrentLocation({ lat, lng });
+          setSelectedLocation({ lat, lng });
+
+          if (!user.locationPromptSeen) {
+            await persistLocationPreference(true);
+          }
+
+          if (locationEnabled || !user.locationPromptSeen) {
+            fetchNearbyTaxiRanks(lat, lng);
+          } else {
+            fetchTaxiRanks();
+          }
+
+          fetchIncidents();
+        },
+        async () => {
+          if (!user.locationPromptSeen) {
+            await persistLocationPreference(false);
+          }
+          fetchTaxiRanks();
+          fetchIncidents();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
       );
+    };
+
+    if (locationEnabled || !user.locationPromptSeen) {
+      requestInitialLocation();
     } else {
       fetchTaxiRanks();
+      fetchIncidents();
     }
-    fetchIncidents();
-  }, []);
+  }, [locationEnabled, user.locationPromptSeen]);
+
+  useEffect(() => {
+    if (!locationEnabled || !navigator.geolocation) {
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setCurrentLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      (err) => {
+        console.error('Location watch error:', err);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 15000,
+      }
+    );
+
+    locationWatchRef.current = watchId;
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      if (locationWatchRef.current === watchId) {
+        locationWatchRef.current = null;
+      }
+    };
+  }, [locationEnabled]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
@@ -573,6 +729,18 @@ useEffect(() => {
 
         {/* Map Controller for Navigation */}
         <MapController selectedLocation={selectedLocation} />
+
+        {/* Live User Location */}
+        {locationEnabled && currentLocation && (
+          <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userLocationIcon}>
+            <Popup className="custom-popup" closeButton={false}>
+              <div className="text-center p-1">
+                <p className="font-bold text-sm tracking-tight">You are here</p>
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Live location</p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* Custom Zoom Controls */}
         <ZoomControls />
@@ -710,16 +878,22 @@ useEffect(() => {
       <div className="absolute bottom-28 right-4 z-[1000] flex flex-col gap-3">
         <button
           onClick={handleNearMe}
-          className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-          title="Go to my location"
+          disabled={!locationEnabled}
+          className={`bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition ${
+            locationEnabled ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : 'opacity-50 cursor-not-allowed'
+          }`}
+          title={locationEnabled ? 'Go to my location' : 'Enable location sharing in Settings'}
         >
           <Navigation size={24} className="transform -rotate-45" />
         </button>
 
         <button
           onClick={() => setShowIncidentForm(!showIncidentForm)}
-          className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-lg shadow-red-600/30 transition transform hover:scale-105"
-          title="Report Incident"
+          disabled={!locationEnabled}
+          className={`bg-red-600 text-white p-4 rounded-2xl shadow-lg shadow-red-600/30 transition ${
+            locationEnabled ? 'hover:bg-red-700 hover:scale-105 transform' : 'opacity-50 cursor-not-allowed'
+          }`}
+          title={locationEnabled ? 'Report Incident' : 'Enable location sharing in Settings to report incidents'}
         >
           <div className="relative">
             <Plus size={24} className={`transform transition-transform duration-300 ${showIncidentForm ? 'rotate-45' : ''}`} />

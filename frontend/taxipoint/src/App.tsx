@@ -35,6 +35,7 @@ export interface User {
   autoRefresh?: boolean;
   locationSharing?: boolean;
   darkMode?: boolean;
+  locationPromptSeen?: boolean;
 }
 
 // Auth helper
@@ -92,6 +93,7 @@ const MainApp: React.FC = () => {
       autoRefresh: userData.autoRefresh ?? true,
       locationSharing: userData.locationSharing ?? false,
       darkMode: userData.darkMode ?? false,
+      locationPromptSeen: userData.locationPromptSeen ?? false,
     };
     setUser(fullUser);
     localStorage.setItem("user", JSON.stringify(fullUser));
@@ -171,7 +173,7 @@ const MainApp: React.FC = () => {
           element={
             <ProtectedRoute user={user}>
               <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
-                <Landing user={user as User} onLogout={handleLogout} />
+                <Landing user={user as User} onLogout={handleLogout} onUpdateUser={setUser} />
               </MainLayout>
             </ProtectedRoute>
           }

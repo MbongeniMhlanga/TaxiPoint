@@ -19,6 +19,7 @@ export interface User {
   autoRefresh?: boolean;
   locationSharing?: boolean;
   darkMode?: boolean;
+  locationPromptSeen?: boolean;
 }
 
 // Props for UserSettings
@@ -46,16 +47,51 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
     setDarkMode(user.darkMode ?? false);
   }, [user]);
 
-  const handleSave = async () => {
+  const persistUserSettings = (nextUserSettings: Partial<User>) => {
+    const updatedUser = {
+      ...user,
+      ...nextUserSettings,
+      locationPromptSeen: true,
+    };
+
+    onUpdateUser(updatedUser);
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+
+    return updatedUser;
+  };
+
+  const saveSettings = async (
+    overrides: Partial<{
+      notifications: boolean;
+      soundAlerts: boolean;
+      autoRefresh: boolean;
+      locationSharing: boolean;
+      darkMode: boolean;
+    }> = {},
+    options: { quiet?: boolean } = {}
+  ) => {
+    const nextNotifications = overrides.notifications ?? notifications;
+    const nextSoundAlerts = overrides.soundAlerts ?? soundAlerts;
+    const nextAutoRefresh = overrides.autoRefresh ?? autoRefresh;
+    const nextLocationSharing = overrides.locationSharing ?? locationSharing;
+    const nextDarkMode = overrides.darkMode ?? darkMode;
+
+    persistUserSettings({
+      notifications: nextNotifications,
+      soundAlerts: nextSoundAlerts,
+      autoRefresh: nextAutoRefresh,
+      locationSharing: nextLocationSharing,
+      darkMode: nextDarkMode,
+    });
+
     setLoading(true);
     try {
-      // Build the payload for the backend
       const payload = {
-        notifications,
-        soundAlerts,
-        autoRefresh,
-        locationSharing,
-        darkMode,
+        notifications: nextNotifications,
+        soundAlerts: nextSoundAlerts,
+        autoRefresh: nextAutoRefresh,
+        locationSharing: nextLocationSharing,
+        darkMode: nextDarkMode,
       };
 
       const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
@@ -68,30 +104,43 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update settings");
+        const errorText = await response.text();
+        let errorMessage = "Failed to update settings";
+
+        if (errorText.trim()) {
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorData.error || errorText;
+          } catch {
+            errorMessage = errorText;
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
-      // Instead of using the response from the backend, we optimistically update
-      // the parent state with the current local state.
-      const updatedUser = {
-        ...user,
-        notifications,
-        soundAlerts,
-        autoRefresh,
-        locationSharing,
-        darkMode,
-      };
+      if (!options.quiet) {
+        toast.success("Settings saved successfully!");
+      }
 
-      onUpdateUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      toast.success("Settings saved successfully!");
+      return true;
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || "Settings update failed");
+      if (!options.quiet) {
+        toast.error(err.message || "Settings update failed");
+        throw err;
+      }
+      return false;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await saveSettings();
+    } catch {
+      // Error toast is already shown inside saveSettings.
     }
   };
 
@@ -165,7 +214,15 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
                       title="Share Location"
                       description="Use your current area to improve local results and map focus."
                       checked={locationSharing}
-                      onChange={() => setLocationSharing((value) => !value)}
+                      onChange={async () => {
+                        const nextValue = !locationSharing;
+                        setLocationSharing(nextValue);
+                        try {
+                          await saveSettings({ locationSharing: nextValue }, { quiet: true });
+                        } catch {
+                          // Keep the locally saved setting even if the backend sync fails.
+                        }
+                      }}
                     />
                   </div>
                 </div>

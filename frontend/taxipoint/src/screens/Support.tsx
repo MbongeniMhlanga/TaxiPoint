@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import { Clock3, HelpCircle, Mail, PhoneCall } from "lucide-react";
+import { Clock3, FileText, HelpCircle, Mail, MessageSquare, PhoneCall } from "lucide-react";
 import "../lib/popup/react-toastify.css";
 
 interface User {
-  name: string;
-  surname: string;
   email: string;
 }
 
@@ -14,34 +12,36 @@ interface SupportProps {
 }
 
 const Support: React.FC<SupportProps> = ({ user }) => {
-  const [name, setName] = useState("");
+  const supportEmail = ["taxipoint25", "@", "gmail.com"].join("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setName(user ? `${user.name} ${user.surname}`.trim() : "");
     setEmail(user?.email ?? "");
-  }, [user?.name, user?.surname, user?.email]);
+  }, [user?.email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !subject || !message) {
+    if (!email || !subject || !message) {
       toast.error("Please fill in all fields.");
       return;
     }
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Your message has been sent! We'll get back to you soon.");
-      setName("");
+      const body = [`From: ${email}`, "", message].join("\n");
+      const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(
+        `TaxiPoint Support: ${subject}`
+      )}&body=${encodeURIComponent(body)}`;
+
+      window.location.href = mailtoUrl;
+      toast.success("Opening your mail app...");
       setEmail("");
       setSubject("");
       setMessage("");
     } catch (err) {
-      toast.error("Failed to send message. Try again later.");
+      toast.error("Unable to open your mail app. Try again.");
     } finally {
       setLoading(false);
     }
@@ -69,41 +69,62 @@ const Support: React.FC<SupportProps> = ({ user }) => {
             <div className="mb-6">
               <h3 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">Send a Message</h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Use the form below to contact the TaxiPoint team.
+                Use the form below to send an email-style support request.
               </p>
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1">
-              <input
-                type="text"
-                placeholder="Your Name"
-                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-              <input
-                type="email"
-                placeholder="Your Email"
-                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Subject"
-                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                required
-              />
-              <textarea
-                placeholder="Your Message"
-                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-40 resize-none transition-colors"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-              />
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  <Mail size={16} />
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="email"
+                    placeholder="Your Email"
+                    className="w-full p-3 pl-12 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  <FileText size={16} />
+                  Subject
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Subject"
+                    className="w-full p-3 pl-12 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  <MessageSquare size={16} />
+                  Message
+                </label>
+                <div className="relative">
+                  <MessageSquare className="absolute left-4 top-4 text-gray-400" size={18} />
+                  <textarea
+                    placeholder="Your Message"
+                    className="w-full p-3 pl-12 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-40 resize-none transition-colors"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={loading}
@@ -118,7 +139,7 @@ const Support: React.FC<SupportProps> = ({ user }) => {
             <div className="max-w-3xl">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Contact Options</h3>
               <p className="mt-2 text-gray-600 dark:text-gray-300">
-                Choose the option that best matches your issue and we’ll route it quickly.
+                Choose the option that best matches your issue and we'll route it quickly.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
