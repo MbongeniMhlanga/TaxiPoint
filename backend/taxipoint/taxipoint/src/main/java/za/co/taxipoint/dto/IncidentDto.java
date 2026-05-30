@@ -16,4 +16,5 @@ public class IncidentDto {
     private double longitude;
     private String formattedAddress;
     private LocalDateTime createdAt;
+    private Boolean resolved;
 }

@@ -11,6 +11,7 @@ import za.co.taxipoint.service.GeocodingService;
 import za.co.taxipoint.service.IncidentService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,34 +24,16 @@ public class IncidentController {
     private final GeocodingService geocodingService;
 
     @GetMapping
-    public ResponseEntity<List<IncidentDto>> getAllIncidents() {
-        List<Incident> incidents = incidentRepository.findAllByOrderByCreatedAtDesc();
+    public ResponseEntity<List<IncidentDto>> getAllIncidents(
+            @RequestParam(defaultValue = "false") boolean includeResolved
+    ) {
+        incidentService.autoResolveExpiredIncidents();
+        List<Incident> incidents = includeResolved
+                ? incidentRepository.findAllByOrderByCreatedAtDesc()
+                : incidentRepository.findByResolvedFalseOrderByCreatedAtDesc();
+
         List<IncidentDto> incidentDtos = incidents.stream()
-                .map(incident -> {
-                    // Check if location is not null before processing
-                    if (incident.getLocation() != null) {
-                        return new IncidentDto(
-                                incident.getId(),
-                                incident.getDescription(),
-                                incident.getReporter(),
-                                incident.getLocation().getY(), // Latitude
-                                incident.getLocation().getX(), // Longitude
-                                geocodingService.reverseGeocode(incident.getLocation().getY(), incident.getLocation().getX()),
-                                incident.getCreatedAt()
-                        );
-                    } else {
-                        // Handle the case where location is null, returning a default DTO
-                        return new IncidentDto(
-                                incident.getId(),
-                                incident.getDescription(),
-                                incident.getReporter(),
-                                0.0, // Default latitude
-                                0.0, // Default longitude
-                                "Location not available",
-                                incident.getCreatedAt()
-                        );
-                    }
-                })
+                .map(this::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(incidentDtos);
     }
@@ -64,5 +47,47 @@ public class IncidentController {
                 request.getLongitude()
         );
         return ResponseEntity.ok(saved);
+    }
+
+    @PutMapping("/{id}/resolved")
+    public ResponseEntity<IncidentDto> updateResolvedStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body
+    ) {
+        Boolean resolved = body.get("resolved");
+        if (resolved == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return incidentRepository.findById(id)
+                .map(incident -> {
+                    incident.setResolved(resolved);
+                    Incident saved = incidentRepository.save(incident);
+                    return ResponseEntity.ok(toDto(saved));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    private IncidentDto toDto(Incident incident) {
+        double latitude = 0.0;
+        double longitude = 0.0;
+        String formattedAddress = "Location not available";
+
+        if (incident.getLocation() != null) {
+            latitude = incident.getLocation().getY();
+            longitude = incident.getLocation().getX();
+            formattedAddress = geocodingService.reverseGeocode(latitude, longitude);
+        }
+
+        return new IncidentDto(
+                incident.getId(),
+                incident.getDescription(),
+                incident.getReporter(),
+                latitude,
+                longitude,
+                formattedAddress,
+                incident.getCreatedAt(),
+                Boolean.TRUE.equals(incident.getResolved())
+        );
     }
 }

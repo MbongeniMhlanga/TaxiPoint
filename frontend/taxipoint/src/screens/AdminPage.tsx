@@ -49,6 +49,17 @@ interface CorrectionSubmission {
   updatedAt?: string | null;
 }
 
+interface Incident {
+  id: number;
+  description: string;
+  reporter: string;
+  latitude: number;
+  longitude: number;
+  formattedAddress: string;
+  createdAt?: string | null;
+  resolved?: boolean;
+}
+
 interface TaxiRankForm {
   name: string;
   description: string;
@@ -100,6 +111,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [pendingCorrections, setPendingCorrections] = useState<CorrectionSubmission[]>([]);
   const [reviewNotesDrafts, setReviewNotesDrafts] = useState<Record<string, string>>({});
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [incidentsLoading, setIncidentsLoading] = useState(true);
+  const [incidentSavingId, setIncidentSavingId] = useState<number | null>(null);
+  const [showIncidentQueue, setShowIncidentQueue] = useState(false);
+  const [showCorrectionQueue, setShowCorrectionQueue] = useState(false);
   const authExpiredRef = useRef(false);
 
   // Statistics state
@@ -146,6 +162,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       setPendingCorrections(data || []);
     } catch (err: any) {
       console.error('Failed to fetch pending corrections:', err);
+    }
+  };
+
+  const fetchIncidents = async () => {
+    try {
+      setIncidentsLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/incidents?includeResolved=true`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          if (!authExpiredRef.current) {
+            authExpiredRef.current = true;
+            toast.error("Your admin session expired. Please log in again.");
+            onLogout();
+          }
+          return;
+        }
+        throw new Error("Failed to fetch incidents");
+      }
+
+      const data = await res.json();
+      setIncidents(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.error('Failed to fetch incidents:', err);
+      toast.error(err.message || 'Failed to fetch incidents');
+    } finally {
+      setIncidentsLoading(false);
     }
   };
 
@@ -206,6 +251,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     fetchTaxiRanks();
     fetchStatistics();
     fetchPendingCorrections();
+    fetchIncidents();
   }, []);
 
   const handleChange = (
@@ -328,6 +374,43 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       fetchTaxiRanks();
     } catch (err: any) {
       toast.error(err.message || "Failed to review correction.");
+    }
+  };
+
+  const updateIncidentStatus = async (incidentId: number, resolved: boolean) => {
+    try {
+      setIncidentSavingId(incidentId);
+      const res = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/resolved`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ resolved }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          if (!authExpiredRef.current) {
+            authExpiredRef.current = true;
+            toast.error("Your admin session expired. Please log in again.");
+            onLogout();
+          }
+          return;
+        }
+        throw new Error("Failed to update incident status");
+      }
+
+      const updatedIncident = await res.json();
+      setIncidents((prev) =>
+        prev.map((incident) => (incident.id === updatedIncident.id ? updatedIncident : incident))
+      );
+      toast.success(resolved ? 'Incident marked as resolved.' : 'Incident marked as unresolved.');
+    } catch (err: any) {
+      console.error('Failed to update incident status:', err);
+      toast.error(err.message || 'Could not update incident status.');
+    } finally {
+      setIncidentSavingId(null);
     }
   };
 
@@ -521,6 +604,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
     rank.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rank.district.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const unresolvedIncidents = incidents.filter((incident) => !incident.resolved);
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-200 transition-colors duration-300">
@@ -678,112 +762,231 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
           {/* Correction Review Queue */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <button
+              type="button"
+              onClick={() => setShowCorrectionQueue((prev) => !prev)}
+              className="w-full flex items-center justify-between gap-4 text-left"
+            >
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Correction Review Queue</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Review commuter submissions before they go live.
                 </p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-semibold">
-                {pendingCorrections.length} pending
-              </span>
-            </div>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-semibold">
+                  {pendingCorrections.length} pending
+                </span>
+                <span className="text-gray-400 dark:text-gray-500 text-sm font-semibold">
+                  {showCorrectionQueue ? 'Hide' : 'Show'}
+                </span>
+              </div>
+            </button>
 
-            {pendingCorrections.length > 0 ? (
-              <div className="space-y-4">
-                {pendingCorrections.map((submission) => (
-                  <div
-                    key={submission.id}
-                    className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-4 space-y-3"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                            {formatCorrectionType(submission.correctionType)}
-                          </span>
-                          <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold">
-                            {formatCorrectionStatus(submission.status)}
-                          </span>
-                        </div>
-                        <h4 className="text-base font-semibold text-gray-900 dark:text-white">
-                          {submission.rankNameSnapshot || 'Unknown rank'}
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {submission.description}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Submitted by {submission.submittedByName || submission.submittedByEmail || 'Unknown user'}
-                        </p>
-                      </div>
+            {showCorrectionQueue ? (
+              <div className="mt-5">
+                {pendingCorrections.length > 0 ? (
+                  <div className="space-y-4">
+                    {pendingCorrections.map((submission) => (
+                      <div
+                        key={submission.id}
+                        className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-4 space-y-3"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                                {formatCorrectionType(submission.correctionType)}
+                              </span>
+                              <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                                {formatCorrectionStatus(submission.status)}
+                              </span>
+                            </div>
+                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                              {submission.rankNameSnapshot || 'Unknown rank'}
+                            </h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {submission.description}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Submitted by {submission.submittedByName || submission.submittedByEmail || 'Unknown user'}
+                            </p>
+                          </div>
 
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold">
-                          {submission.confirmationsCount} confirmations
-                        </span>
-                        <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold">
-                          {submission.rejectionsCount} rejections
-                        </span>
-                        {submission.autoApproved ? (
-                          <span className="px-2 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold">
-                            Auto-approved
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {submission.details && Object.keys(submission.details).length > 0 ? (
-                      <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                          Details
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(submission.details).slice(0, 4).map(([key, value]) => (
-                            <span
-                              key={key}
-                              className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs"
-                            >
-                              {key}: {Array.isArray(value) ? value.join(', ') : String(value)}
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold">
+                              {submission.confirmationsCount} confirmations
                             </span>
-                          ))}
+                            <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold">
+                              {submission.rejectionsCount} rejections
+                            </span>
+                            {submission.autoApproved ? (
+                              <span className="px-2 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold">
+                                Auto-approved
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {submission.details && Object.keys(submission.details).length > 0 ? (
+                          <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                              Details
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(submission.details).slice(0, 4).map(([key, value]) => (
+                                <span
+                                  key={key}
+                                  className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs"
+                                >
+                                  {key}: {Array.isArray(value) ? value.join(', ') : String(value)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <textarea
+                          value={reviewNotesDrafts[submission.id] || ''}
+                          onChange={(e) => setReviewNotesDrafts((prev) => ({ ...prev, [submission.id]: e.target.value }))}
+                          placeholder="Review notes (optional)"
+                          className="w-full p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[90px]"
+                        />
+
+                        <div className="flex flex-col md:flex-row gap-3">
+                          <button
+                            type="button"
+                            onClick={() => reviewCorrection(submission.id, 'APPROVE')}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition"
+                          >
+                            <CheckCircle2 size={18} />
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => reviewCorrection(submission.id, 'REJECT')}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition"
+                          >
+                            <XCircle size={18} />
+                            Reject
+                          </button>
                         </div>
                       </div>
-                    ) : null}
-
-                    <textarea
-                      value={reviewNotesDrafts[submission.id] || ''}
-                      onChange={(e) => setReviewNotesDrafts((prev) => ({ ...prev, [submission.id]: e.target.value }))}
-                      placeholder="Review notes (optional)"
-                      className="w-full p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[90px]"
-                    />
-
-                    <div className="flex flex-col md:flex-row gap-3">
-                      <button
-                        type="button"
-                        onClick={() => reviewCorrection(submission.id, 'APPROVE')}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition"
-                      >
-                        <CheckCircle2 size={18} />
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => reviewCorrection(submission.id, 'REJECT')}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition"
-                      >
-                        <XCircle size={18} />
-                        Reject
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
+                    No correction submissions are waiting for review right now.
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
-                No correction submissions are waiting for review right now.
+            ) : null}
+          </div>
+
+          {/* Incident Resolution Queue */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <button
+              type="button"
+              onClick={() => setShowIncidentQueue((prev) => !prev)}
+              className="w-full flex items-center justify-between gap-4 text-left"
+            >
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Incident Resolution Queue</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Mark incidents as resolved to remove them from the public map. Incidents older than 48 hours auto-resolve.
+                </p>
               </div>
-            )}
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-semibold">
+                  {unresolvedIncidents.length} unresolved
+                </span>
+                <span className="text-gray-400 dark:text-gray-500 text-sm font-semibold">
+                  {showIncidentQueue ? 'Hide' : 'Show'}
+                </span>
+              </div>
+            </button>
+
+            {showIncidentQueue ? (
+              <div className="mt-5">
+                {incidentsLoading ? (
+                  <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
+                    Loading incidents...
+                  </div>
+                ) : incidents.length > 0 ? (
+                  <div className="space-y-4">
+                    {incidents.map((incident) => {
+                      const isResolved = Boolean(incident.resolved);
+                      return (
+                        <div
+                          key={incident.id}
+                          className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 p-4 space-y-3"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${isResolved ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
+                                  {isResolved ? 'Resolved' : 'Unresolved'}
+                                </span>
+                                <span className="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-semibold">
+                                  #{incident.id}
+                                </span>
+                              </div>
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                                {incident.description}
+                              </h4>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Reported by {incident.reporter}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-2">
+                                {incident.formattedAddress}
+                              </p>
+                              {incident.createdAt ? (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(incident.createdAt).toLocaleString()}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span className="px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold">
+                                {incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row gap-3">
+                            <button
+                              type="button"
+                              onClick={() => updateIncidentStatus(incident.id, !isResolved)}
+                              disabled={incidentSavingId === incident.id}
+                              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition disabled:opacity-60 ${isResolved ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                            >
+                              {incidentSavingId === incident.id ? (
+                                <span>Saving...</span>
+                              ) : isResolved ? (
+                                <>
+                                  <XCircle size={18} />
+                                  Mark Unresolved
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 size={18} />
+                                  Mark Resolved
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
+                    No incidents reported yet.
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
 
           {/* Management Section Header */}

@@ -10,6 +10,8 @@ public class StatsService {
     private UserRepository userRepository;
     @Autowired
     private IncidentRepository incidentRepository;
+    @Autowired
+    private IncidentService incidentService;
     /**
      * Get total user count from User table
      * Counts all rows in the users table
@@ -22,6 +24,7 @@ public class StatsService {
      * Counts incidents where resolved = false
      */
     public long getActiveIncidentsCount() {
+        incidentService.autoResolveExpiredIncidents();
         return incidentRepository.countByResolvedFalse();
         
         // Alternative if using status field:

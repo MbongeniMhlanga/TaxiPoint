@@ -51,6 +51,7 @@ interface Incident {
   longitude: number;
   createdAt: string;
   formattedAddress: string;
+  resolved?: boolean;
 }
 
 // New component to handle map navigation
@@ -287,6 +288,7 @@ const Landing = ({ user }: LandingProps) => {
     latitude: incident.latitude || 0,
     longitude: incident.longitude || 0,
     formattedAddress: incident.formattedAddress || 'Unknown',
+    resolved: Boolean(incident.resolved),
   });
 
   const fetchIncidents = async () => {
@@ -298,7 +300,7 @@ const Landing = ({ user }: LandingProps) => {
         throw new Error('Failed to fetch incidents');
       }
       const data = await res.json();
-      setIncidents(data.map(mapIncident));
+      setIncidents((Array.isArray(data) ? data : []).map(mapIncident).filter((incident) => !incident.resolved));
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to fetch incidents. Please try again later.');
@@ -521,7 +523,9 @@ useEffect(() => {
     onConnect: () => {
       stompClient.subscribe('/topic/incidents', (message) => {
         const incident: Incident = mapIncident(JSON.parse(message.body));
-        setIncidents((prev) => [...prev, incident]);
+        setIncidents((prev) =>
+          incident.resolved ? prev.filter((item) => item.id !== incident.id) : [...prev, incident]
+        );
       });
     },
     onStompError: (frame) => {

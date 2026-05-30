@@ -6,8 +6,12 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
 import za.co.taxipoint.model.Incident;
 import za.co.taxipoint.repository.IncidentRepository;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -26,5 +30,20 @@ public class IncidentService {
                 .build();
 
         return incidentRepository.save(incident);
+    }
+
+    @Transactional
+    @Scheduled(fixedRate = 300000L)
+    public int autoResolveExpiredIncidents() {
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(48);
+        var expiredIncidents = incidentRepository.findByResolvedFalseAndCreatedAtBefore(cutoff);
+
+        if (expiredIncidents.isEmpty()) {
+            return 0;
+        }
+
+        expiredIncidents.forEach(incident -> incident.setResolved(true));
+        incidentRepository.saveAll(expiredIncidents);
+        return expiredIncidents.size();
     }
 }
