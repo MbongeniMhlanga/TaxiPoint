@@ -25,6 +25,8 @@ interface TaxiRank {
   phone: string;
   currency?: string;
   facilities: Record<string, any>;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface CorrectionSubmission {
@@ -474,6 +476,36 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
 
   // --- Statistics Logic ---
   const totalRanks = taxiRanks.length;
+  const lastMonthCutoff = new Date();
+  lastMonthCutoff.setDate(1);
+  lastMonthCutoff.setHours(0, 0, 0, 0);
+  lastMonthCutoff.setMilliseconds(-1);
+
+  const previousMonthTotal = taxiRanks.filter((rank) => {
+    if (!rank.createdAt) return false;
+
+    const createdAt = new Date(rank.createdAt);
+    if (Number.isNaN(createdAt.getTime())) return false;
+
+    return createdAt <= lastMonthCutoff;
+  }).length;
+
+  const rankTrendText = (() => {
+    if (previousMonthTotal === 0) {
+      return totalRanks > 0 ? "New since last month" : "No rank history yet";
+    }
+
+    const change = ((totalRanks - previousMonthTotal) / previousMonthTotal) * 100;
+    const sign = change >= 0 ? "+" : "";
+    return `${sign}${change.toFixed(1)}% from last month`;
+  })();
+
+  const rankTrendColor = previousMonthTotal === 0
+    ? "#6B7280"
+    : totalRanks >= previousMonthTotal
+      ? "#10B981"
+      : "#EF4444";
+
   const districtData = taxiRanks.reduce((acc: any, rank) => {
     const district = rank.district || "Unknown";
     acc[district] = (acc[district] || 0) + 1;
@@ -535,9 +567,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                   <Map size={24} />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-sm text-green-500">
-                <span>+2.5%</span>
-                <span className="text-gray-400 ml-2">from last month</span>
+              <div className="mt-4 flex items-center text-sm">
+                <span style={{ color: rankTrendColor }}>{rankTrendText}</span>
               </div>
             </div>
 

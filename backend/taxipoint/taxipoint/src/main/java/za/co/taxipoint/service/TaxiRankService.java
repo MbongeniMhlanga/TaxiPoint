@@ -143,6 +143,8 @@ public TaxiRank updateTaxiRank(UUID id, TaxiRankDTO dto) {
         dto.setActive(rank.getActive() == null || Boolean.TRUE.equals(rank.getActive()));
         dto.setRouteFares(rank.getRouteFares());
         dto.setFacilities(rank.getFacilities());
+        dto.setCreatedAt(rank.getCreatedAt());
+        dto.setUpdatedAt(rank.getUpdatedAt());
 
         if (rank.getLocation() != null) {
             dto.setLatitude(rank.getLocation().getY());

@@ -1,6 +1,8 @@
 package za.co.taxipoint.dto;
 
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -21,4 +23,6 @@ public class TaxiRankDTO {
     private Boolean active;
     private Map<String, Object> facilities; // e.g. {"toilets": true}
     private Double distanceMeters;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
