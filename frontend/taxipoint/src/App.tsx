@@ -133,7 +133,7 @@ const MainApp: React.FC = () => {
 
         <Route path="/support" element={
           <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
-            <Support />
+            <Support user={user as User} />
           </MainLayout>
         } />
 
