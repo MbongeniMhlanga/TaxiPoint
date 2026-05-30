@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
-  <title id="title">TaxiPoint Database Structure</title>
-  <desc id="desc">A diagram of the main TaxiPoint database tables and their relationships.</desc>
+  <title id="title">TaxiPoint Database ERD</title>
+  <desc id="desc">Entity relationship diagram showing the main TaxiPoint database tables and their real connections.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#f8fbff" />
@@ -10,113 +10,162 @@
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#1f3b73" flood-opacity="0.12" />
     </filter>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L12,6 L0,12 z" fill="#4361ee" />
+    <marker id="bar" markerWidth="14" markerHeight="14" refX="7" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M7 1 L7 13" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" />
+    </marker>
+    <marker id="crowfoot" markerWidth="20" markerHeight="20" refX="2" refY="10" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2 L18 10 L2 18" stroke="#2563eb" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M6 2 L18 10 L6 18" stroke="#2563eb" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M10 2 L18 10 L10 18" stroke="#2563eb" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </marker>
+    <marker id="diamond" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,6 L6,1 L11,6 L6,11 Z" fill="#7c8db5" stroke="#7c8db5" />
     </marker>
     <style>
       .title { font: 700 40px Arial, sans-serif; fill: #0f172a; }
       .subtitle { font: 400 18px Arial, sans-serif; fill: #475569; }
       .header { font: 700 22px Arial, sans-serif; fill: #ffffff; text-transform: lowercase; }
-      .header-small { font: 700 18px Arial, sans-serif; fill: #ffffff; text-transform: lowercase; }
       .field { font: 400 16px Arial, sans-serif; fill: #334155; }
-      .note { font: 400 15px Arial, sans-serif; fill: #64748b; }
-      .line { stroke: #4361ee; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .note { font: 400 14px Arial, sans-serif; fill: #64748b; }
+      .card { fill: #ffffff; stroke: #d9e4f5; stroke-width: 1.5; }
+      .relation { stroke: #2563eb; stroke-width: 3; fill: none; }
+      .lookup { stroke: #7c8db5; stroke-width: 2.5; fill: none; stroke-dasharray: 8 7; }
+      .legend-label { font: 600 14px Arial, sans-serif; fill: #475569; }
+      .card-title { font: 700 18px Arial, sans-serif; fill: #ffffff; text-transform: lowercase; }
     </style>
   </defs>
 
   <rect width="1600" height="980" fill="url(#bg)" />
 
-  <text x="800" y="70" text-anchor="middle" class="title">TaxiPoint Database Structure</text>
-  <text x="800" y="102" text-anchor="middle" class="subtitle">Main tables, data fields, and the relationships used by the app</text>
+  <text x="800" y="66" text-anchor="middle" class="title">TaxiPoint Database ERD</text>
+  <text x="800" y="98" text-anchor="middle" class="subtitle">The main entities and the relationships used by the app</text>
+
+  <!-- Legend -->
+  <g transform="translate(1210 48)">
+    <rect x="0" y="0" width="330" height="74" rx="18" fill="#ffffff" stroke="#d9e4f5" filter="url(#shadow)" />
+    <line x1="20" y1="28" x2="90" y2="28" class="relation" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+    <text x="105" y="33" class="legend-label">foreign key</text>
+    <line x1="20" y1="52" x2="90" y2="52" class="lookup" marker-start="url(#bar)" marker-end="url(#diamond)" />
+    <text x="105" y="57" class="legend-label">non-FK lookup</text>
+  </g>
 
   <!-- users -->
   <g filter="url(#shadow)">
-    <rect x="70" y="150" width="320" height="310" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="70" y="150" width="320" height="58" rx="22" fill="#2563eb" />
-    <text x="102" y="187" class="header">users</text>
-    <text x="102" y="240" class="field">id</text>
-    <text x="102" y="267" class="field">name, surname</text>
-    <text x="102" y="294" class="field">email, password_hash</text>
-    <text x="102" y="321" class="field">role</text>
-    <text x="102" y="348" class="field">notifications, sound_alerts</text>
-    <text x="102" y="375" class="field">auto_refresh, location_sharing</text>
-    <text x="102" y="402" class="field">dark_mode, created_at, updated_at</text>
+    <rect x="60" y="150" width="300" height="290" rx="22" class="card" />
+    <rect x="60" y="150" width="300" height="58" rx="22" fill="#2563eb" />
+    <text x="92" y="186" class="header">users</text>
+    <text x="92" y="238" class="field">id</text>
+    <text x="92" y="265" class="field">name, surname</text>
+    <text x="92" y="292" class="field">email, password_hash</text>
+    <text x="92" y="319" class="field">role</text>
+    <text x="92" y="346" class="field">notifications, sound_alerts</text>
+    <text x="92" y="373" class="field">auto_refresh, location_sharing</text>
+    <text x="92" y="400" class="field">dark_mode, created_at, updated_at</text>
   </g>
 
   <!-- taxi_ranks -->
   <g filter="url(#shadow)">
-    <rect x="470" y="150" width="360" height="320" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="470" y="150" width="360" height="58" rx="22" fill="#0f766e" />
-    <text x="502" y="187" class="header">taxi_ranks</text>
-    <text x="502" y="240" class="field">id, name</text>
-    <text x="502" y="267" class="field">description, address</text>
-    <text x="502" y="294" class="field">location, district</text>
-    <text x="502" y="321" class="field">routes_served, route_fares</text>
-    <text x="502" y="348" class="field">hours, phone, currency</text>
-    <text x="502" y="375" class="field">facilities, active</text>
-    <text x="502" y="402" class="field">created_at, updated_at</text>
+    <rect x="430" y="150" width="360" height="310" rx="22" class="card" />
+    <rect x="430" y="150" width="360" height="58" rx="22" fill="#0f766e" />
+    <text x="462" y="186" class="header">taxi_ranks</text>
+    <text x="462" y="238" class="field">id, name</text>
+    <text x="462" y="265" class="field">description, address</text>
+    <text x="462" y="292" class="field">location, district</text>
+    <text x="462" y="319" class="field">routes_served, route_fares</text>
+    <text x="462" y="346" class="field">hours, phone, currency</text>
+    <text x="462" y="373" class="field">facilities, active</text>
+    <text x="462" y="400" class="field">created_at, updated_at</text>
   </g>
 
   <!-- incidents -->
   <g filter="url(#shadow)">
-    <rect x="910" y="150" width="320" height="260" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="910" y="150" width="320" height="58" rx="22" fill="#7c3aed" />
-    <text x="942" y="187" class="header">incidents</text>
-    <text x="942" y="240" class="field">id</text>
-    <text x="942" y="267" class="field">description</text>
-    <text x="942" y="294" class="field">reporter, location</text>
-    <text x="942" y="321" class="field">resolved</text>
-    <text x="942" y="348" class="field">created_at</text>
+    <rect x="850" y="150" width="320" height="260" rx="22" class="card" />
+    <rect x="850" y="150" width="320" height="58" rx="22" fill="#7c3aed" />
+    <text x="882" y="186" class="header">incidents</text>
+    <text x="882" y="238" class="field">id</text>
+    <text x="882" y="265" class="field">description</text>
+    <text x="882" y="292" class="field">reporter, location</text>
+    <text x="882" y="319" class="field">resolved</text>
+    <text x="882" y="346" class="field">created_at</text>
+    <text x="882" y="374" class="note">reporter is stored as text, not a FK</text>
   </g>
 
   <!-- password_reset_tokens -->
   <g filter="url(#shadow)">
-    <rect x="1260" y="150" width="270" height="260" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="1260" y="150" width="270" height="58" rx="22" fill="#f97316" />
-    <text x="1292" y="182" class="header-small">password_reset_tokens</text>
-    <text x="1292" y="240" class="field">id, token</text>
-    <text x="1292" y="267" class="field">email</text>
-    <text x="1292" y="294" class="field">expiry_date</text>
-    <text x="1292" y="321" class="field">used</text>
-    <text x="1292" y="348" class="field">created_at, updated_at</text>
-    <text x="1292" y="378" class="note">lookup by email, not FK</text>
+    <rect x="1200" y="150" width="340" height="260" rx="22" class="card" />
+    <rect x="1200" y="150" width="340" height="58" rx="22" fill="#f97316" />
+    <text x="1232" y="186" class="header">password_reset_tokens</text>
+    <text x="1232" y="238" class="field">id, token</text>
+    <text x="1232" y="265" class="field">email</text>
+    <text x="1232" y="292" class="field">expiry_date</text>
+    <text x="1232" y="319" class="field">used</text>
+    <text x="1232" y="346" class="field">created_at, updated_at</text>
+    <text x="1232" y="374" class="note">email lookup, no FK constraint</text>
   </g>
 
   <!-- correction_submissions -->
   <g filter="url(#shadow)">
-    <rect x="170" y="560" width="410" height="290" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="170" y="560" width="410" height="58" rx="22" fill="#db2777" />
-    <text x="202" y="597" class="header">correction_submissions</text>
-    <text x="202" y="650" class="field">id, rank_id, rank_name_snapshot</text>
-    <text x="202" y="677" class="field">correction_type, description</text>
-    <text x="202" y="704" class="field">details, status</text>
-    <text x="202" y="731" class="field">submitted_by_user_id, submitted_by_email</text>
-    <text x="202" y="758" class="field">reviewed_by_user_id, reviewed_at</text>
-    <text x="202" y="785" class="field">created_at, updated_at</text>
+    <rect x="120" y="540" width="560" height="310" rx="22" class="card" />
+    <rect x="120" y="540" width="560" height="58" rx="22" fill="#db2777" />
+    <text x="152" y="576" class="header">correction_submissions</text>
+    <text x="152" y="628" class="field">id, rank_id, rank_name_snapshot</text>
+    <text x="152" y="655" class="field">correction_type, description</text>
+    <text x="152" y="682" class="field">details, status</text>
+    <text x="152" y="709" class="field">submitted_by_user_id, submitted_by_email</text>
+    <text x="152" y="736" class="field">reviewed_by_user_id, reviewed_by_email</text>
+    <text x="152" y="763" class="field">review_notes, reviewed_at</text>
+    <text x="152" y="790" class="field">created_at, updated_at</text>
   </g>
 
   <!-- correction_votes -->
   <g filter="url(#shadow)">
-    <rect x="670" y="590" width="340" height="230" rx="22" fill="#ffffff" stroke="#d9e4f5" />
-    <rect x="670" y="590" width="340" height="58" rx="22" fill="#1d4ed8" />
-    <text x="702" y="627" class="header">correction_votes</text>
-    <text x="702" y="680" class="field">id, submission_id</text>
-    <text x="702" y="707" class="field">voter_user_id, voter_email</text>
-    <text x="702" y="734" class="field">vote_type</text>
-    <text x="702" y="761" class="field">created_at, updated_at</text>
+    <rect x="760" y="590" width="360" height="240" rx="22" class="card" />
+    <rect x="760" y="590" width="360" height="58" rx="22" fill="#1d4ed8" />
+    <text x="792" y="626" class="header">correction_votes</text>
+    <text x="792" y="678" class="field">id, submission_id</text>
+    <text x="792" y="705" class="field">voter_user_id, voter_email</text>
+    <text x="792" y="732" class="field">vote_type</text>
+    <text x="792" y="759" class="field">created_at, updated_at</text>
   </g>
 
-  <!-- relationships -->
-  <path class="line" d="M230 460 L230 560" />
-  <path class="line" d="M390 410 L260 560" />
-  <path class="line" d="M670 470 L370 560" />
-  <path class="line" d="M580 720 L670 705" />
+  <!-- Relationships -->
+  <!-- users -> correction_submissions (submitted_by_user_id) -->
+  <path class="relation" d="M360 230 L420 230 L420 628 L120 628" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+  <text x="372" y="222" class="note">submitted_by_user_id</text>
+  <text x="387" y="242" class="note">1</text>
+  <text x="134" y="622" class="note">*</text>
 
-  <!-- relationship labels -->
-  <text x="200" y="520" class="note">submitted_by_user_id</text>
-  <text x="280" y="505" class="note">voter_user_id</text>
-  <text x="525" y="535" class="note">rank_id</text>
-  <text x="720" y="698" class="note">submission_id</text>
+  <!-- users -> correction_submissions (reviewed_by_user_id) -->
+  <path class="relation" d="M360 260 L460 260 L460 682 L120 682" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+  <text x="372" y="252" class="note">reviewed_by_user_id</text>
+  <text x="474" y="274" class="note">1</text>
+  <text x="134" y="676" class="note">*</text>
 
-  <text x="800" y="915" text-anchor="middle" class="subtitle">TaxiPoint keeps rank data, live incidents, corrections, and account recovery separate but connected where needed.</text>
+  <!-- users -> correction_votes (voter_user_id) -->
+  <path class="relation" d="M360 292 L540 292 L540 700 L760 700" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+  <text x="372" y="284" class="note">voter_user_id</text>
+  <text x="554" y="304" class="note">1</text>
+  <text x="772" y="694" class="note">*</text>
+
+  <!-- taxi_ranks -> correction_submissions (rank_id) -->
+  <path class="relation" d="M610 460 L610 520 L400 520 L400 540" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+  <text x="620" y="506" class="note">rank_id</text>
+  <text x="626" y="476" class="note">1</text>
+  <text x="406" y="536" class="note">*</text>
+
+  <!-- correction_submissions -> correction_votes (submission_id) -->
+  <path class="relation" d="M680 700 L760 700" marker-start="url(#bar)" marker-end="url(#crowfoot)" />
+  <text x="690" y="690" class="note">submission_id</text>
+  <text x="692" y="716" class="note">1</text>
+  <text x="772" y="694" class="note">*</text>
+
+  <!-- users -> password_reset_tokens (email lookup, non-FK) -->
+  <path class="lookup" d="M360 190 L760 190 L760 240 L1200 240" marker-start="url(#bar)" marker-end="url(#diamond)" />
+  <text x="522" y="182" class="note">email lookup</text>
+  <text x="370" y="204" class="note">1</text>
+  <text x="1212" y="234" class="note">*</text>
+
+  <text x="800" y="925" text-anchor="middle" class="subtitle">
+    TaxiPoint keeps rank data, incidents, corrections, and account recovery separated, with only the real relationships linked in the ERD.
+  </text>
 </svg>
