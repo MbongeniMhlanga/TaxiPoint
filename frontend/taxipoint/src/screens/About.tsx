@@ -1,9 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Users, Shield, Zap, Heart, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
+
+interface TaxiRank {
+  district: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
 
 const About: React.FC = () => {
+  const [totalRanks, setTotalRanks] = useState(0);
+  const [districtsCovered, setDistrictsCovered] = useState(0);
+  useEffect(() => {
+    const fetchAboutStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000&includeInactive=true`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const ranks: TaxiRank[] = Array.isArray(data?.content) ? data.content : [];
+
+        setTotalRanks(ranks.length);
+        setDistrictsCovered(
+          new Set(
+            ranks
+              .map((rank) => rank.district?.trim())
+              .filter((district): district is string => Boolean(district))
+          ).size
+        );
+
+      } catch (error) {
+        console.error('Failed to load about stats:', error);
+      }
+    };
+
+    fetchAboutStats();
+  }, []);
+
   const features = [
     {
       icon: <MapPin size={28} />,
@@ -166,14 +201,14 @@ const About: React.FC = () => {
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <div className="text-5xl font-bold mb-2">5+</div>
+                <div className="text-5xl font-bold mb-2">{totalRanks}</div>
                 <div className="text-blue-100 text-lg">Taxi Ranks</div>
               </motion.div>
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <div className="text-5xl font-bold mb-2">3</div>
+                <div className="text-5xl font-bold mb-2">{districtsCovered}</div>
                 <div className="text-blue-100 text-lg">Districts Covered</div>
               </motion.div>
               <motion.div
