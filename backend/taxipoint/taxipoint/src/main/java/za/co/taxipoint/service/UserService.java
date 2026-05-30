@@ -67,6 +67,9 @@ public class UserService {
     }
 
     if (dto.getNotifications() != null) user.setNotifications(dto.getNotifications());
+    if (dto.getSoundAlerts() != null) user.setSoundAlerts(dto.getSoundAlerts());
+    if (dto.getAutoRefresh() != null) user.setAutoRefresh(dto.getAutoRefresh());
+    if (dto.getLocationSharing() != null) user.setLocationSharing(dto.getLocationSharing());
     if (dto.getDarkMode() != null) user.setDarkMode(dto.getDarkMode());
 
     User saved = userRepository.save(user);
@@ -120,12 +123,15 @@ public void updatePassword(Long id, String oldPassword, String newPassword) {
     private UserDTO toDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
-        dto.setName(user.getName());
+         dto.setName(user.getName());
         dto.setSurname(user.getSurname());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
-         dto.setNotifications(user.getNotifications()); // include notifications
-    dto.setDarkMode(user.getDarkMode());           // include darkMode
+        dto.setNotifications(user.getNotifications());
+        dto.setSoundAlerts(user.getSoundAlerts());
+        dto.setAutoRefresh(user.getAutoRefresh());
+        dto.setLocationSharing(user.getLocationSharing());
+        dto.setDarkMode(user.getDarkMode());
         return dto;
     }
 }

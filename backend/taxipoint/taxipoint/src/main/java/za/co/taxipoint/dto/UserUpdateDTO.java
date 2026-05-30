@@ -8,6 +8,9 @@ public class UserUpdateDTO {
     private String surname;
     private String email;
     private String password; // optional, only set if changing password
-        private Boolean notifications; // new
-    private Boolean darkMode; // new
+    private Boolean notifications;
+    private Boolean soundAlerts;
+    private Boolean autoRefresh;
+    private Boolean locationSharing;
+    private Boolean darkMode;
 }

@@ -1,16 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
     theme: Theme;
     toggleTheme: () => void;
+    setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [theme, setTheme] = useState<Theme>(() => {
+    const [theme, setThemeState] = useState<Theme>(() => {
         // Check localStorage first
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light' || savedTheme === 'dark') {
@@ -23,7 +24,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return 'light'; // Default to light (white)
     });
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
         root.classList.add(theme);
@@ -31,11 +32,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, [theme]);
 
     const toggleTheme = () => {
-        setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+        setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+    };
+
+    const setTheme = (nextTheme: Theme) => {
+        setThemeState(nextTheme);
     };
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
             {children}
         </ThemeContext.Provider>
     );

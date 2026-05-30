@@ -1,9 +1,10 @@
-import { useState } from "react";
-import type { Dispatch, SetStateAction, FC } from "react";
+import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction, FC, ReactNode } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "../lib/popup/react-toastify.css";
 import { API_BASE_URL } from "../config";
-import { Settings } from "lucide-react";
+import { Bell, MapPin, Moon, RefreshCw, Settings, ShieldAlert, Volume2 } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
 // User interface
 export interface User {
@@ -14,6 +15,9 @@ export interface User {
   role: string;
   token: string;
   notifications?: boolean;
+  soundAlerts?: boolean;
+  autoRefresh?: boolean;
+  locationSharing?: boolean;
   darkMode?: boolean;
 }
 
@@ -24,10 +28,23 @@ interface UserSettingsProps {
 }
 
 const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
+  const { theme, setTheme } = useTheme();
+
   // Initialize state with the user's existing preferences.
   const [notifications, setNotifications] = useState(user.notifications ?? true);
-  const [darkMode] = useState(user.darkMode ?? false);
+  const [soundAlerts, setSoundAlerts] = useState(user.soundAlerts ?? true);
+  const [autoRefresh, setAutoRefresh] = useState(user.autoRefresh ?? true);
+  const [locationSharing, setLocationSharing] = useState(user.locationSharing ?? false);
+  const [darkMode, setDarkMode] = useState(user.darkMode ?? false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setNotifications(user.notifications ?? true);
+    setSoundAlerts(user.soundAlerts ?? true);
+    setAutoRefresh(user.autoRefresh ?? true);
+    setLocationSharing(user.locationSharing ?? false);
+    setDarkMode(user.darkMode ?? false);
+  }, [user]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -35,13 +52,12 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
       // Build the payload for the backend
       const payload = {
         notifications,
+        soundAlerts,
+        autoRefresh,
+        locationSharing,
         darkMode,
       };
 
-      // Call your backend API to update user settings
-
-
-      // ...
       const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: "PATCH",
         headers: {
@@ -61,10 +77,14 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
       const updatedUser = {
         ...user,
         notifications,
+        soundAlerts,
+        autoRefresh,
+        locationSharing,
         darkMode,
       };
 
       onUpdateUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
 
       toast.success("Settings saved successfully!");
     } catch (err: any) {
@@ -103,33 +123,69 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
                 </p>
               </div>
 
-              <div className="space-y-4">
-                {/* Notifications toggle */}
-                <div className="group flex items-center justify-between w-full p-5 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-300/60 dark:hover:border-blue-500/40 hover:bg-white dark:hover:bg-gray-900">
-                  <div>
-                    <span className="block text-base font-semibold text-gray-900 dark:text-gray-100">
-                      Enable Notifications
-                    </span>
-                    <span className="block mt-1 text-sm text-gray-600 dark:text-gray-400">
-                      Get alerts for updates and important activity.
-                    </span>
+              <div className="space-y-6">
+                <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Bell size={18} className="text-blue-600 dark:text-blue-400" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Alerts and Updates</h4>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
+                  <div className="space-y-4">
+                    <SettingToggle
+                      icon={<Bell size={18} />}
+                      title="Enable Notifications"
+                      description="Get alerts for updates and important activity."
                       checked={notifications}
-                      onChange={() => setNotifications(!notifications)}
-                      className="sr-only peer"
+                      onChange={() => setNotifications((value) => !value)}
                     />
-                    <div className="relative w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
-                  </label>
+                    <SettingToggle
+                      icon={<Volume2 size={18} />}
+                      title="Sound Alerts"
+                      description="Play a sound when a new alert or update comes in."
+                      checked={soundAlerts}
+                      onChange={() => setSoundAlerts((value) => !value)}
+                    />
+                    <SettingToggle
+                      icon={<RefreshCw size={18} />}
+                      title="Auto Refresh"
+                      description="Refresh live ranks and incidents automatically."
+                      checked={autoRefresh}
+                      onChange={() => setAutoRefresh((value) => !value)}
+                    />
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 p-5">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Theme</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Dark mode is handled globally from the main app controls.
-                  </p>
+                <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ShieldAlert size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Privacy and Location</h4>
+                  </div>
+                  <div className="space-y-4">
+                    <SettingToggle
+                      icon={<MapPin size={18} />}
+                      title="Share Location"
+                      description="Use your current area to improve local results and map focus."
+                      checked={locationSharing}
+                      onChange={() => setLocationSharing((value) => !value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Moon size={18} className="text-emerald-600 dark:text-emerald-400" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Appearance</h4>
+                  </div>
+                    <SettingToggle
+                      icon={<Moon size={18} />}
+                      title="Dark Mode"
+                      description={`Currently ${theme === "dark" ? "enabled" : "disabled"} for this app.`}
+                      checked={darkMode}
+                      onChange={() => {
+                        const nextValue = !darkMode;
+                        setDarkMode(nextValue);
+                        setTheme(nextValue ? "dark" : "light");
+                      }}
+                    />
                 </div>
               </div>
 
@@ -158,6 +214,10 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
                     <p className="text-sm text-blue-100">Email</p>
                     <p className="text-lg font-semibold break-words">{user.email}</p>
                   </div>
+                  <div className="rounded-2xl bg-white/10 backdrop-blur-sm p-4">
+                    <p className="text-sm text-blue-100">Theme</p>
+                    <p className="text-lg font-semibold capitalize">{theme}</p>
+                  </div>
                 </div>
               </div>
 
@@ -165,7 +225,8 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">What this affects</h4>
                 <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                   <li>- Notification alerts for account activity.</li>
-                  <li>- How quickly you hear about important TaxiPoint updates.</li>
+                  <li>- Sound feedback for important app events.</li>
+                  <li>- Live data refreshes and location-aware experience.</li>
                   <li>- Your preferences stay tied to this account after saving.</li>
                 </ul>
               </div>
@@ -178,3 +239,31 @@ const UserSettings: FC<UserSettingsProps> = ({ user, onUpdateUser }) => {
 };
 
 export default UserSettings;
+
+interface SettingToggleProps {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+}
+
+const SettingToggle: FC<SettingToggleProps> = ({ icon, title, description, checked, onChange }) => {
+  return (
+    <div className="group flex items-center justify-between gap-4 w-full p-4 bg-white dark:bg-gray-950 rounded-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-300/60 dark:hover:border-blue-500/40">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          {icon}
+        </div>
+        <div>
+          <span className="block text-base font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+          <span className="block mt-1 text-sm text-gray-600 dark:text-gray-400">{description}</span>
+        </div>
+      </div>
+      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+        <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
+        <div className="relative w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+      </label>
+    </div>
+  );
+};

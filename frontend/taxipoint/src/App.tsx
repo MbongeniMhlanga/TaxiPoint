@@ -30,6 +30,11 @@ export interface User {
   email: string;
   role: string;
   token: string;
+  notifications?: boolean;
+  soundAlerts?: boolean;
+  autoRefresh?: boolean;
+  locationSharing?: boolean;
+  darkMode?: boolean;
 }
 
 // Auth helper
@@ -82,6 +87,11 @@ const MainApp: React.FC = () => {
       email: userData.email,
       role: userData.role,
       token: userData.token,
+      notifications: userData.notifications ?? true,
+      soundAlerts: userData.soundAlerts ?? true,
+      autoRefresh: userData.autoRefresh ?? true,
+      locationSharing: userData.locationSharing ?? false,
+      darkMode: userData.darkMode ?? false,
     };
     setUser(fullUser);
     localStorage.setItem("user", JSON.stringify(fullUser));
