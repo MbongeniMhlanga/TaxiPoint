@@ -248,12 +248,17 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
       popupAnchor: [0, -44],
     });
 
+  // Helper to conditionally add Authorization header
+  const getAuthHeaders = () => {
+    return user.role === 'ROLE_GUEST' ? {} : { Authorization: `Bearer ${user.token}` };
+  };
+
   // --- Fetch Nearby Taxi Ranks ---
   const fetchNearbyTaxiRanks = async (lat: number, lng: number, radius: number = 50000) => {
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/taxi-ranks/nearby?lat=${lat}&lng=${lng}&radius_m=${radius}`,
-        { headers: { Authorization: `Bearer ${user.token}` } }
+        { headers: getAuthHeaders() }
       );
       if (!res.ok) throw new Error('Failed to fetch nearby taxi ranks');
       const data = await res.json();
@@ -282,12 +287,14 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
     onUpdateUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
 
+    if (user.role === 'ROLE_GUEST') return;
+
     try {
       await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ locationSharing: nextValue }),
       });
@@ -300,7 +307,7 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const fetchTaxiRanks = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
       });
       const data = await res.json();
       setTaxiRanks(data.content || []);
@@ -326,7 +333,7 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
     }
     try {
       const res = await fetch(`${API_BASE_URL}/api/taxi-ranks/search?query=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
       });
 
       if (!res.ok) {
@@ -360,7 +367,7 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const fetchIncidents = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/incidents`, {
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) {
         throw new Error('Failed to fetch incidents');
@@ -408,7 +415,7 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${user.token}`,
+              ...getAuthHeaders(),
             },
             body: JSON.stringify({
               description: tempIncident.description,
@@ -593,6 +600,8 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
   };
 
 useEffect(() => {
+  if (user.role === 'ROLE_GUEST') return;
+
   const socket = new SockJS(`${API_BASE_URL}/ws`);
   const stompClient = new Client({
     webSocketFactory: () => socket,

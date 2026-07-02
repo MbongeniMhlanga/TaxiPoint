@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/reset-password/validate").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/taxi-ranks").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/taxi-ranks/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/incidents").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/incidents/*/resolved").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/submissions").authenticated()
