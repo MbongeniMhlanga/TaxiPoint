@@ -246,7 +246,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       )}
 
       {isGuest && (
-        <div className="fixed top-4 right-4 z-[3000] flex items-center gap-3">
+        <div className="fixed bottom-4 left-4 z-[3000] flex items-center gap-3">
           <button
             onClick={toggleTheme}
             className="p-3 rounded-full bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
