@@ -321,14 +321,16 @@ const TaxiRanks: React.FC<TaxiRanksProps> = ({ user }) => {
                                     </div>
                                 )}
 
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCorrectionOpen(true)}
-                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/20 transition"
-                                >
-                                    <AlertTriangle size={18} />
-                                    Suggest a correction
-                                </button>
+                                {user.role !== 'ROLE_GUEST' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCorrectionOpen(true)}
+                                        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/20 transition"
+                                    >
+                                        <AlertTriangle size={18} />
+                                        Suggest a correction
+                                    </button>
+                                )}
 
                                 {/* Navigate Button */}
                                 <button

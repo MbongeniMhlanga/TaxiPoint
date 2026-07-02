@@ -88,6 +88,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
+  const handleGuestLogin = () => {
+    const guestUser = {
+      id: Math.floor(Math.random() * 100000),
+      name: "Guest",
+      surname: "User",
+      email: "guest@taxipoint.local",
+      role: "ROLE_GUEST",
+      token: "guest-token-mock",
+      notifications: false,
+      soundAlerts: false,
+      autoRefresh: true,
+      locationSharing: false,
+      darkMode: false,
+      locationPromptSeen: false,
+    };
+    toast.success("Logged in as Guest!");
+    onLogin(guestUser);
+    navigate("/landing", { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex bg-white dark:bg-gray-900 transition-colors duration-300">
 
@@ -234,6 +254,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <FaFacebook size={20} color="#1877F2" /> Facebook
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            className="w-full py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            Continue as Guest
+          </button>
 
           <p className="text-center text-gray-600 dark:text-gray-400">
             Don't have an account?{" "}
