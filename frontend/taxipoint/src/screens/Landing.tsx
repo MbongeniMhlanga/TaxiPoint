@@ -249,7 +249,7 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
     });
 
   // Helper to conditionally add Authorization header
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): Record<string, string> => {
     return user.role === 'ROLE_GUEST' ? {} : { Authorization: `Bearer ${user.token}` };
   };
 
