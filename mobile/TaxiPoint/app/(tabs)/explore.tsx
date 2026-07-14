@@ -370,14 +370,14 @@ export default function ExploreScreen() {
           sessionToken: placeAutocompleteSessionTokenRef.current,
           locationBias: userLocation
             ? {
-                circle: {
-                  center: {
-                    latitude: userLocation.latitude,
-                    longitude: userLocation.longitude,
-                  },
-                  radius: 50000,
+              circle: {
+                center: {
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
                 },
-              }
+                radius: 50000,
+              },
+            }
             : undefined,
         }),
       });
@@ -1105,15 +1105,15 @@ export default function ExploreScreen() {
             )}
 
             {filteredSuggestions.map((rank) => (
-                <TouchableOpacity
-                  key={rank.id}
-                  onPress={() => {
-                    suppressAutocompleteRef.current = true;
-                    setSearchQuery(rank.name);
-                    setDisplayedTaxiRanks([rank]);
-                    setSelectedRank(rank);
-                    setShowSearchResults(false);
-                    setPlaceSuggestions([]);
+              <TouchableOpacity
+                key={rank.id}
+                onPress={() => {
+                  suppressAutocompleteRef.current = true;
+                  setSearchQuery(rank.name);
+                  setDisplayedTaxiRanks([rank]);
+                  setSelectedRank(rank);
+                  setShowSearchResults(false);
+                  setPlaceSuggestions([]);
                   if (mapRef.current) {
                     mapRef.current.animateToRegion({
                       latitude: rank.latitude,

@@ -46,11 +46,17 @@ const ProtectedRoute: React.FC<{
   user: User | null;
   children: ReactElement | null;
   requiredRole?: string;
-}> = ({ user, children, requiredRole }) => {
+  allowGuest?: boolean;
+}> = ({ user, children, requiredRole, allowGuest = false }) => {
   const location = useLocation();
 
   if (!isAuthenticated(user)) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user?.role === "ROLE_GUEST" && !allowGuest) {
+    toast.warning("Guest users do not have access to this page! Please register or log in.");
+    return <Navigate to="/landing" replace />;
   }
 
   if (requiredRole && user?.role !== requiredRole) {
@@ -171,7 +177,7 @@ const MainApp: React.FC = () => {
         <Route
           path="/landing"
           element={
-            <ProtectedRoute user={user}>
+            <ProtectedRoute user={user} allowGuest={true}>
               <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
                 <Landing user={user as User} onLogout={handleLogout} onUpdateUser={setUser} />
               </MainLayout>
