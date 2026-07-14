@@ -72,28 +72,6 @@ const MapController = ({ selectedLocation }: { selectedLocation: { lat: number; 
   return null;
 };
 
-// Component for the custom zoom controls
-const ZoomControls = () => {
-  const map = useMap();
-
-  return (
-    <div className="absolute top-24 right-4 z-[1000] flex flex-col space-y-2">
-      <button
-        onClick={() => map.zoomIn()}
-        className="bg-white dark:bg-gray-800 p-2.5 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
-      >
-        <Plus size={20} />
-      </button>
-      <button
-        onClick={() => map.zoomOut()}
-        className="bg-white dark:bg-gray-800 p-2.5 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
-      >
-        <span className="text-xl font-bold leading-none">-</span>
-      </button>
-    </div>
-  );
-};
-
 const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const { theme } = useTheme();
   const locationEnabled = user.locationSharing ?? false;
@@ -750,9 +728,6 @@ useEffect(() => {
             </Popup>
           </Marker>
         )}
-
-        {/* Custom Zoom Controls */}
-        <ZoomControls />
 
         {/* Taxi Ranks */}
         {taxiRanks.map((rank) => (
