@@ -65,7 +65,7 @@ const ProtectedRoute: React.FC<{
 const MainApp: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default to true (open)
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -209,7 +209,7 @@ const MainApp: React.FC = () => {
               ? user.role === "ROLE_ADMIN"
                 ? <Navigate to="/admin" replace />
                 : <Navigate to="/landing" replace />
-              : <Navigate to="/login" replace />
+                : <Navigate to="/login" replace />
           }
         />
 

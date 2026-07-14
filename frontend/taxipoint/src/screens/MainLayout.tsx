@@ -59,7 +59,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     <div className="relative h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
 
       {!isGuest && (
-        <div className="hidden md:flex flex-col fixed left-4 top-4 bottom-4 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 transition-all duration-300">
+        <div className={`hidden md:flex flex-col fixed left-4 top-4 bottom-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 transition-all duration-300 overflow-hidden ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full border-none shadow-none'}`}>
           {/* Logo Area */}
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -71,6 +71,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 <span className="text-xs text-gray-500 font-medium">Commuter</span>
               </div>
             </div>
+            {/* Collapse button */}
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              title="Collapse Sidebar"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           {/* Navigation Items */}
@@ -144,6 +152,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           </div>
         </div>
       )}
+
 
       {!isGuest && (
         <div className="md:hidden">
@@ -278,8 +287,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         onCancel={() => setShowLogoutConfirm(false)}
       />
 
+      {/* Desktop Sidebar Toggle Button (when collapsed) */}
+      {!isGuest && !isSidebarOpen && (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="hidden md:flex fixed top-8 left-8 z-[1005] bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
+          title="Expand Sidebar"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
       {/* Main Content Area */}
-      <div className={`h-full w-full ${isGuest ? 'p-0' : 'pt-16 md:pt-0 md:pl-72'} relative transition-all duration-300`}>
+      <div className={`h-full w-full ${isGuest ? 'p-0' : `pt-16 md:pt-0 ${isSidebarOpen ? 'md:pl-72' : 'md:pl-4'}`} relative transition-all duration-300`}>
         <div className="h-full w-full overflow-hidden p-4 md:p-4">
           <div className="h-full w-full bg-white dark:bg-gray-800 md:rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative transition-colors duration-300">
             {children}
