@@ -106,7 +106,7 @@ const Register: React.FC = () => {
 
             {/* RIGHT SIDE: Form */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16 h-full overflow-y-auto">
-                <div className="w-full max-w-md space-y-8 my-auto">
+                <div className="w-full max-w-2xl space-y-8 my-auto">
 
                     <div className="text-center lg:text-left">
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h2>

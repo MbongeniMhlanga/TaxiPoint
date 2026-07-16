@@ -136,7 +136,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       {/* RIGHT SIDE: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
-        <div className="w-full max-w-md space-y-8">
+        <div className="w-full max-w-2xl space-y-8">
 
           <div className="text-center lg:text-left">
             <motion.h2
