@@ -5,8 +5,6 @@ import { toast } from "react-toastify";
 import "../../lib/popup/react-toastify.css";
 import ThemeToggle from "../../components/ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
-import { FaFacebook } from "react-icons/fa";
 import { API_BASE_URL } from "../../config";
 import { motion } from "framer-motion";
 
@@ -237,6 +235,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
 
+          {/*
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
@@ -254,6 +253,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <FaFacebook size={20} color="#1877F2" /> Facebook
             </button>
           </div>
+          */}
 
           <button
             type="button"

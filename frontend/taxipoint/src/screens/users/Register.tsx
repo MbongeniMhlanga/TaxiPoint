@@ -207,6 +207,7 @@ const Register: React.FC = () => {
                         </button>
                     </form>
 
+                    {/*
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
@@ -224,6 +225,7 @@ const Register: React.FC = () => {
                             <FaFacebook size={20} color="#1877F2" /> Facebook
                         </button>
                     </div>
+                    */}
 
                     <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
                         Already have an account?{" "}
