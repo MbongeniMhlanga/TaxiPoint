@@ -7,8 +7,9 @@ export interface AssistantMessage {
   createdAt: string;
 }
 
-// Keep this enabled until the Spring Boot Gemini endpoint is available.
-const USE_MOCK_ASSISTANT = true;
+// Keep mock replies enabled locally until the Gemini key is configured on Render.
+// Set VITE_USE_MOCK_ASSISTANT=false in the frontend deployment environment to use the backend.
+const USE_MOCK_ASSISTANT = import.meta.env.VITE_USE_MOCK_ASSISTANT !== "false";
 
 const mockReply = (prompt: string) => {
   const question = prompt.toLowerCase();
