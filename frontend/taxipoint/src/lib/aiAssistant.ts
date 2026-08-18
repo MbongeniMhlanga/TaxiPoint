@@ -7,9 +7,9 @@ export interface AssistantMessage {
   createdAt: string;
 }
 
-// Keep mock replies enabled locally until the Gemini key is configured on Render.
-// Set VITE_USE_MOCK_ASSISTANT=false in the frontend deployment environment to use the backend.
-const USE_MOCK_ASSISTANT = import.meta.env.VITE_USE_MOCK_ASSISTANT !== "false";
+// The real database-backed assistant is the default. Set VITE_USE_MOCK_ASSISTANT=true
+// only when you intentionally want to preview the frontend without the backend.
+const USE_MOCK_ASSISTANT = import.meta.env.VITE_USE_MOCK_ASSISTANT === "true";
 
 const mockReply = (prompt: string) => {
   const question = prompt.toLowerCase();
