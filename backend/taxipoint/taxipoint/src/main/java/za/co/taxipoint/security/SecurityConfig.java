@@ -35,7 +35,13 @@ public class SecurityConfig {
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"))
                         .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
                 )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) ->
+                                response.sendError(org.springframework.http.HttpStatus.UNAUTHORIZED.value(), "Authentication required"))
+                )
                 .authorizeHttpRequests(authorize -> authorize
+                        // Browsers send unauthenticated CORS preflight requests before cross-origin POSTs.
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // 1. PUBLIC: Anyone can use these
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/register").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/login").permitAll()
