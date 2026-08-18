@@ -35,11 +35,24 @@ export async function askAssistant(prompt: string, history: AssistantMessage[], 
     return mockReply(prompt);
   }
 
+  let storedToken = "";
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    storedToken = typeof storedUser?.token === "string" ? storedUser.token : "";
+  } catch {
+    // The in-memory token will still be used below if available.
+  }
+
+  const authToken = token || storedToken;
+  if (!authToken) {
+    throw new Error("Your login session token is missing. Please log in again.");
+  }
+
   const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify({
       message: prompt,
