@@ -5,6 +5,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import za.co.taxipoint.dto.AiChatMessage;
 import za.co.taxipoint.dto.AiChatRequest;
 
@@ -15,6 +17,8 @@ import java.util.Map;
 
 @Service
 public class GeminiAssistantService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GeminiAssistantService.class);
 
     private static final int MAX_MESSAGE_LENGTH = 2000;
     private static final int MAX_HISTORY_MESSAGES = 12;
@@ -35,6 +39,7 @@ public class GeminiAssistantService {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
         this.endpoint = apiUrl.replaceAll("/$", "") + "/models/" + model + ":generateContent";
+        logger.info("Gemini assistant configuration loaded: apiKeyPresent={}, model={}", !this.apiKey.isBlank(), this.model);
     }
 
     public String chat(AiChatRequest request) {

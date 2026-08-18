@@ -48,7 +48,14 @@ export async function askAssistant(prompt: string, history: AssistantMessage[], 
   });
 
   if (!response.ok) {
-    throw new Error("The assistant is temporarily unavailable.");
+    let detail = "The assistant is temporarily unavailable.";
+    try {
+      const error = await response.json();
+      detail = error.message ?? error.error ?? detail;
+    } catch {
+      // Keep the friendly fallback when the backend does not return JSON.
+    }
+    throw new Error(`${detail} (HTTP ${response.status})`);
   }
 
   const data = await response.json();
