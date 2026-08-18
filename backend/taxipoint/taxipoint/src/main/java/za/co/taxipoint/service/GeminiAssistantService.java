@@ -88,6 +88,7 @@ public class GeminiAssistantService {
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (Exception exception) {
+            logger.error("Gemini assistant request failed: {}", exception.getMessage(), exception);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI assistant is temporarily unavailable.", exception);
         }
     }
