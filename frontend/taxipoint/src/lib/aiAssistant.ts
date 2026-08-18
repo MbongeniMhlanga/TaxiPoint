@@ -61,14 +61,23 @@ export async function askAssistant(prompt: string, history: AssistantMessage[], 
   });
 
   if (!response.ok) {
-    let detail = "The assistant is temporarily unavailable.";
+    let detail = "Sorry, I couldn’t catch that. Please try again.";
     try {
       const error = await response.json();
-      detail = error.message ?? error.error ?? detail;
+      console.error("Assistant request failed", response.status, error);
     } catch {
-      // Keep the friendly fallback when the backend does not return JSON.
+      console.error("Assistant request failed", response.status);
     }
-    throw new Error(`${detail} (HTTP ${response.status})`);
+
+    if (response.status === 401 || response.status === 403) {
+      detail = "Your session has expired. Please log in again.";
+    } else if (response.status === 429) {
+      detail = "The assistant is busy right now. Please try again shortly.";
+    } else if (response.status >= 500) {
+      detail = "The assistant is temporarily unavailable. Please try again shortly.";
+    }
+
+    throw new Error(detail);
   }
 
   const data = await response.json();
