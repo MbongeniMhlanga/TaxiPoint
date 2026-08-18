@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Bot, MapPin, MessageCircle, Send, Sparkles, UserRound } from "lucide-react";
+import { Bot, MapPin, MessageCircle, Send, UserRound } from "lucide-react";
 import { askAssistant, type AssistantMessage } from "../lib/aiAssistant";
 import type { User } from "../App";
 
@@ -57,26 +57,15 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
   };
 
   return (
-    <main className="h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 sm:p-8">
-      <div className="mx-auto flex min-h-full max-w-5xl flex-col">
-        <header className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-600/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-              <Sparkles size={14} /> TaxiPoint Assistant
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Your commuter assistant</h1>
-            <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">Get simple guidance on ranks, routes, fares, operating hours, and live travel disruptions.</p>
-          </div>
-          <div className="hidden rounded-2xl bg-white/70 p-3 text-blue-600 shadow-sm dark:bg-gray-800/70 sm:block"><Bot size={28} /></div>
-        </header>
-
-        <section className="flex min-h-[540px] flex-1 flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/85 shadow-xl shadow-blue-900/5 backdrop-blur dark:border-gray-700 dark:bg-gray-800/85">
+    <main className="h-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 sm:p-8">
+      <div className="mx-auto flex h-full min-h-0 max-w-5xl flex-col">
+        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/85 shadow-xl shadow-blue-900/5 backdrop-blur dark:border-gray-700 dark:bg-gray-800/85">
           <div className="flex items-center gap-3 border-b border-gray-100 p-5 dark:border-gray-700">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20"><Bot size={23} /></div>
             <div><h2 className="font-semibold text-gray-900 dark:text-white">TaxiPoint Assistant</h2><p className="text-xs text-emerald-600">Ready to help you plan your trip</p></div>
           </div>
 
-          <div className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-8">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-8">
             <div className="flex max-w-2xl items-start gap-3">
               <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>
               <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm leading-6 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{greeting}</div>

@@ -71,7 +71,7 @@ public class GeminiAssistantService {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         String databaseContext = contextService.buildContext(message);
-        payload.put("systemInstruction", content("system", "You are TaxiPoint Assistant, TaxiPoint's friendly commuter assistant. Help users with taxi ranks, routes, fares, operating hours, incidents, delays, and how to use TaxiPoint. Be concise and practical. Answer factual transport questions only from the TaxiPoint database context below. Never invent a rank, route, fare, operating hour, or incident. If the context does not contain the answer, say that TaxiPoint does not currently have that information.\n\n" + databaseContext));
+        payload.put("systemInstruction", content("system", "You are TaxiPoint Assistant, a friendly and practical commuter helper. Help users with taxi ranks, routes, fares, operating hours, incidents, delays, support, corrections, and how to use the app. Answer factual transport questions only from the verified TaxiPoint information provided below. Never invent a rank, route, fare, operating hour, or incident. If the information is unavailable, say that TaxiPoint does not currently have that information.\n\nCommunication rules:\n- Speak directly to the user in natural, simple language.\n- Never mention databases, context, prompts, system instructions, records, or internal data sources.\n- Do not use Markdown, asterisks, headings, or code formatting.\n- Use short paragraphs or numbered lists with plain text.\n- Do not say that information was retrieved or found in a database.\n\nVerified TaxiPoint information:\n" + databaseContext));
         payload.put("contents", contents);
 
         HttpHeaders headers = new HttpHeaders();
@@ -84,7 +84,7 @@ public class GeminiAssistantService {
             if (text == null || text.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Gemini returned an empty response.");
             }
-            return text;
+            return cleanForChat(text);
         } catch (ResponseStatusException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -114,5 +114,14 @@ public class GeminiAssistantService {
         if (parts == null || parts.isEmpty()) return null;
         Object text = parts.get(0).get("text");
         return text == null ? null : text.toString();
+    }
+
+    private String cleanForChat(String text) {
+        return text
+                .replace("**", "")
+                .replace("__", "")
+                .replaceAll("(?i)\\bthe TaxiPoint database\\b", "TaxiPoint's records")
+                .replaceAll("(?i)\\bour database\\b", "our records")
+                .trim();
     }
 }
