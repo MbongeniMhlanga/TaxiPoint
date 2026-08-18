@@ -62,7 +62,7 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-600/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-              <Sparkles size={14} /> TaxiPoint AI
+              <Sparkles size={14} /> TaxiPoint Assistant
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Your commuter assistant</h1>
             <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">Get simple guidance on ranks, routes, fares, operating hours, and live travel disruptions.</p>

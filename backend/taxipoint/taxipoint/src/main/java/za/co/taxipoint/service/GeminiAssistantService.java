@@ -20,15 +20,18 @@ public class GeminiAssistantService {
     private static final int MAX_HISTORY_MESSAGES = 12;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final AiContextService contextService;
     private final String apiKey;
     private final String model;
     private final String endpoint;
 
     public GeminiAssistantService(
+            AiContextService contextService,
             @Value("${GEMINI_API_KEY:}") String apiKey,
             @Value("${GEMINI_MODEL:gemini-2.5-flash}") String model,
             @Value("${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta}") String apiUrl
     ) {
+        this.contextService = contextService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
         this.endpoint = apiUrl.replaceAll("/$", "") + "/models/" + model + ":generateContent";
@@ -62,7 +65,8 @@ public class GeminiAssistantService {
         }
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("systemInstruction", content("system", "You are Will, TaxiPoint's friendly commuter assistant. Help users with taxi ranks, routes, fares, operating hours, incidents, delays, and how to use TaxiPoint. Be concise and practical. Do not invent live transport information. If data is unavailable, say so clearly."));
+        String databaseContext = contextService.buildContext(message);
+        payload.put("systemInstruction", content("system", "You are TaxiPoint Assistant, TaxiPoint's friendly commuter assistant. Help users with taxi ranks, routes, fares, operating hours, incidents, delays, and how to use TaxiPoint. Be concise and practical. Answer factual transport questions only from the TaxiPoint database context below. Never invent a rank, route, fare, operating hour, or incident. If the context does not contain the answer, say that TaxiPoint does not currently have that information.\n\n" + databaseContext));
         payload.put("contents", contents);
 
         HttpHeaders headers = new HttpHeaders();
