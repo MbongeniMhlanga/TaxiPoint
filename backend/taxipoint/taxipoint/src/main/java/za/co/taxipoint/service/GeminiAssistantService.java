@@ -27,9 +27,9 @@ public class GeminiAssistantService {
 
     public GeminiAssistantService(
             AiContextService contextService,
-            @Value("${GEMINI_API_KEY:}") String apiKey,
-            @Value("${GEMINI_MODEL:gemini-2.5-flash}") String model,
-            @Value("${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta}") String apiUrl
+            @Value("${gemini.api-key:}") String apiKey,
+            @Value("${gemini.model:gemini-2.5-flash}") String model,
+            @Value("${gemini.api-url:https://generativelanguage.googleapis.com/v1beta}") String apiUrl
     ) {
         this.contextService = contextService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
