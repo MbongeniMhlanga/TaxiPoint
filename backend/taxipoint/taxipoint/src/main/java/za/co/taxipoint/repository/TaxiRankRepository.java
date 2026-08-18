@@ -13,6 +13,9 @@ import java.util.UUID;
 
 public interface TaxiRankRepository extends JpaRepository<TaxiRank, UUID> {
 
+    @Query("SELECT COUNT(t) FROM TaxiRank t WHERE COALESCE(t.active, true) = true")
+    long countActive();
+
     @Query("SELECT t FROM TaxiRank t WHERE COALESCE(t.active, true) = true")
     Page<TaxiRank> findActive(Pageable pageable);
 

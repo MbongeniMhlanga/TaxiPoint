@@ -20,12 +20,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiContextService {
 
-    private static final int MAX_RANKS = 20;
-    private static final int MAX_INCIDENTS = 20;
+    private static final int MAX_RANKS = 100;
+    private static final int MAX_INCIDENTS = 100;
     private static final Set<String> STOP_WORDS = Set.of(
             "the", "and", "for", "are", "near", "from", "with", "what", "where", "which", "how",
             "does", "there", "this", "that", "have", "any", "about", "please", "find", "show", "tell",
-            "taxi", "rank", "ranks", "route", "routes", "fare", "fares", "price", "prices", "cost", "costs"
+            "taxi", "rank", "ranks", "route", "routes", "fare", "fares", "price", "prices", "cost", "costs",
+            "many", "much", "number", "trip", "current", "currently"
     );
 
     private final TaxiRankRepository taxiRankRepository;
@@ -40,8 +41,10 @@ public class AiContextService {
 
         StringBuilder context = new StringBuilder();
         context.append("This context was retrieved from the TaxiPoint database. It is the source of truth.\n\n");
+        context.append("TOTAL ACTIVE TAXI RANKS: ").append(taxiRankRepository.countActive()).append("\n\n");
         appendRanks(context, ranks);
         appendIncidents(context, incidents);
+        appendAppGuide(context);
         return context.toString();
     }
 
@@ -63,6 +66,11 @@ public class AiContextService {
                 }
             });
             if (matches.size() >= MAX_RANKS) break;
+        }
+        // For broad questions such as rank counts, include a representative set of
+        // active records even when the extracted words do not match a location.
+        if (matches.isEmpty()) {
+            return taxiRankRepository.findActive(PageRequest.of(0, MAX_RANKS)).getContent();
         }
         return matches;
     }
@@ -86,6 +94,13 @@ public class AiContextService {
                         .append("): ").append(rank.getRouteFares());
             }
             if (rank.getHours() != null && !rank.getHours().isEmpty()) context.append(" | hours: ").append(rank.getHours());
+            if (rank.getDescription() != null) context.append(" | description: ").append(rank.getDescription());
+            if (rank.getPhone() != null) context.append(" | phone: ").append(rank.getPhone());
+            if (rank.getFacilities() != null && !rank.getFacilities().isEmpty()) context.append(" | facilities: ").append(rank.getFacilities());
+            if (rank.getLocation() != null) {
+                context.append(" | coordinates: ").append(rank.getLocation().getY()).append(", ").append(rank.getLocation().getX());
+            }
+            if (rank.getUpdatedAt() != null) context.append(" | last updated: ").append(rank.getUpdatedAt());
             context.append("\n");
         }
     }
@@ -105,5 +120,16 @@ public class AiContextService {
             }
             context.append("\n");
         }
+    }
+
+    private void appendAppGuide(StringBuilder context) {
+        context.append("\nTAXIPOINT APP GUIDE (verified product information):\n")
+                .append("- Support: users can contact TaxiPoint Support at taxipoint25@gmail.com. Include the account email, subject, and a description of the issue.\n")
+                .append("- Home: use the map to explore taxi ranks, view rank details, search ranks, and review reported incidents.\n")
+                .append("- Taxi rank details: select a rank to view its address, routes, fares, operating hours, phone number, facilities, and location when available.\n")
+                .append("- Corrections: open a taxi rank, choose the correction option, describe the inaccurate or missing information, and submit it. Users can view submitted corrections under Corrections; administrators review them.\n")
+                .append("- Profile: update personal account details. Settings contains preferences such as notifications, sound alerts, automatic refresh, location sharing, and dark mode.\n")
+                .append("- Incidents: users can report delays, safety concerns, and route disruptions from the map. Unresolved incidents are shown as current alerts; users should verify urgent safety information independently.\n")
+                .append("- Assistant limitations: never claim a route, fare, rank, incident, opening time, or contact detail unless it appears in the database context or this verified app guide.\n");
     }
 }
