@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // Browsers send unauthenticated CORS preflight requests before cross-origin POSTs.
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         // 1. PUBLIC: Anyone can use these
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/register").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users/login").permitAll()
