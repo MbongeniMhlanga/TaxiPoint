@@ -21,6 +21,7 @@ import About from "./screens/About";
 import Support from "./screens/Support";
 import TaxiRanks from "./screens/TaxiRanks";
 import CorrectionHistory from "./screens/CorrectionHistory";
+import CommuterAssistant from "./screens/CommuterAssistant";
 
 // User interface
 export interface User {
@@ -153,6 +154,14 @@ const MainApp: React.FC = () => {
           <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
             <Support user={user as User} />
           </MainLayout>
+        } />
+
+        <Route path="/assistant" element={
+          <ProtectedRoute user={user}>
+            <MainLayout user={user as User} onLogout={handleLogout} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}>
+              <CommuterAssistant user={user as User} />
+            </MainLayout>
+          </ProtectedRoute>
         } />
 
         <Route

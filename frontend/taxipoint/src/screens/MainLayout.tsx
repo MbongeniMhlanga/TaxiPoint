@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Menu, X, Sun, Moon, LayoutDashboard, Map as MapIcon, Info, HelpCircle, Settings, User as UserIcon, History } from 'lucide-react';
+import { Menu, X, Sun, Moon, LayoutDashboard, Map as MapIcon, Info, HelpCircle, Settings, User as UserIcon, History, Bot } from 'lucide-react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -40,6 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     { name: 'Corrections', icon: <History size={20} />, path: '/corrections' },
     { name: 'About', icon: <Info size={20} />, path: '/about' },
     { name: 'Support', icon: <HelpCircle size={20} />, path: '/support' },
+    { name: 'AI Assistant', icon: <Bot size={20} />, path: '/assistant' },
     ...(user.role === 'ROLE_ADMIN' ? [{ name: 'Admin', icon: <LayoutDashboard size={20} />, path: '/admin' }] : []),
   ];
 
