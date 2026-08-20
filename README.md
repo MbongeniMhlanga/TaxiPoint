@@ -42,6 +42,7 @@ TaxiPoint is a real-time, community-driven transport intelligence platform desig
 - Enable real-time incident reporting
 - Support crowdsourced data correction with moderation workflows
 - Deliver live updates via WebSockets
+- Provide a database-grounded AI commuter assistant
 
 The platform consists of:
 
@@ -85,6 +86,18 @@ The platform consists of:
 - Role-based access control (RBAC)
 - Secure password reset via token system
 
+### 3.5 TaxiPoint Assistant
+
+TaxiPoint Assistant is an AI commuter support experience available in the web application. It helps users with:
+
+- Taxi-rank discovery and route questions
+- Fares, operating hours, facilities, addresses, and contact details
+- Current unresolved incidents and delays
+- Navigating and using the TaxiPoint application
+- Contacting support and submitting data corrections
+
+The assistant is grounded in TaxiPoint's PostgreSQL data before each Gemini request. It receives relevant active taxi-rank records, unresolved incidents, and verified application guidance. It is instructed not to invent transport information and to clearly state when information is unavailable.
+
 ---
 
 ## 4. System Architecture
@@ -101,6 +114,20 @@ Service Layer (Business Logic)
 Persistence Layer (JPA)
         |
 PostgreSQL + PostGIS
+```
+
+AI assistant flow:
+
+```text
+User question
+      |
+POST /api/ai/chat
+      |
+Taxi-rank and incident context retrieval
+      |
+Gemini API (server-side)
+      |
+Grounded commuter response
 ```
 
 Real-time updates:
@@ -122,6 +149,7 @@ Client <-> WebSocket Gateway (STOMP / SockJS)
 | Realtime | WebSockets (STOMP, SockJS) |
 | Messaging | Java Mail, SendGrid |
 | Auth | JWT |
+| AI | Google Gemini API |
 
 ---
 
@@ -235,6 +263,23 @@ npx expo start
 - The mobile app points to the deployed backend and websocket URL in `mobile/TaxiPoint/config.ts`
 - If you want to run locally, update those URLs before starting the apps
 
+### AI configuration
+
+The Gemini API key must only be configured on the backend. Never expose it in the web or mobile applications.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+The assistant endpoint is:
+
+```text
+POST /api/ai/chat
+```
+
+The endpoint retrieves relevant TaxiPoint data before sending the request to Gemini. `GEMINI_MODEL` is optional; the configured default can be overridden through the environment.
+
 ---
 
 ## 10. Future Improvements
@@ -259,6 +304,5 @@ It demonstrates:
 - Production-grade backend practices
 
 ---
-
 
 
