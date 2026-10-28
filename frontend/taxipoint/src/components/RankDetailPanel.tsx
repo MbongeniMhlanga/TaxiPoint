@@ -29,9 +29,11 @@ interface RankDetailPanelProps {
   user: { token: string; role?: string } | null;
   onClose: () => void;
   onNavigate: (rank: TaxiRank) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (rank: TaxiRank) => void;
 }
 
-const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, user, onClose, onNavigate }) => {
+const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, user, onClose, onNavigate, isFavorite, onToggleFavorite }) => {
   const [selectedDestination, setSelectedDestination] = React.useState<string | null>(null);
   const [isCorrectionOpen, setIsCorrectionOpen] = React.useState(false);
 
@@ -94,8 +96,14 @@ const RankDetailPanel: React.FC<RankDetailPanelProps> = ({ rank, user, onClose, 
             <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition text-gray-500">
               <Share2 size={20} />
             </button>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition text-red-500">
-              <Heart size={20} />
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(rank)}
+              className={`p-2 rounded-full transition ${isFavorite ? 'bg-red-50 text-red-500 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              aria-label={isFavorite ? 'Remove from favourites' : 'Save to favourites'}
+              title={isFavorite ? 'Remove from favourites' : 'Save to favourites'}
+            >
+              <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
             </button>
           </div>
         </div>

@@ -1,0 +1,32 @@
+package za.co.taxipoint.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+@Entity
+@Table(name = "user_favorites", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "taxi_rank_id"}))
+public class Favorite {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "taxi_rank_id", nullable = false)
+    private TaxiRank taxiRank;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+}

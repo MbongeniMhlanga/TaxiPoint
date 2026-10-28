@@ -87,8 +87,41 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
+  const [favoriteRankIds, setFavoriteRankIds] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const locationWatchRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (user.role === 'ROLE_GUEST') return;
+
+    fetch(`${API_BASE_URL}/api/favourites`, {
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((ranks: TaxiRank[]) => setFavoriteRankIds(ranks.map((rank) => rank.id)))
+      .catch(() => setFavoriteRankIds([]));
+  }, [user.role, user.token]);
+
+  const toggleFavorite = async (rank: TaxiRank) => {
+    const wasFavorite = favoriteRankIds.includes(rank.id);
+    setFavoriteRankIds((current) => wasFavorite
+      ? current.filter((id) => id !== rank.id)
+      : [...current, rank.id]);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/favourites/${rank.id}`, {
+        method: wasFavorite ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (!response.ok) throw new Error('Unable to update favourite');
+      toast.success(wasFavorite ? 'Removed from favourites' : 'Saved to favourites');
+    } catch {
+      setFavoriteRankIds((current) => wasFavorite
+        ? [...current, rank.id]
+        : current.filter((id) => id !== rank.id));
+      toast.error('Could not update favourites. Please try again.');
+    }
+  };
 
   // Leaflet default icon fix
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -937,6 +970,8 @@ useEffect(() => {
               const url = `https://www.google.com/maps/dir/?api=1&destination=${rank.latitude},${rank.longitude}`;
               window.open(url, '_blank');
             }}
+            isFavorite={favoriteRankIds.includes(selectedRank.id)}
+            onToggleFavorite={toggleFavorite}
           />
         )}
       </AnimatePresence>
