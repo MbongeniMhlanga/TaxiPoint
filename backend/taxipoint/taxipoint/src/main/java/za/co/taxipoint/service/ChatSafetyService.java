@@ -101,10 +101,7 @@ public class ChatSafetyService {
     public String normalizeUserText(String message) {
         if (message == null) return "";
 
-        String normalized = Normalizer.normalize(message, Normalizer.Form.NFKC)
-                .replace('а', 'a').replace('е', 'e').replace('і', 'i').replace('о', 'o').replace('р', 'p')
-                .replace('с', 'c').replace('х', 'x').replace('у', 'y').replace('ѕ', 's').replace('һ', 'h');
-        normalized = ZERO_WIDTH.matcher(normalized).replaceAll("");
+        String normalized = normalizeUnicode(message);
 
         for (Map.Entry<String, String> abbreviation : ABBREVIATIONS.entrySet()) {
             String expression = "(?i)(?<![a-z0-9])" + Pattern.quote(abbreviation.getKey()) + "(?![a-z0-9])";
@@ -137,12 +134,19 @@ public class ChatSafetyService {
     }
 
     private String normalizeForDetection(String message) {
-        String normalized = normalizeUserText(message)
+        String normalized = normalizeUnicode(message)
                 .toLowerCase(Locale.ROOT)
                 .replace('0', 'o').replace('1', 'i').replace('3', 'e')
                 .replace('4', 'a').replace('5', 's').replace('7', 't')
                 .replace('@', 'a').replace('$', 's');
         normalized = NON_ALPHANUMERIC.matcher(normalized).replaceAll(" ").trim();
         return REPEATED_LETTERS.matcher(normalized).replaceAll("$1$1");
+    }
+
+    private String normalizeUnicode(String message) {
+        String normalized = Normalizer.normalize(message, Normalizer.Form.NFKC)
+                .replace('а', 'a').replace('е', 'e').replace('і', 'i').replace('о', 'o').replace('р', 'p')
+                .replace('с', 'c').replace('х', 'x').replace('у', 'y').replace('ѕ', 's').replace('һ', 'h');
+        return ZERO_WIDTH.matcher(normalized).replaceAll("");
     }
 }
