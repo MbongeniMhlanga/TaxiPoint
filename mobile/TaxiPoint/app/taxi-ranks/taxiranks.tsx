@@ -49,6 +49,7 @@ export default function TaxiRanksScreen() {
     const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
     const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
     const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
+    const [favoriteRankIds, setFavoriteRankIds] = useState<string[]>([]);
     const [showCorrectionModal, setShowCorrectionModal] = useState(false);
 
     // 🎙️ Voice Search States
@@ -115,6 +116,45 @@ export default function TaxiRanksScreen() {
     useEffect(() => {
         setSelectedDestination(null);
     }, [selectedRank?.id]);
+
+    useEffect(() => {
+        if (!user?.token) {
+            setFavoriteRankIds([]);
+            return;
+        }
+
+        fetch(`${API_BASE_URL}/api/favourites`, {
+            headers: { Authorization: `Bearer ${user.token}` },
+        })
+            .then(async (response) => response.ok ? response.json() : [])
+            .then((favorites: TaxiRank[]) => setFavoriteRankIds(favorites.map((rank) => rank.id)))
+            .catch((error) => console.warn('Favourites fetch failed:', error));
+    }, [user?.token]);
+
+    const toggleFavorite = async (rank: TaxiRank) => {
+        if (!user?.token) {
+            Alert.alert('Sign in required', 'Please sign in to save taxi ranks to your favourites.');
+            return;
+        }
+
+        const wasFavorite = favoriteRankIds.includes(rank.id);
+        setFavoriteRankIds((current) => wasFavorite
+            ? current.filter((id) => id !== rank.id)
+            : [...current, rank.id]);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/favourites/${rank.id}`, {
+                method: wasFavorite ? 'DELETE' : 'POST',
+                headers: { Authorization: `Bearer ${user.token}` },
+            });
+            if (!response.ok) throw new Error('Favourite update failed');
+        } catch (error) {
+            setFavoriteRankIds((current) => wasFavorite
+                ? [...current, rank.id]
+                : current.filter((id) => id !== rank.id));
+            Alert.alert('Could not update favourites', 'Please try again.');
+        }
+    };
 
     useEffect(() => {
         fetchTaxiRanks();
@@ -338,6 +378,18 @@ export default function TaxiRanksScreen() {
                                                 style={styles.closeModalButton}
                                             >
                                                 <Feather name="x" size={20} color="#FFFFFF" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => void toggleFavorite(selectedRank)}
+                                                style={styles.favoriteRankButton}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={favoriteRankIds.includes(selectedRank.id) ? 'Remove from favourites' : 'Save to favourites'}
+                                            >
+                                                <Feather
+                                                    name="heart"
+                                                    size={20}
+                                                    color={favoriteRankIds.includes(selectedRank.id) ? '#FCA5A5' : '#FFFFFF'}
+                                                />
                                             </TouchableOpacity>
                                             <View style={styles.modalHeaderContent}>
                                                 <View style={styles.largeIconBg}>
@@ -660,6 +712,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 16,
         right: 16,
+        padding: 8,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 20,
+        zIndex: 10,
+    },
+    favoriteRankButton: {
+        position: 'absolute',
+        top: 16,
+        right: 60,
         padding: 8,
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 20,
