@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, MapPin, MessageCircle, Send, UserRound } from "lucide-react";
 import { askAssistant, type AssistantMessage } from "../lib/aiAssistant";
 import type { User } from "../App";
@@ -19,12 +19,30 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [typedGreeting, setTypedGreeting] = useState("");
   const endOfMessages = useRef<HTMLDivElement>(null);
 
   const greeting = useMemo(
     () => `Hi ${user.name || "there"}! I’m your TaxiPoint commuter assistant. How can I help with your trip today?`,
     [user.name],
   );
+
+  useEffect(() => {
+    const cleanGreeting = greeting.replace("I?m", "I'm");
+    let characterIndex = 0;
+    setTypedGreeting("");
+
+    const typingTimer = window.setInterval(() => {
+      characterIndex += 1;
+      setTypedGreeting(cleanGreeting.slice(0, characterIndex));
+
+      if (characterIndex >= cleanGreeting.length) {
+        window.clearInterval(typingTimer);
+      }
+    }, 28);
+
+    return () => window.clearInterval(typingTimer);
+  }, [greeting]);
 
   const submitQuestion = async (question = input) => {
     const trimmed = question.trim();
@@ -68,7 +86,10 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6 sm:p-10">
             <div className="flex max-w-2xl items-start gap-3">
               <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>
-              <div className="rounded-2xl rounded-tl-sm bg-slate-100 px-5 py-3 text-sm leading-6 text-slate-700 dark:bg-gray-800 dark:text-gray-200">{greeting.replace("I?m", "I'm")}</div>
+              <div className="rounded-2xl rounded-tl-sm bg-slate-100 px-5 py-3 text-sm leading-6 text-slate-700 dark:bg-gray-800 dark:text-gray-200">
+                {typedGreeting}
+                {typedGreeting.length < greeting.replace("I?m", "I'm").length && <span className="ml-0.5 animate-pulse text-blue-500">|</span>}
+              </div>
             </div>
 
             {messages.map((message) => (
