@@ -109,6 +109,7 @@ export default function ExploreScreen() {
   const [displayedTaxiRanks, setDisplayedTaxiRanks] = useState<TaxiRank[]>([]);
   const [selectedRank, setSelectedRank] = useState<TaxiRank | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
+  const [favoriteRankIds, setFavoriteRankIds] = useState<string[]>([]);
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -617,6 +618,53 @@ export default function ExploreScreen() {
       console.error('Error fetching taxi ranks:', err);
     }
   };
+
+  const fetchFavorites = async () => {
+    if (!user?.token) {
+      setFavoriteRankIds([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/favourites`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (!response.ok) return;
+      const favorites: TaxiRank[] = await response.json();
+      setFavoriteRankIds(favorites.map((rank) => rank.id));
+    } catch (error) {
+      console.warn('Favourites fetch failed:', error);
+    }
+  };
+
+  const toggleFavorite = async (rank: TaxiRank) => {
+    if (!user?.token) {
+      Alert.alert('Sign in required', 'Please sign in to save taxi ranks to your favourites.');
+      return;
+    }
+
+    const wasFavorite = favoriteRankIds.includes(rank.id);
+    setFavoriteRankIds((current) => wasFavorite
+      ? current.filter((id) => id !== rank.id)
+      : [...current, rank.id]);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/favourites/${rank.id}`, {
+        method: wasFavorite ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (!response.ok) throw new Error('Favourite update failed');
+    } catch (error) {
+      setFavoriteRankIds((current) => wasFavorite
+        ? [...current, rank.id]
+        : current.filter((id) => id !== rank.id));
+      Alert.alert('Could not update favourites', 'Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    void fetchFavorites();
+  }, [user?.token]);
 
   // 🔑 REFACTORED: Intelligent Client-Side Search
   const searchTaxiRanks = async (query: string) => {
@@ -1441,6 +1489,18 @@ export default function ExploreScreen() {
                   >
                     <Feather name="x" size={20} color="#FFFFFF" />
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => void toggleFavorite(selectedRank)}
+                    style={styles.favoriteRankButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={favoriteRankIds.includes(selectedRank.id) ? 'Remove from favourites' : 'Save to favourites'}
+                  >
+                    <Feather
+                      name="heart"
+                      size={20}
+                      color={favoriteRankIds.includes(selectedRank.id) ? '#FCA5A5' : '#FFFFFF'}
+                    />
+                  </TouchableOpacity>
                   <View style={styles.rankModalHeaderContent}>
                     <View style={styles.largeIconBg}>
                       <Feather name="map-pin" size={28} color={primaryColor} />
@@ -1979,6 +2039,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  favoriteRankButton: {
+    position: 'absolute',
+    top: 16,
+    right: 60,
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
