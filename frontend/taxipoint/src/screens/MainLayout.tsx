@@ -300,8 +300,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       )}
 
       {/* Main Content Area */}
-      <div className={`h-full w-full ${isGuest ? 'p-0' : `pt-16 md:pt-0 ${isSidebarOpen ? 'md:pl-72' : 'md:pl-4'}`} relative transition-all duration-300`}>
-        <div className="h-full w-full overflow-hidden p-4 md:p-4">
+      <div className={`${isGuest ? 'h-full' : 'h-[calc(100vh-4rem)] md:h-full'} w-full ${isGuest ? 'p-0' : `pt-16 md:pt-0 ${isSidebarOpen ? 'md:pl-72' : 'md:pl-4'}`} relative transition-all duration-300`}>
+        <div className="h-full w-full overflow-hidden p-2 md:p-4">
           <div className="h-full w-full bg-white dark:bg-gray-800 md:rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative transition-colors duration-300">
             {children}
           </div>
