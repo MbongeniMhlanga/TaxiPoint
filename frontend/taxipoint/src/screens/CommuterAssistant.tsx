@@ -57,24 +57,24 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
   };
 
   return (
-    <main className="h-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 sm:p-8">
-      <div className="mx-auto flex h-full min-h-0 max-w-5xl flex-col">
-        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/85 shadow-xl shadow-blue-900/5 backdrop-blur dark:border-gray-700 dark:bg-gray-800/85">
-          <div className="flex items-center gap-3 border-b border-gray-100 p-5 dark:border-gray-700">
+    <main className="h-full overflow-hidden bg-[#f5f8fc] p-3 dark:bg-gray-950 sm:p-5 lg:p-6">
+      <div className="flex h-full min-h-0 w-full flex-col">
+        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_20px_60px_rgba(30,64,175,0.08)] dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center gap-4 border-b border-slate-100 px-6 py-5 dark:border-gray-800 sm:px-7">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20"><Bot size={23} /></div>
-            <div><h2 className="font-semibold text-gray-900 dark:text-white">TaxiPoint Assistant</h2><p className="text-xs text-emerald-600">Ready to help you plan your trip</p></div>
+            <div><h2 className="font-semibold tracking-tight text-slate-900 dark:text-white">TaxiPoint Assistant</h2><p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-emerald-600"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Ready to help you plan your trip</p></div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-8">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6 sm:p-10">
             <div className="flex max-w-2xl items-start gap-3">
               <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>
-              <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm leading-6 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{greeting}</div>
+              <div className="rounded-2xl rounded-tl-sm bg-slate-100 px-5 py-3 text-sm leading-6 text-slate-700 dark:bg-gray-800 dark:text-gray-200">{greeting.replace("I?m", "I'm")}</div>
             </div>
 
             {messages.map((message) => (
               <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                 {message.role === "assistant" && <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>}
-                <div className={`max-w-2xl rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white" : "rounded-tl-sm bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"}`}>{message.content}</div>
+                <div className={`max-w-3xl rounded-2xl px-5 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white shadow-sm shadow-blue-600/20" : "rounded-tl-sm bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-200"}`}>{message.content}</div>
                 {message.role === "user" && <div className="mt-1 rounded-full bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"><UserRound size={16} /></div>}
               </div>
             ))}
@@ -84,12 +84,12 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
             <div ref={endOfMessages} />
           </div>
 
-          <div className="border-t border-gray-100 p-4 dark:border-gray-700 sm:p-5">
-            {messages.length === 0 && <div className="mb-4 flex flex-wrap gap-2">{suggestions.map((suggestion) => <button key={suggestion} onClick={() => submitQuestion(suggestion)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">{suggestion}</button>)}</div>}
-            <form onSubmit={(event) => { event.preventDefault(); void submitQuestion(); }} className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 dark:border-gray-600 dark:bg-gray-900/60 dark:focus-within:ring-blue-900/30">
+          <div className="border-t border-slate-100 p-5 dark:border-gray-800 sm:p-6">
+            {messages.length === 0 && <div className="mb-5 flex flex-wrap gap-2">{suggestions.map((suggestion) => <button key={suggestion} onClick={() => submitQuestion(suggestion)} className="rounded-full border border-blue-100 bg-blue-50/70 px-4 py-2.5 text-xs font-medium text-blue-700 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">{suggestion}</button>)}</div>}
+            <form onSubmit={(event) => { event.preventDefault(); void submitQuestion(); }} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 transition focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100 dark:border-gray-700 dark:bg-gray-950/60 dark:focus-within:bg-gray-950 dark:focus-within:ring-blue-900/30">
               <MessageCircle className="ml-2 text-gray-400" size={20} />
               <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about your journey…" className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white" disabled={isLoading} />
-              <button type="submit" disabled={!input.trim() || isLoading} className="rounded-xl bg-blue-600 p-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Send message"><Send size={18} /></button>
+              <button type="submit" disabled={!input.trim() || isLoading} className="rounded-xl bg-blue-600 p-3 text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Send message"><Send size={18} /></button>
             </form>
             <p className="mt-3 flex items-center justify-center gap-1 text-center text-[11px] text-gray-400"><MapPin size={12} /> AI guidance can be imperfect. Confirm important travel details before leaving.</p>
           </div>
