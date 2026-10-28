@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the dark map theme keyless by styling the public OSM tiles locally. */
+.leaflet-tile-dark {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.8);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

@@ -708,10 +708,10 @@ useEffect(() => {
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors &copy; CartoDB'
-          url={theme === 'dark'
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
+          key={theme}
+          attribution='&copy; OpenStreetMap contributors'
+          className={theme === 'dark' ? 'leaflet-tile-dark' : ''}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {/* Map Controller for Navigation */}
