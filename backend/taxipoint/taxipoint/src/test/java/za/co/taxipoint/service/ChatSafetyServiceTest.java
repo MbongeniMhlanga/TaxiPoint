@@ -71,5 +71,10 @@ class ChatSafetyServiceTest {
 
         String sanitized = safetyService.sanitizeAssistantResponse("Contact user@example.com for help.");
         assertFalse(sanitized.contains("user@example.com"));
+
+        String ordinaryPrivacyMessage = safetyService.sanitizeAssistantResponse(
+                "I can't access or share personal account details or passwords.");
+        assertTrue(ordinaryPrivacyMessage.contains("personal account details"));
+        assertFalse(ordinaryPrivacyMessage.contains("private identifier removed"));
     }
 }

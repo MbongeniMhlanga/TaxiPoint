@@ -19,8 +19,8 @@ public class ChatSafetyService {
                     + "You can ask me about taxi ranks, routes, fares, delays, or using TaxiPoint.";
 
     public static final String PRIVATE_DATA_RESPONSE =
-            "I can't access or share passwords, tokens, private profiles, or another person's personal data. "
-                    + "I can still help with TaxiPoint routes, ranks, fares, and delays.";
+            "I can't access or reveal passwords or private account information. "
+                    + "You can update your profile details directly in the app.";
 
     // Language-tagged starter terms. Native-speaker review is still required
     // before treating any language list as complete.
@@ -73,7 +73,8 @@ public class ChatSafetyService {
                     + "\\s*[:=]?\\s*[^\\s,;]+");
     private static final Pattern IDENTIFIER = Pattern.compile(
             "(?i)\\b(?:identity|account|reference|passport|license|licence)"
-                    + "(?:\\s+number|\\s+id)?\\b\\s*[:#-]?\\s*[a-z0-9-]{4,}");
+                    + "(?:\\s+(?:number|no\\.?|id)\\s*[:#=-]?\\s*|\\s*[:#=-]\\s*)"
+                    + "[a-z0-9][a-z0-9-]{3,}\\b");
     private static final Pattern PRIVATE_REQUEST = Pattern.compile(
             "\\b(?:password|passcode|pin|token|api key|secret|login details|credentials)\\b"
                     + "|\\b(?:my|your|their|another|someone else's|other)\\b.*\\b"
