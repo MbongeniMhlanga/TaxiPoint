@@ -19,6 +19,8 @@ const MAPPING = {
   'person.fill': 'person',
   'person.circle.fill': 'account-circle',
   'gearshape.fill': 'settings',
+  'heart.fill': 'favorite',
+  'sparkles': 'auto-awesome',
   'questionmark.circle.fill': 'help',
   'info.circle.fill': 'info',
   'chevron.left.forwardslash.chevron.right': 'code',

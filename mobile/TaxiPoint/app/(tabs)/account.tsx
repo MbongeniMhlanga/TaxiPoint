@@ -38,6 +38,16 @@ export default function AccountScreen() {
             route: '/account/settings',
         },
         {
+            title: 'Favourites',
+            icon: 'heart.fill' as const,
+            route: '/account/favourites',
+        },
+        {
+            title: 'AI Assistant',
+            icon: 'sparkles' as const,
+            route: '/account/assistant',
+        },
+        {
             title: 'Corrections',
             icon: 'clock.fill' as const,
             route: '/account/corrections',
