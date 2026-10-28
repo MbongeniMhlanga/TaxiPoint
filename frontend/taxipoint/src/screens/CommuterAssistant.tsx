@@ -14,6 +14,33 @@ const suggestions = [
   "How does TaxiPoint work?",
 ];
 
+const AnimatedAssistantMessage: React.FC<{ content: string }> = ({ content }) => {
+  const [visibleContent, setVisibleContent] = useState("");
+
+  useEffect(() => {
+    let characterIndex = 0;
+    setVisibleContent("");
+
+    const typingTimer = window.setInterval(() => {
+      characterIndex += 1;
+      setVisibleContent(content.slice(0, characterIndex));
+
+      if (characterIndex >= content.length) {
+        window.clearInterval(typingTimer);
+      }
+    }, 22);
+
+    return () => window.clearInterval(typingTimer);
+  }, [content]);
+
+  return (
+    <>
+      {visibleContent}
+      {visibleContent.length < content.length && <span className="ml-0.5 animate-pulse text-blue-500">|</span>}
+    </>
+  );
+};
+
 const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState("");
@@ -95,7 +122,9 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
             {messages.map((message) => (
               <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                 {message.role === "assistant" && <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>}
-                <div className={`max-w-3xl rounded-2xl px-5 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white shadow-sm shadow-blue-600/20" : "rounded-tl-sm bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-200"}`}>{message.content}</div>
+                <div className={`max-w-3xl rounded-2xl px-5 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white shadow-sm shadow-blue-600/20" : "rounded-tl-sm bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-200"}`}>
+                  {message.role === "assistant" ? <AnimatedAssistantMessage content={message.content} /> : message.content}
+                </div>
                 {message.role === "user" && <div className="mt-1 rounded-full bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"><UserRound size={16} /></div>}
               </div>
             ))}
