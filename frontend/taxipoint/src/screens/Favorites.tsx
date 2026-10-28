@@ -57,16 +57,25 @@ const Favorites: React.FC<{ user: User }> = ({ user }) => {
   }
 
   return (
-    <main className="h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 sm:p-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400"><Heart size={17} fill="currentColor" /> Saved for your next trip</p>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Favourites</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">Your saved taxi ranks, ready when you need them.</p>
+    <main className="h-full w-full overflow-y-auto">
+      <div className="min-h-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 text-gray-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 dark:text-gray-100">
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-16 text-white sm:py-20">
+          <div className="absolute inset-0 bg-black/10" />
+          <div className="relative mx-auto max-w-4xl text-center">
+            <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+              <Heart size={38} fill="currentColor" />
+            </div>
+            <h1 className="mb-4 text-5xl font-bold md:text-6xl">Favourites</h1>
+            <p className="mx-auto max-w-2xl text-xl text-blue-100 md:text-2xl">
+              Save the taxi ranks you use most for quick access whenever you travel.
+            </p>
           </div>
-          <span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">{favorites.length} saved</span>
         </div>
+
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+          <div className="mb-6 flex justify-end">
+            <span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">{favorites.length} saved</span>
+          </div>
 
         {favorites.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-blue-200 bg-white/80 px-6 py-16 text-center shadow-sm dark:border-blue-900 dark:bg-gray-900/70">
@@ -97,6 +106,7 @@ const Favorites: React.FC<{ user: User }> = ({ user }) => {
             ))}
           </div>
         )}
+        </div>
       </div>
     </main>
   );
