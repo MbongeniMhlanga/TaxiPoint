@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import za.co.taxipoint.dto.AiChatMessage;
 import za.co.taxipoint.dto.AiChatRequest;
 import za.co.taxipoint.dto.AiTripOption;
+import za.co.taxipoint.dto.AiTripPlan;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -113,6 +114,13 @@ public class GeminiAssistantService {
     public List<AiTripOption> buildTripOptions(AiChatRequest request) {
         String message = request == null ? "" : request.message();
         return contextService.buildTripOptions(message, request == null ? null : request.latitude(), request == null ? null : request.longitude());
+    }
+
+    public AiTripPlan buildTripPlan(AiChatRequest request) {
+        String message = request == null ? "" : request.message();
+        return contextService.buildTripPlan(message,
+                request == null ? null : request.latitude(),
+                request == null ? null : request.longitude());
     }
 
     private Map<String, Object> content(String role, String text) {

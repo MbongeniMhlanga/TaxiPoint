@@ -18,7 +18,8 @@ public class AiAssistantController {
     public ResponseEntity<AiChatResponse> chat(@RequestBody AiChatRequest request) {
         return ResponseEntity.ok(new AiChatResponse(
                 assistantService.chat(request),
-                assistantService.buildTripOptions(request)
+                assistantService.buildTripOptions(request),
+                assistantService.buildTripPlan(request)
         ));
     }
 }

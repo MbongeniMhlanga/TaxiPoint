@@ -6,6 +6,7 @@ export interface AssistantMessage {
   content: string;
   createdAt: string;
   tripOptions?: AiTripOption[];
+  tripPlan?: AiTripPlan | null;
 }
 
 export interface AiTripOption {
@@ -19,6 +20,13 @@ export interface AiTripOption {
   latitude: number | null;
   longitude: number | null;
   incidents: { id: number; description: string; createdAt: string | null }[];
+}
+
+export interface AiTripPlan {
+  origin: string;
+  destination: string;
+  summary: string;
+  options: AiTripOption[];
 }
 
 // The real database-backed assistant is the default. Set VITE_USE_MOCK_ASSISTANT=true
@@ -47,10 +55,10 @@ export async function askAssistant(
   prompt: string,
   history: AssistantMessage[],
   token?: string,
-): Promise<{ reply: string; tripOptions: AiTripOption[] }> {
+): Promise<{ reply: string; tripOptions: AiTripOption[]; tripPlan: AiTripPlan | null }> {
   if (USE_MOCK_ASSISTANT) {
     await new Promise((resolve) => setTimeout(resolve, 650));
-    return { reply: mockReply(prompt), tripOptions: [] };
+    return { reply: mockReply(prompt), tripOptions: [], tripPlan: null };
   }
 
   let location: { latitude: number; longitude: number } | null = null;
@@ -115,5 +123,6 @@ export async function askAssistant(
   return {
     reply: data.reply ?? data.text ?? "I could not generate a response.",
     tripOptions: Array.isArray(data.tripOptions) ? data.tripOptions : [],
+    tripPlan: data.tripPlan ?? null,
   };
 }

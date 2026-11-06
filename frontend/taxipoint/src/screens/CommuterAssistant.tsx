@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Bot, MapPin, MessageCircle, Send, UserRound } from "lucide-react";
-import { askAssistant, type AssistantMessage, type AiTripOption } from "../lib/aiAssistant";
+import { askAssistant, type AssistantMessage, type AiTripOption, type AiTripPlan } from "../lib/aiAssistant";
 import type { User } from "../App";
 
 interface CommuterAssistantProps {
@@ -57,6 +57,14 @@ const TripOptionCards: React.FC<{ options: AiTripOption[]; onShowOnMap: (option:
         <button type="button" onClick={() => onShowOnMap(option)} disabled={!option.rankId} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><MapPin size={14} /> Show on map</button>
       </article>;
     })}
+  </div>
+);
+
+const TripPlanSummary: React.FC<{ plan: AiTripPlan }> = ({ plan }) => (
+  <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 dark:border-indigo-900/60 dark:bg-indigo-900/20">
+    <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Trip plan</p>
+    <p className="mt-1 font-semibold text-slate-900 dark:text-white">{plan.origin} <span className="text-indigo-500">→</span> {plan.destination}</p>
+    <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-gray-300">{plan.summary}</p>
   </div>
 );
 
@@ -116,7 +124,7 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
       const response = await askAssistant(trimmed, [...messages, userMessage], user.token);
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: response.reply, tripOptions: response.tripOptions, createdAt: new Date().toISOString() },
+        { id: crypto.randomUUID(), role: "assistant", content: response.reply, tripOptions: response.tripPlan?.options?.length ? response.tripPlan.options : response.tripOptions, tripPlan: response.tripPlan, createdAt: new Date().toISOString() },
       ]);
     } catch (assistantError) {
       setError(assistantError instanceof Error ? assistantError.message : "Something went wrong.");
@@ -148,7 +156,7 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
               <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                 {message.role === "assistant" && <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>}
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-3xl sm:px-5 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white shadow-sm shadow-blue-600/20" : "rounded-tl-sm bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-200"}`}>
-                  {message.role === "assistant" ? <><AnimatedAssistantMessage content={message.content} />{message.tripOptions && message.tripOptions.length > 0 && <TripOptionCards options={message.tripOptions} onShowOnMap={showTripOptionOnMap} />}</> : message.content}
+                  {message.role === "assistant" ? <><AnimatedAssistantMessage content={message.content} />{message.tripPlan && <TripPlanSummary plan={message.tripPlan} />}{message.tripOptions && message.tripOptions.length > 0 && <TripOptionCards options={message.tripOptions} onShowOnMap={showTripOptionOnMap} />}</> : message.content}
                 </div>
                 {message.role === "user" && <div className="mt-1 rounded-full bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"><UserRound size={16} /></div>}
               </div>
