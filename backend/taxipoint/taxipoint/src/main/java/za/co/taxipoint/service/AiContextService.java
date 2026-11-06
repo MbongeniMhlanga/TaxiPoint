@@ -46,6 +46,15 @@ public class AiContextService {
 
         StringBuilder context = new StringBuilder();
         context.append("This context was retrieved from the TaxiPoint database. It is the source of truth.\n\n");
+        if (latitude != null && longitude != null) {
+            context.append("USER LOCATION IS AVAILABLE: latitude=")
+                    .append(latitude)
+                    .append(", longitude=")
+                    .append(longitude)
+                    .append(". The taxi ranks listed below were selected as nearby options for this location. Do not say that the user's location is unavailable.\n\n");
+        } else {
+            context.append("USER LOCATION IS NOT AVAILABLE. Do not describe any rank as being near the user.\n\n");
+        }
         context.append("TOTAL ACTIVE TAXI RANKS: ").append(taxiRankRepository.countActive()).append("\n\n");
         appendRanks(context, ranks);
         appendIncidents(context, incidents);
