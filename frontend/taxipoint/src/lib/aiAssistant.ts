@@ -25,7 +25,17 @@ export interface AiTripOption {
 export interface AiTripPlan {
   origin: string;
   destination: string;
+  requestedTime: string;
+  constraint: string;
   summary: string;
+  originLatitude: number | null;
+  originLongitude: number | null;
+  destinationLatitude: number | null;
+  destinationLongitude: number | null;
+  totalDistanceMeters: number;
+  totalDurationSeconds: number;
+  directionsUrl: string | null;
+  legs: { from: string; to: string; distanceMeters: number; durationSeconds: number; directions: string[] }[];
   options: AiTripOption[];
 }
 

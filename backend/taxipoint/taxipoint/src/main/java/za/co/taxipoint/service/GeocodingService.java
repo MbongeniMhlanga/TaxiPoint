@@ -12,6 +12,29 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class GeocodingService {
 
     private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
+    private static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+
+    public GeoPoint geocode(String query) {
+        if (query == null || query.isBlank()) return null;
+        try {
+            String url = UriComponentsBuilder.fromHttpUrl(NOMINATIM_SEARCH_URL)
+                    .queryParam("q", query + ", Johannesburg, South Africa")
+                    .queryParam("format", "json")
+                    .queryParam("limit", 1)
+                    .toUriString();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "TaxiPoint/1.0 (contact@taxipoint.com)");
+            ResponseEntity<NominatimSearchResponse[]> response = new RestTemplate().exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), NominatimSearchResponse[].class);
+            NominatimSearchResponse[] results = response.getBody();
+            if (results != null && results.length > 0) {
+                return new GeoPoint(Double.parseDouble(results[0].lat), Double.parseDouble(results[0].lon), results[0].display_name);
+            }
+        } catch (Exception e) {
+            System.err.println("Geocoding failed for [" + query + "]: " + e.getMessage());
+        }
+        return null;
+    }
 
 public String reverseGeocode(double latitude, double longitude) {
     try {
@@ -51,5 +74,14 @@ public String reverseGeocode(double latitude, double longitude) {
         public void setDisplay_name(String display_name) {
             this.display_name = display_name;
         }
+    }
+
+    static class NominatimSearchResponse {
+        public String lat;
+        public String lon;
+        public String display_name;
+    }
+
+    public record GeoPoint(double latitude, double longitude, String displayName) {
     }
 }

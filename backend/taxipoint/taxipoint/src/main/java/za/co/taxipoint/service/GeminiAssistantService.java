@@ -27,6 +27,7 @@ public class GeminiAssistantService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final AiContextService contextService;
+    private final TripPlanningService tripPlanningService;
     private final ChatSafetyService chatSafetyService;
     private final String apiKey;
     private final String model;
@@ -34,12 +35,14 @@ public class GeminiAssistantService {
 
     public GeminiAssistantService(
             AiContextService contextService,
+            TripPlanningService tripPlanningService,
             ChatSafetyService chatSafetyService,
             @Value("${gemini.api-key:}") String apiKey,
             @Value("${gemini.model:gemini-3.6-flash}") String model,
             @Value("${gemini.api-url:https://generativelanguage.googleapis.com/v1beta}") String apiUrl
     ) {
         this.contextService = contextService;
+        this.tripPlanningService = tripPlanningService;
         this.chatSafetyService = chatSafetyService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
@@ -118,7 +121,7 @@ public class GeminiAssistantService {
 
     public AiTripPlan buildTripPlan(AiChatRequest request) {
         String message = request == null ? "" : request.message();
-        return contextService.buildTripPlan(message,
+        return tripPlanningService.plan(message,
                 request == null ? null : request.latitude(),
                 request == null ? null : request.longitude());
     }

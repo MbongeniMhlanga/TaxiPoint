@@ -82,6 +82,8 @@ public class AiContextService {
                 || normalizedQuestion.contains("incident")
                 || normalizedQuestion.contains("near me")
                 || normalizedQuestion.contains("go to")
+                || normalizedQuestion.contains("get to")
+                || normalizedQuestion.contains("need to")
                 || normalizedQuestion.contains("trip")
                 || normalizedQuestion.contains("travel")
                 || normalizedQuestion.contains("commute");
@@ -109,52 +111,6 @@ public class AiContextService {
                                 .toList()
                 ))
                 .toList();
-    }
-
-    public AiTripPlan buildTripPlan(String question, Double latitude, Double longitude) {
-        String safeQuestion = question == null ? "" : question.trim();
-        Matcher fromTo = FROM_TO.matcher(safeQuestion);
-        Matcher arrow = ARROW.matcher(safeQuestion);
-        String origin;
-        String destination;
-        if (fromTo.find()) {
-            origin = cleanEndpoint(fromTo.group(1));
-            destination = cleanEndpoint(fromTo.group(2));
-        } else if (arrow.matches()) {
-            origin = cleanEndpoint(arrow.group(1));
-            destination = cleanEndpoint(arrow.group(2));
-        } else {
-            return null;
-        }
-
-        if (origin.isBlank() || destination.isBlank()) return null;
-        List<AiTripOption> candidates = buildTripOptions(safeQuestion, latitude, longitude);
-        String destinationTerm = destination.toLowerCase(Locale.ROOT);
-        List<AiTripOption> destinationMatches = candidates.stream()
-                .filter(option -> option.routes().stream().anyMatch(route -> containsTerm(route, destinationTerm))
-                        || option.fares().keySet().stream().anyMatch(route -> containsTerm(route, destinationTerm)))
-                .toList();
-        List<AiTripOption> options = destinationMatches.isEmpty() ? candidates : destinationMatches;
-
-        return new AiTripPlan(
-                origin,
-                destination,
-                options.isEmpty()
-                        ? "TaxiPoint does not currently have a verified rank or fare for this trip."
-                        : "These are the TaxiPoint rank options serving your destination. Check the fare and any alerts before travelling.",
-                options
-        );
-    }
-
-    private String cleanEndpoint(String endpoint) {
-        return endpoint.replaceFirst("(?i)^(how much is (a )?trip|what is the fare|fare|trip)\\s+", "")
-                .replaceFirst("(?i)\\s+(please|today)$", "")
-                .trim();
-    }
-
-    private boolean containsTerm(String value, String term) {
-        String normalizedValue = value == null ? "" : value.toLowerCase(Locale.ROOT);
-        return normalizedValue.contains(term) || term.contains(normalizedValue);
     }
 
     private boolean isRelevantIncident(TaxiRank rank, Incident incident) {

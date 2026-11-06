@@ -65,6 +65,14 @@ const TripPlanSummary: React.FC<{ plan: AiTripPlan }> = ({ plan }) => (
     <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Trip plan</p>
     <p className="mt-1 font-semibold text-slate-900 dark:text-white">{plan.origin} <span className="text-indigo-500">→</span> {plan.destination}</p>
     <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-gray-300">{plan.summary}</p>
+    {(plan.totalDistanceMeters > 0 || plan.totalDurationSeconds > 0 || plan.requestedTime || plan.constraint) && <div className="mt-3 flex flex-wrap gap-2 text-xs text-indigo-700 dark:text-indigo-200">
+      {plan.totalDistanceMeters > 0 && <span className="rounded-lg bg-white/70 px-2 py-1">{(plan.totalDistanceMeters / 1000).toFixed(1)} km</span>}
+      {plan.totalDurationSeconds > 0 && <span className="rounded-lg bg-white/70 px-2 py-1">About {Math.max(1, Math.round(plan.totalDurationSeconds / 60))} min</span>}
+      {plan.requestedTime && <span className="rounded-lg bg-white/70 px-2 py-1">{plan.requestedTime}</span>}
+      {plan.constraint && <span className="rounded-lg bg-white/70 px-2 py-1">Preference: {plan.constraint}</span>}
+    </div>}
+    {plan.directionsUrl && <a href={plan.directionsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Open directions</a>}
+    {plan.legs.length > 0 && <details className="mt-3 text-xs text-slate-600 dark:text-gray-300"><summary className="cursor-pointer font-semibold text-indigo-700 dark:text-indigo-300">View route steps</summary><div className="mt-2 space-y-2">{plan.legs.map((leg) => <div key={`${leg.from}-${leg.to}`}><p className="font-semibold text-slate-700 dark:text-gray-200">{leg.from} → {leg.to}</p><ol className="ml-4 list-decimal">{leg.directions.slice(0, 8).map((direction, index) => <li key={`${direction}-${index}`}>{direction}</li>)}</ol></div>)}</div></details>}
   </div>
 );
 
