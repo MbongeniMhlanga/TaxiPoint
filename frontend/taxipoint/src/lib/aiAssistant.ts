@@ -53,6 +53,17 @@ export async function askAssistant(
     return { reply: mockReply(prompt), tripOptions: [] };
   }
 
+  let location: { latitude: number; longitude: number } | null = null;
+  if (/\bnear me\b|\bnearby\b|\bclose to me\b/i.test(prompt) && navigator.geolocation) {
+    location = await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 },
+      );
+    });
+  }
+
   let storedToken = "";
   try {
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -75,6 +86,8 @@ export async function askAssistant(
     body: JSON.stringify({
       message: prompt,
       history: history.map(({ role, content }) => ({ role, content })),
+      latitude: location?.latitude,
+      longitude: location?.longitude,
     }),
   });
 

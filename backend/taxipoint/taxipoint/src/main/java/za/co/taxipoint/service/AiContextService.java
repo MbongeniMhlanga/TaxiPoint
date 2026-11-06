@@ -34,7 +34,11 @@ public class AiContextService {
     private final IncidentRepository incidentRepository;
 
     public String buildContext(String question) {
-        List<TaxiRank> ranks = findRelevantRanks(question);
+        return buildContext(question, null, null);
+    }
+
+    public String buildContext(String question, Double latitude, Double longitude) {
+        List<TaxiRank> ranks = findRelevantRanks(question, latitude, longitude);
         List<Incident> incidents = incidentRepository.findByResolvedFalseOrderByCreatedAtDesc()
                 .stream()
                 .limit(MAX_INCIDENTS)
@@ -50,6 +54,10 @@ public class AiContextService {
     }
 
     public List<AiTripOption> buildTripOptions(String question) {
+        return buildTripOptions(question, null, null);
+    }
+
+    public List<AiTripOption> buildTripOptions(String question, Double latitude, Double longitude) {
         String normalizedQuestion = question == null ? "" : question.toLowerCase(Locale.ROOT);
         boolean tripQuestion = normalizedQuestion.contains("rank")
                 || normalizedQuestion.contains("route")
@@ -65,7 +73,7 @@ public class AiContextService {
         if (!tripQuestion) return List.of();
 
         List<Incident> incidents = incidentRepository.findByResolvedFalseOrderByCreatedAtDesc();
-        return findRelevantRanks(question).stream()
+        return findRelevantRanks(question, latitude, longitude).stream()
                 .limit(5)
                 .map(rank -> new AiTripOption(
                         rank.getId() == null ? null : rank.getId().toString(),
@@ -97,6 +105,17 @@ public class AiContextService {
     }
 
     private List<TaxiRank> findRelevantRanks(String question) {
+        return findRelevantRanks(question, null, null);
+    }
+
+    private List<TaxiRank> findRelevantRanks(String question, Double latitude, Double longitude) {
+        if (latitude != null && longitude != null
+                && latitude >= -90 && latitude <= 90
+                && longitude >= -180 && longitude <= 180) {
+            List<TaxiRank> nearby = taxiRankRepository.findNearbyWithDistance(latitude, longitude, 50_000d);
+            if (!nearby.isEmpty()) return nearby.stream().limit(MAX_RANKS).toList();
+        }
+
         Set<String> terms = Arrays.stream(question.toLowerCase(Locale.ROOT).split("[^a-z0-9]+"))
                 .filter(term -> term.length() >= 3 && !STOP_WORDS.contains(term))
                 .limit(5)
