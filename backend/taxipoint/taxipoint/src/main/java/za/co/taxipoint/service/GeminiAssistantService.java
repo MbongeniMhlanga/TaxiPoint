@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import za.co.taxipoint.dto.AiChatMessage;
 import za.co.taxipoint.dto.AiChatRequest;
+import za.co.taxipoint.dto.AiTripOption;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -108,6 +109,11 @@ public class GeminiAssistantService {
             logger.error("Gemini assistant request failed: {}", exception.getMessage(), exception);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "The AI assistant is temporarily unavailable.", exception);
         }
+    }
+
+    public List<AiTripOption> buildTripOptions(AiChatRequest request) {
+        String message = request == null ? "" : request.message();
+        return contextService.buildTripOptions(message);
     }
 
     private Map<String, Object> content(String role, String text) {

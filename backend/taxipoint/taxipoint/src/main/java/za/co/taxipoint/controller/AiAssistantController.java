@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import za.co.taxipoint.dto.AiChatRequest;
+import za.co.taxipoint.dto.AiChatResponse;
 import za.co.taxipoint.service.GeminiAssistantService;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -16,7 +15,10 @@ public class AiAssistantController {
     private final GeminiAssistantService assistantService;
 
     @PostMapping("/chat")
-    public ResponseEntity<Map<String, String>> chat(@RequestBody AiChatRequest request) {
-        return ResponseEntity.ok(Map.of("reply", assistantService.chat(request)));
+    public ResponseEntity<AiChatResponse> chat(@RequestBody AiChatRequest request) {
+        return ResponseEntity.ok(new AiChatResponse(
+                assistantService.chat(request),
+                assistantService.buildTripOptions(request)
+        ));
     }
 }

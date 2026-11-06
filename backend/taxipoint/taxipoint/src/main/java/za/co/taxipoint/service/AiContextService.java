@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import za.co.taxipoint.model.Incident;
 import za.co.taxipoint.model.TaxiRank;
+import za.co.taxipoint.dto.AiTripOption;
 import za.co.taxipoint.repository.IncidentRepository;
 import za.co.taxipoint.repository.TaxiRankRepository;
 
@@ -46,6 +47,53 @@ public class AiContextService {
         appendIncidents(context, incidents);
         appendAppGuide(context);
         return context.toString();
+    }
+
+    public List<AiTripOption> buildTripOptions(String question) {
+        String normalizedQuestion = question == null ? "" : question.toLowerCase(Locale.ROOT);
+        boolean tripQuestion = normalizedQuestion.contains("rank")
+                || normalizedQuestion.contains("route")
+                || normalizedQuestion.contains("fare")
+                || normalizedQuestion.contains("price")
+                || normalizedQuestion.contains("cost")
+                || normalizedQuestion.contains("delay")
+                || normalizedQuestion.contains("incident")
+                || normalizedQuestion.contains("near me")
+                || normalizedQuestion.contains("go to")
+                || normalizedQuestion.contains("travel")
+                || normalizedQuestion.contains("commute");
+        if (!tripQuestion) return List.of();
+
+        List<Incident> incidents = incidentRepository.findByResolvedFalseOrderByCreatedAtDesc();
+        return findRelevantRanks(question).stream()
+                .limit(5)
+                .map(rank -> new AiTripOption(
+                        rank.getId() == null ? null : rank.getId().toString(),
+                        rank.getName(),
+                        rank.getAddress(),
+                        rank.getDistrict(),
+                        rank.getRoutesServed() == null ? List.of() : rank.getRoutesServed(),
+                        rank.getRouteFares() == null ? java.util.Map.of() : rank.getRouteFares(),
+                        rank.getCurrency() == null ? "ZAR" : rank.getCurrency(),
+                        rank.getLocation() == null ? null : rank.getLocation().getY(),
+                        rank.getLocation() == null ? null : rank.getLocation().getX(),
+                        incidents.stream()
+                                .filter(incident -> isRelevantIncident(rank, incident))
+                                .limit(3)
+                                .map(incident -> new AiTripOption.AiTripIncident(
+                                        incident.getId(), incident.getDescription(),
+                                        incident.getCreatedAt() == null ? null : incident.getCreatedAt().toString()))
+                                .toList()
+                ))
+                .toList();
+    }
+
+    private boolean isRelevantIncident(TaxiRank rank, Incident incident) {
+        if (rank.getLocation() == null || incident.getLocation() == null) return false;
+        double latDistance = (rank.getLocation().getY() - incident.getLocation().getY()) * 111_000;
+        double lngDistance = (rank.getLocation().getX() - incident.getLocation().getX()) * 111_000
+                * Math.cos(Math.toRadians(rank.getLocation().getY()));
+        return Math.sqrt(latDistance * latDistance + lngDistance * lngDistance) <= 5_000;
     }
 
     private List<TaxiRank> findRelevantRanks(String question) {

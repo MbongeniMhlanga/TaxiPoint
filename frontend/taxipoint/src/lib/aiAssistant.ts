@@ -5,6 +5,20 @@ export interface AssistantMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  tripOptions?: AiTripOption[];
+}
+
+export interface AiTripOption {
+  rankId: string | null;
+  name: string;
+  address: string | null;
+  district: string | null;
+  routes: string[];
+  fares: Record<string, number>;
+  currency: string;
+  latitude: number | null;
+  longitude: number | null;
+  incidents: { id: number; description: string; createdAt: string | null }[];
 }
 
 // The real database-backed assistant is the default. Set VITE_USE_MOCK_ASSISTANT=true
@@ -29,10 +43,14 @@ const mockReply = (prompt: string) => {
   return "I’m your TaxiPoint commuter assistant. I can help you find taxi ranks and routes, understand incidents and delays, check fares and operating hours, and learn how to use TaxiPoint.";
 };
 
-export async function askAssistant(prompt: string, history: AssistantMessage[], token?: string) {
+export async function askAssistant(
+  prompt: string,
+  history: AssistantMessage[],
+  token?: string,
+): Promise<{ reply: string; tripOptions: AiTripOption[] }> {
   if (USE_MOCK_ASSISTANT) {
     await new Promise((resolve) => setTimeout(resolve, 650));
-    return mockReply(prompt);
+    return { reply: mockReply(prompt), tripOptions: [] };
   }
 
   let storedToken = "";
@@ -81,5 +99,8 @@ export async function askAssistant(prompt: string, history: AssistantMessage[], 
   }
 
   const data = await response.json();
-  return data.reply ?? data.text ?? "I could not generate a response.";
+  return {
+    reply: data.reply ?? data.text ?? "I could not generate a response.",
+    tripOptions: Array.isArray(data.tripOptions) ? data.tripOptions : [],
+  };
 }

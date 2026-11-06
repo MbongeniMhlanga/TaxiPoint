@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, MapPin, MessageCircle, Send, UserRound } from "lucide-react";
-import { askAssistant, type AssistantMessage } from "../lib/aiAssistant";
+import { useNavigate } from "react-router-dom";
+import { AlertTriangle, Bot, MapPin, MessageCircle, Send, UserRound } from "lucide-react";
+import { askAssistant, type AssistantMessage, type AiTripOption } from "../lib/aiAssistant";
 import type { User } from "../App";
 
 interface CommuterAssistantProps {
@@ -41,13 +42,37 @@ const AnimatedAssistantMessage: React.FC<{ content: string }> = ({ content }) =>
   );
 };
 
+const TripOptionCards: React.FC<{ options: AiTripOption[]; onShowOnMap: (option: AiTripOption) => void }> = ({ options, onShowOnMap }) => (
+  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+    {options.map((option) => {
+      const fareEntries = Object.entries(option.fares || {}).slice(0, 3);
+      return <article key={option.rankId || option.name} className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-start justify-between gap-3">
+          <div><h3 className="font-semibold text-slate-900 dark:text-white">{option.name}</h3><p className="text-xs text-slate-500 dark:text-gray-400">{option.address || option.district || "Location available"}</p></div>
+          {option.incidents.length > 0 && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700"><AlertTriangle size={12} /> Alert</span>}
+        </div>
+        {option.routes.length > 0 && <p className="mt-3 text-xs text-slate-600 dark:text-gray-300"><span className="font-semibold">Routes:</span> {option.routes.slice(0, 4).join(", ")}</p>}
+        {fareEntries.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{fareEntries.map(([route, fare]) => <span key={route} className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{route}: {option.currency === "ZAR" ? "R" : `${option.currency} `}{Math.round(fare)}</span>)}</div>}
+        {option.incidents.length > 0 && <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">{option.incidents[0].description}</p>}
+        <button type="button" onClick={() => onShowOnMap(option)} disabled={!option.rankId} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><MapPin size={14} /> Show on map</button>
+      </article>;
+    })}
+  </div>
+);
+
 const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [typedGreeting, setTypedGreeting] = useState("");
   const endOfMessages = useRef<HTMLDivElement>(null);
+
+  const showTripOptionOnMap = (option: AiTripOption) => {
+    if (!option.rankId) return;
+    navigate("/landing", { state: { selectedRankId: option.rankId } });
+  };
 
   const greeting = useMemo(
     () => `Hi ${user.name || "there"}! I’m your TaxiPoint commuter assistant. How can I help with your trip today?`,
@@ -88,10 +113,10 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
     setIsLoading(true);
 
     try {
-      const reply = await askAssistant(trimmed, [...messages, userMessage], user.token);
+      const response = await askAssistant(trimmed, [...messages, userMessage], user.token);
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", content: reply, createdAt: new Date().toISOString() },
+        { id: crypto.randomUUID(), role: "assistant", content: response.reply, tripOptions: response.tripOptions, createdAt: new Date().toISOString() },
       ]);
     } catch (assistantError) {
       setError(assistantError instanceof Error ? assistantError.message : "Something went wrong.");
@@ -123,7 +148,7 @@ const CommuterAssistant: React.FC<CommuterAssistantProps> = ({ user }) => {
               <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                 {message.role === "assistant" && <div className="mt-1 rounded-full bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"><Bot size={16} /></div>}
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-3xl sm:px-5 ${message.role === "user" ? "rounded-tr-sm bg-blue-600 text-white shadow-sm shadow-blue-600/20" : "rounded-tl-sm bg-slate-100 text-slate-700 dark:bg-gray-800 dark:text-gray-200"}`}>
-                  {message.role === "assistant" ? <AnimatedAssistantMessage content={message.content} /> : message.content}
+                  {message.role === "assistant" ? <><AnimatedAssistantMessage content={message.content} />{message.tripOptions && message.tripOptions.length > 0 && <TripOptionCards options={message.tripOptions} onShowOnMap={showTripOptionOnMap} />}</> : message.content}
                 </div>
                 {message.role === "user" && <div className="mt-1 rounded-full bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"><UserRound size={16} /></div>}
               </div>

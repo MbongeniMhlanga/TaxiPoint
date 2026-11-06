@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { AnimatePresence } from 'framer-motion';
 import RankDetailPanel from '../components/RankDetailPanel';
@@ -73,6 +74,8 @@ const MapController = ({ selectedLocation }: { selectedLocation: { lat: number; 
 };
 
 const Landing = ({ user, onUpdateUser }: LandingProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const locationEnabled = user.locationSharing ?? false;
   const [taxiRanks, setTaxiRanks] = useState<TaxiRank[]>([]);
@@ -90,6 +93,18 @@ const Landing = ({ user, onUpdateUser }: LandingProps) => {
   const [favoriteRankIds, setFavoriteRankIds] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const locationWatchRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const requestedRankId = (location.state as { selectedRankId?: string } | null)?.selectedRankId;
+    if (!requestedRankId || taxiRanks.length === 0) return;
+
+    const requestedRank = taxiRanks.find((rank) => rank.id === requestedRankId);
+    if (requestedRank) {
+      setSelectedRank(requestedRank);
+      setSelectedLocation({ lat: requestedRank.latitude, lng: requestedRank.longitude });
+      navigate('/landing', { replace: true, state: null });
+    }
+  }, [location.state, navigate, taxiRanks]);
 
   useEffect(() => {
     if (user.role === 'ROLE_GUEST') return;
