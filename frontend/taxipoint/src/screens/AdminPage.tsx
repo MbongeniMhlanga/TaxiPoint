@@ -1182,7 +1182,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       {showFormModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn border border-gray-100 dark:border-gray-700">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center z-10">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center z-[1100]">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">{isEditing ? "Edit Taxi Rank" : "Add New Rank"}</h2>
               <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
                 <span className="text-2xl">&times;</span>
