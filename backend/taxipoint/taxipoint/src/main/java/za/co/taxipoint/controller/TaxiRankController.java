@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import za.co.taxipoint.dto.TaxiFareQuoteDTO;
 import za.co.taxipoint.dto.TaxiRankDTO;
 import za.co.taxipoint.model.TaxiRank;
@@ -20,6 +22,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api")
 public class TaxiRankController {
+
+    private static final Logger logger = LoggerFactory.getLogger(TaxiRankController.class);
 
     @Autowired
     private TaxiRankService taxiRankService;
@@ -69,7 +73,9 @@ public class TaxiRankController {
     // Resolve a rank name/address into coordinates for the admin form.
     @GetMapping("/taxi-ranks/geocode")
     public ResponseEntity<GeocodingService.GeoPoint> geocodeTaxiRank(@RequestParam String query) {
+        logger.info("Geocode endpoint called: query='{}'", query);
         GeocodingService.GeoPoint point = geocodingService.geocode(query);
+        logger.info("Geocode endpoint result: found={}", point != null);
         return point == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(point);
     }
 
