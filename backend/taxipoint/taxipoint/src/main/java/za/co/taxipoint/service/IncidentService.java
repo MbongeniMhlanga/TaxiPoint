@@ -33,7 +33,7 @@ public class IncidentService {
     }
 
     @Transactional
-    @Scheduled(fixedRate = 300000L)
+    @Scheduled(fixedRate = 43200000L) // Every 12 hours
     public int autoResolveExpiredIncidents() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(48);
         var expiredIncidents = incidentRepository.findByResolvedFalseAndCreatedAtBefore(cutoff);
