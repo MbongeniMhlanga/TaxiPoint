@@ -81,7 +81,7 @@ public class GeocodingService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Goog-Api-Key", googleMapsApiKey);
-            headers.set("X-Goog-FieldMask", "places.displayName,places.formattedAddress,places.location");
+            headers.set("X-Goog-FieldMask", "places.displayName,places.formattedAddress,places.location,places.addressComponents");
             headers.set("Content-Type", "application/json");
 
             Map<String, Object> requestBody = Map.of(
@@ -102,16 +102,33 @@ public class GeocodingService {
             }
 
             GooglePlace place = places.get(0);
-            String displayName = place.displayName == null || place.displayName.text == null
+            String displayName = place.formattedAddress != null && !place.formattedAddress.isBlank()
                     ? place.formattedAddress
+                    : place.displayName == null || place.displayName.text == null
+                    ? query
                     : place.displayName.text;
-            GeoPoint point = new GeoPoint(place.location.latitude, place.location.longitude, displayName);
+            String district = extractDistrict(place.addressComponents);
+            GeoPoint point = new GeoPoint(place.location.latitude, place.location.longitude, displayName, place.formattedAddress, district);
             logger.info("Google Places match found: latitude={}, longitude={}, displayName='{}'", point.latitude(), point.longitude(), point.displayName());
             return point;
         } catch (Exception e) {
             logger.error("Google Places request failed: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    private String extractDistrict(List<GoogleAddressComponent> components) {
+        if (components == null) {
+            return null;
+        }
+
+        return components.stream()
+                .filter(component -> component.types != null && component.types.stream()
+                        .anyMatch(type -> "administrative_area_level_2".equals(type)))
+                .map(component -> component.longText)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
 public String reverseGeocode(double latitude, double longitude) {
@@ -168,6 +185,7 @@ public String reverseGeocode(double latitude, double longitude) {
         public GoogleDisplayName displayName;
         public String formattedAddress;
         public GoogleLocation location;
+        public List<GoogleAddressComponent> addressComponents;
     }
 
     static class GoogleDisplayName {
@@ -179,6 +197,14 @@ public String reverseGeocode(double latitude, double longitude) {
         public double longitude;
     }
 
-    public record GeoPoint(double latitude, double longitude, String displayName) {
+    static class GoogleAddressComponent {
+        public String longText;
+        public List<String> types;
+    }
+
+    public record GeoPoint(double latitude, double longitude, String displayName, String address, String district) {
+        public GeoPoint(double latitude, double longitude, String displayName) {
+            this(latitude, longitude, displayName, displayName, null);
+        }
     }
 }

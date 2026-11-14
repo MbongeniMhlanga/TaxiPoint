@@ -315,10 +315,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       if (!response.ok) {
         throw new Error("Location not found. Try adding a nearby street, suburb, or city.");
       }
-      const point: { latitude: number; longitude: number; displayName: string } = await response.json();
+      const point: { latitude: number; longitude: number; displayName?: string; address?: string | null; district?: string | null } = await response.json();
       setLocationDraft({ latitude: point.latitude, longitude: point.longitude });
-      setForm((previous) => ({ ...previous, address: previous.address.trim() || point.displayName }));
-      toast.success(`Location found: ${point.displayName}`);
+      setForm((previous) => ({
+        ...previous,
+        address: point.address || point.displayName || "",
+        district: point.district || "",
+      }));
+      toast.success(`Location found: ${point.address || point.displayName || "coordinates received"}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not find that location.");
     } finally {
@@ -1231,11 +1235,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Latitude</label>
-                      <input type="number" step="any" name="latitude" value={form.latitude || ""} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                      <input type="number" step="any" name="latitude" value={locationDraft?.latitude ?? (form.latitude || "")} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Longitude</label>
-                      <input type="number" step="any" name="longitude" value={form.longitude || ""} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                      <input type="number" step="any" name="longitude" value={locationDraft?.longitude ?? (form.longitude || "")} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
                     </div>
                   </div>
                 </div>
