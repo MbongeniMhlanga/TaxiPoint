@@ -9,6 +9,7 @@ import za.co.taxipoint.dto.TaxiFareQuoteDTO;
 import za.co.taxipoint.dto.TaxiRankDTO;
 import za.co.taxipoint.model.TaxiRank;
 import za.co.taxipoint.service.TaxiRankService;
+import za.co.taxipoint.service.GeocodingService;
 
 import java.net.URI;
 import java.util.Collections;
@@ -22,6 +23,9 @@ public class TaxiRankController {
 
     @Autowired
     private TaxiRankService taxiRankService;
+
+    @Autowired
+    private GeocodingService geocodingService;
 
     // List taxi ranks with optional suburb filter or nearby geo query
     @GetMapping("/taxi-ranks")
@@ -60,6 +64,13 @@ public class TaxiRankController {
         Page<TaxiRank> ranks = taxiRankService.listTaxiRanks(suburb, includeInactive, page, size);
         Page<TaxiRankDTO> dtoPage = ranks.map(taxiRankService::toDTO);
         return ResponseEntity.ok(dtoPage);
+    }
+
+    // Resolve a rank name/address into coordinates for the admin form.
+    @GetMapping("/taxi-ranks/geocode")
+    public ResponseEntity<GeocodingService.GeoPoint> geocodeTaxiRank(@RequestParam String query) {
+        GeocodingService.GeoPoint point = geocodingService.geocode(query);
+        return point == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(point);
     }
 
     // Get a single taxi rank by ID

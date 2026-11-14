@@ -4,12 +4,45 @@ import "../lib/popup/react-toastify.css";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter, CheckCircle2, XCircle } from 'lucide-react';
+import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter, CheckCircle2, XCircle, MapPin } from 'lucide-react';
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import ThemeToggle from "../components/ThemeToggle"; // Assuming we want theme toggle here too
 import { API_BASE_URL } from "../config";
 
 // --- Icons ---
 // Using Lucide icons imported above instead of inline SVGs for consistency
+
+type Coordinates = { latitude: number; longitude: number };
+const JOHANNESBURG: Coordinates = { latitude: -26.2044, longitude: 28.0473 };
+const locationPin = L.divIcon({
+  className: '',
+  html: '<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#2563eb;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);transform:rotate(-45deg)"></div>',
+  iconSize: [22, 22],
+  iconAnchor: [11, 22],
+});
+
+function LocationPicker({ position, onChange }: { position: Coordinates; onChange: (position: Coordinates) => void }) {
+  useMapEvents({
+    click: (event) => onChange({ latitude: event.latlng.lat, longitude: event.latlng.lng }),
+  });
+
+  return (
+    <Marker
+      position={[position.latitude, position.longitude]}
+      icon={locationPin}
+      draggable
+      eventHandlers={{
+        dragend: (event) => {
+          const marker = event.target as L.Marker;
+          const point = marker.getLatLng();
+          onChange({ latitude: point.lat, longitude: point.lng });
+        },
+      }}
+    />
+  );
+}
 
 interface TaxiRank {
   id: string;
@@ -104,6 +137,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentRankId, setCurrentRankId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [locationDraft, setLocationDraft] = useState<Coordinates | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [rankToDelete, setRankToDelete] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -259,6 +294,58 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === 'latitude' || name === 'longitude') {
+      setLocationDraft((previous) => ({
+        latitude: name === 'latitude' ? Number(value) : previous?.latitude ?? form.latitude,
+        longitude: name === 'longitude' ? Number(value) : previous?.longitude ?? form.longitude,
+      }));
+    }
+  };
+
+  const findRankLocation = async () => {
+    const query = [form.name, form.address, form.district].filter((value) => value.trim()).join(", ");
+    if (!query) {
+      toast.error("Enter the rank name or address first.");
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/taxi-ranks/geocode?query=${encodeURIComponent(query)}`);
+      if (!response.ok) {
+        throw new Error("Location not found. Try adding a nearby street, suburb, or city.");
+      }
+      const point: { latitude: number; longitude: number; displayName: string } = await response.json();
+      setLocationDraft({ latitude: point.latitude, longitude: point.longitude });
+      setForm((previous) => ({ ...previous, address: previous.address.trim() || point.displayName }));
+      toast.success(`Location found: ${point.displayName}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not find that location.");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("This browser does not support GPS location.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationDraft({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        toast.success("GPS location captured. Review the pin, then confirm it.");
+      },
+      () => toast.error("Could not access GPS. Check browser location permissions."),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  const confirmLocation = () => {
+    if (!locationDraft) return;
+    setForm((previous) => ({ ...previous, ...locationDraft }));
+    toast.success("Location confirmed.");
   };
 
   const routeOptions = Array.from(
@@ -429,6 +516,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       phone: rank.phone,
       facilities: JSON.stringify(rank.facilities),
     });
+    setLocationDraft({ latitude: rank.latitude, longitude: rank.longitude });
     setRouteFareMap(rank.routeFares ? { ...rank.routeFares } : {});
     setRouteFareDraft({ route: "", fare: "" });
     setShowFormModal(true);
@@ -449,6 +537,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
       phone: "",
       facilities: "{}",
     });
+    setLocationDraft(null);
     setRouteFareMap({});
     setRouteFareDraft({ route: "", fare: "" });
     setShowFormModal(false);
@@ -1104,13 +1193,51 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
                   <input name="address" value={form.address} onChange={handleChange} required className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitude</label>
-                  <input type="number" step="any" name="latitude" value={form.latitude} onChange={handleChange} required className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
-                  <input type="number" step="any" name="longitude" value={form.longitude} onChange={handleChange} required className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                <div className="md:col-span-2 rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/20 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Location</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Find it automatically, use GPS, or drag the pin. Confirm before saving.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={findRankLocation} disabled={isGeocoding} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                        <MapPin size={16} /> {isGeocoding ? "Finding..." : "Find location"}
+                      </button>
+                      <button type="button" onClick={useCurrentLocation} className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:bg-gray-900 dark:text-blue-300">
+                        <MapPin size={16} /> Use GPS
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                    <MapContainer
+                      center={[locationDraft?.latitude ?? (form.latitude || JOHANNESBURG.latitude), locationDraft?.longitude ?? (form.longitude || JOHANNESBURG.longitude)]}
+                      zoom={locationDraft || (form.latitude !== 0 && form.longitude !== 0) ? 16 : 11}
+                      scrollWheelZoom
+                      style={{ height: 260, width: '100%' }}
+                    >
+                      <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      <LocationPicker
+                        position={locationDraft ?? (form.latitude !== 0 && form.longitude !== 0 ? { latitude: form.latitude, longitude: form.longitude } : JOHANNESBURG)}
+                        onChange={setLocationDraft}
+                      />
+                    </MapContainer>
+                  </div>
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Drag the blue pin or click the map to adjust the exact position.</p>
+                    <button type="button" onClick={confirmLocation} disabled={!locationDraft} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                      Use this location
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Latitude</label>
+                      <input type="number" step="any" name="latitude" value={form.latitude || ""} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Longitude</label>
+                      <input type="number" step="any" name="longitude" value={form.longitude || ""} onChange={handleChange} required className="w-full p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 outline-none transition" />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
