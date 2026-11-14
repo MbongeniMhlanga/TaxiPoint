@@ -4,11 +4,15 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class GeocodingService {
@@ -17,6 +21,13 @@ public class GeocodingService {
 
     private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
     private static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+    private static final String GOOGLE_PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
+    private final String googleMapsApiKey;
+
+    public GeocodingService(@Value("${GOOGLE_MAPS_API_KEY:}") String googleMapsApiKey) {
+        this.googleMapsApiKey = googleMapsApiKey == null ? "" : googleMapsApiKey.trim();
+        logger.info("Google Places geocoder configured={}", !this.googleMapsApiKey.isBlank());
+    }
 
     public GeoPoint geocode(String query) {
         if (query == null || query.isBlank()) {
@@ -30,6 +41,17 @@ public class GeocodingService {
                 ? searchableQuery
                 : searchableQuery + ", Johannesburg, South Africa";
         logger.info("Geocoding request received: originalQuery='{}', providerQuery='{}'", query, locationQuery);
+
+        if (!googleMapsApiKey.isBlank()) {
+            GeoPoint googlePoint = searchGooglePlaces(locationQuery);
+            if (googlePoint != null) {
+                return googlePoint;
+            }
+            logger.warn("Google Places returned no match; falling back to OpenStreetMap");
+        } else {
+            logger.warn("GOOGLE_MAPS_API_KEY is not configured; using OpenStreetMap geocoding");
+        }
+
         try {
             String url = UriComponentsBuilder.fromHttpUrl(NOMINATIM_SEARCH_URL)
                     .queryParam("q", locationQuery)
@@ -52,6 +74,44 @@ public class GeocodingService {
             logger.error("Geocoding provider request failed for providerQuery='{}': {}", locationQuery, e.getMessage(), e);
         }
         return null;
+    }
+
+    private GeoPoint searchGooglePlaces(String query) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Goog-Api-Key", googleMapsApiKey);
+            headers.set("X-Goog-FieldMask", "places.displayName,places.formattedAddress,places.location");
+            headers.set("Content-Type", "application/json");
+
+            Map<String, Object> requestBody = Map.of(
+                    "textQuery", query,
+                    "pageSize", 5
+            );
+            ResponseEntity<GooglePlacesSearchResponse> response = restTemplate.exchange(
+                    GOOGLE_PLACES_SEARCH_URL,
+                    HttpMethod.POST,
+                    new HttpEntity<>(requestBody, headers),
+                    GooglePlacesSearchResponse.class
+            );
+
+            List<GooglePlace> places = response.getBody() == null ? List.of() : response.getBody().places;
+            logger.info("Google Places response: status={}, resultCount={}", response.getStatusCode(), places == null ? 0 : places.size());
+            if (places == null || places.isEmpty() || places.get(0).location == null) {
+                return null;
+            }
+
+            GooglePlace place = places.get(0);
+            String displayName = place.displayName == null || place.displayName.text == null
+                    ? place.formattedAddress
+                    : place.displayName.text;
+            GeoPoint point = new GeoPoint(place.location.latitude, place.location.longitude, displayName);
+            logger.info("Google Places match found: latitude={}, longitude={}, displayName='{}'", point.latitude(), point.longitude(), point.displayName());
+            return point;
+        } catch (Exception e) {
+            logger.error("Google Places request failed: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
 public String reverseGeocode(double latitude, double longitude) {
@@ -98,6 +158,25 @@ public String reverseGeocode(double latitude, double longitude) {
         public String lat;
         public String lon;
         public String display_name;
+    }
+
+    static class GooglePlacesSearchResponse {
+        public List<GooglePlace> places;
+    }
+
+    static class GooglePlace {
+        public GoogleDisplayName displayName;
+        public String formattedAddress;
+        public GoogleLocation location;
+    }
+
+    static class GoogleDisplayName {
+        public String text;
+    }
+
+    static class GoogleLocation {
+        public double latitude;
+        public double longitude;
     }
 
     public record GeoPoint(double latitude, double longitude, String displayName) {
