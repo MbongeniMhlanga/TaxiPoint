@@ -16,9 +16,15 @@ public class GeocodingService {
 
     public GeoPoint geocode(String query) {
         if (query == null || query.isBlank()) return null;
+        // Business qualifiers such as "(Hancock)" often appear in local rank names
+        // but are not part of the geographic search index.
+        String searchableQuery = query.replaceAll("\\s*\\([^)]*\\)", "").replaceAll("\\s+", " ").trim();
+        String locationQuery = searchableQuery.toLowerCase().contains("johannesburg")
+                ? searchableQuery
+                : searchableQuery + ", Johannesburg, South Africa";
         try {
             String url = UriComponentsBuilder.fromHttpUrl(NOMINATIM_SEARCH_URL)
-                    .queryParam("q", query + ", Johannesburg, South Africa")
+                    .queryParam("q", locationQuery)
                     .queryParam("format", "json")
                     .queryParam("limit", 1)
                     .toUriString();
@@ -31,7 +37,7 @@ public class GeocodingService {
                 return new GeoPoint(Double.parseDouble(results[0].lat), Double.parseDouble(results[0].lon), results[0].display_name);
             }
         } catch (Exception e) {
-            System.err.println("Geocoding failed for [" + query + "]: " + e.getMessage());
+            System.err.println("Geocoding failed for [" + searchableQuery + "]: " + e.getMessage());
         }
         return null;
     }
