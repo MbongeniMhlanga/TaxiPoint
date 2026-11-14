@@ -5,7 +5,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LayoutDashboard, Map, Users, AlertTriangle, LogOut, Edit3, Trash2, Plus, Search, Filter, CheckCircle2, XCircle, MapPin } from 'lucide-react';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import ThemeToggle from "../components/ThemeToggle"; // Assuming we want theme toggle here too
@@ -24,6 +24,12 @@ const locationPin = L.divIcon({
 });
 
 function LocationPicker({ position, onChange }: { position: Coordinates; onChange: (position: Coordinates) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView([position.latitude, position.longitude], 16, { animate: true });
+  }, [map, position.latitude, position.longitude]);
+
   useMapEvents({
     click: (event) => onChange({ latitude: event.latlng.lat, longitude: event.latlng.lng }),
   });
