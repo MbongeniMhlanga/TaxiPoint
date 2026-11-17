@@ -807,10 +807,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Ranks Distribution Chart */}
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="lg:col-span-2 min-w-0 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Taxi Ranks per District</h3>
               <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                     <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
@@ -826,10 +826,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout, user }) => {
             </div>
 
             {/* Small Interactive - User Roles (Mock) */}
-            <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+            <div className="lg:col-span-1 min-w-0 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 w-full text-left">User Distribution</h3>
               <div className="h-[200px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                   <PieChart>
                     <Pie
                       data={[
