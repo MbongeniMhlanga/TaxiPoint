@@ -203,7 +203,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
               <hr className="border-gray-100 dark:border-gray-700 mb-4" />
 
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 pr-1">
                 {navItems.map((item) => (
                   <Link
                     key={item.path}
