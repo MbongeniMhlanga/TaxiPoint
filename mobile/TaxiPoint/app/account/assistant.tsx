@@ -33,7 +33,7 @@ type Message = {
 };
 const suggestions = ['Find taxi ranks near me', 'Are there any reported delays?', 'How do I find a route and fare?'];
 
-function AnimatedText({ content, speed = 22 }: { content: string; speed?: number }) {
+function AnimatedText({ content, speed = 12 }: { content: string; speed?: number }) {
   const [visible, setVisible] = useState('');
   useEffect(() => {
     let index = 0;
@@ -111,7 +111,7 @@ export default function AssistantScreen() {
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}><View style={[styles.headerIcon, { backgroundColor: colors.tint }]}><Feather name="cpu" size={22} color="#fff" /></View><View><Text style={[styles.headerTitle, { color: colors.text }]}>TaxiPoint Assistant</Text><Text style={{ color: colors.success, fontSize: 12 }}>● Ready to help you plan your trip</Text></View></View>
         <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.row}><View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View><View style={[styles.bubble, { backgroundColor: colors.secondaryBackground }]}><Text style={{ color: colors.text, lineHeight: 20 }}><AnimatedText content={greeting} speed={28} /></Text></View></View>
+          <View style={styles.row}><View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View><View style={[styles.bubble, { backgroundColor: colors.secondaryBackground }]}><Text style={{ color: colors.text, lineHeight: 20 }}><AnimatedText content={greeting} speed={16} /></Text></View></View>
           {messages.map((message) => <React.Fragment key={message.id}>
             <View style={[styles.row, message.role === 'user' && styles.userRow]}>{message.role === 'assistant' && <View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View>}<View style={[styles.bubble, { backgroundColor: message.role === 'user' ? colors.tint : colors.secondaryBackground }, message.role === 'user' && styles.userBubble]}><Text style={{ color: message.role === 'user' ? '#fff' : colors.text, lineHeight: 20 }}>{message.role === 'assistant' ? <AnimatedText content={message.content} /> : message.content}</Text></View>{message.role === 'user' && <View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="user" size={15} color={colors.tint} /></View>}</View>
             {message.role === 'assistant' && message.tripPlan && <View style={[styles.planCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.text }]}>{message.tripPlan.origin} → {message.tripPlan.destination}</Text><Text style={{ color: colors.textSecondary }}>{message.tripPlan.summary}</Text><Text style={[styles.cardMeta, { color: colors.tint }]}>{formatDistance(message.tripPlan.totalDistanceMeters)} · {formatDuration(message.tripPlan.totalDurationSeconds)}</Text></View>}
