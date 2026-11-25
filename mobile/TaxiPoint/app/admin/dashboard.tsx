@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Loader } from '@/components/loader';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { Feather } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -107,6 +108,7 @@ export default function AdminDashboard() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentRankId, setCurrentRankId] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
     const [form, setForm] = useState<TaxiRankForm>({
         name: '',
         description: '',
@@ -355,6 +357,66 @@ export default function AdminDashboard() {
                 }
             }
         ]);
+    };
+
+    const findRankLocation = async () => {
+        const query = [form.name, form.address, form.district]
+            .filter((value) => value.trim())
+            .join(', ');
+
+        if (!query) {
+            Alert.alert('Missing location', 'Enter the rank name or address first.');
+            return;
+        }
+
+        setIsGeocoding(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/taxi-ranks/geocode?query=${encodeURIComponent(query)}`);
+            if (!response.ok) {
+                throw new Error('Location not found. Add a nearby street, suburb, or city and try again.');
+            }
+
+            const point: {
+                latitude: number;
+                longitude: number;
+                displayName?: string;
+                address?: string | null;
+                district?: string | null;
+            } = await response.json();
+
+            setForm((previous) => ({
+                ...previous,
+                address: point.address || point.displayName || previous.address,
+                district: point.district || previous.district,
+                latitude: String(point.latitude),
+                longitude: String(point.longitude),
+            }));
+            Alert.alert('Location found', point.address || point.displayName || 'Coordinates received.');
+        } catch (error) {
+            Alert.alert('Location unavailable', error instanceof Error ? error.message : 'Could not find that location.');
+        } finally {
+            setIsGeocoding(false);
+        }
+    };
+
+    const useCurrentLocation = async () => {
+        try {
+            const permission = await Location.requestForegroundPermissionsAsync();
+            if (permission.status !== 'granted') {
+                Alert.alert('Location permission needed', 'Allow location access to use your current position.');
+                return;
+            }
+
+            const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+            setForm((previous) => ({
+                ...previous,
+                latitude: String(position.coords.latitude),
+                longitude: String(position.coords.longitude),
+            }));
+            Alert.alert('GPS location captured', 'Review the coordinates before saving the rank.');
+        } catch (error) {
+            Alert.alert('GPS unavailable', 'Could not access your current location. Check device permissions.');
+        }
     };
 
     const formatCorrectionType = (type: CorrectionType) => {
@@ -803,6 +865,35 @@ export default function AdminDashboard() {
                                         placeholder="Full street address"
                                         placeholderTextColor={colors.textSecondary}
                                     />
+                                </View>
+
+                                <View style={[styles.smartLocationCard, { backgroundColor: `${colors.tint}10`, borderColor: `${colors.tint}35` }]}>
+                                    <View style={styles.smartLocationHeader}>
+                                        <View style={{ flex: 1 }}>
+                                            <ThemedText style={styles.label}>Smart location</ThemedText>
+                                            <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                                Find the rank with Google Places, use GPS, then review the coordinates before saving.
+                                            </ThemedText>
+                                        </View>
+                                        <Feather name="map-pin" size={22} color={colors.tint} />
+                                    </View>
+                                    <View style={styles.smartLocationActions}>
+                                        <TouchableOpacity
+                                            onPress={() => void findRankLocation()}
+                                            disabled={isGeocoding}
+                                            style={[styles.smartLocationPrimary, { backgroundColor: colors.tint, opacity: isGeocoding ? 0.65 : 1 }]}
+                                        >
+                                            {isGeocoding ? <ActivityIndicator color="#fff" size="small" /> : <Feather name="search" size={16} color="#fff" />}
+                                            <ThemedText style={styles.addButtonText}>{isGeocoding ? 'Finding...' : 'Find location'}</ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => void useCurrentLocation()}
+                                            style={[styles.smartLocationSecondary, { borderColor: `${colors.tint}55` }]}
+                                        >
+                                            <Feather name="crosshair" size={16} color={colors.tint} />
+                                            <ThemedText style={{ color: colors.tint, fontWeight: '700', fontSize: 13 }}>Use GPS</ThemedText>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View style={[styles.row, { gap: 12 }]}>
@@ -1374,6 +1465,42 @@ const styles = StyleSheet.create({
     },
     formScroll: {
         padding: 24,
+    },
+    smartLocationCard: {
+        borderWidth: 1,
+        borderRadius: 14,
+        padding: 14,
+        gap: 12,
+        marginBottom: 20,
+    },
+    smartLocationHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+    },
+    smartLocationActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    smartLocationPrimary: {
+        minHeight: 42,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+    },
+    smartLocationSecondary: {
+        minHeight: 42,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
     },
     inputGroup: {
         marginBottom: 20,
