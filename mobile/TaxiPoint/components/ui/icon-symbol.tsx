@@ -21,6 +21,7 @@ const MAPPING = {
   'person.circle.fill': 'account-circle',
   'gearshape.fill': 'settings',
   'heart.fill': 'favorite',
+  'clock.fill': 'schedule',
   'sparkles': 'auto-awesome',
   'questionmark.circle.fill': 'help',
   'info.circle.fill': 'info',

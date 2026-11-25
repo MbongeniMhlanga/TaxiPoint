@@ -4,7 +4,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
@@ -22,21 +22,35 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
           borderTopWidth: 0,
           borderTopColor: 'transparent',
-          borderRadius: 24,
-          height: 70 + bottomInset,
-          marginHorizontal: 12,
-          marginBottom: 8,
-          paddingTop: 8,
+          height: 48 + bottomInset,
+          width: 220,
+          alignSelf: 'center',
+          paddingTop: 0,
           paddingBottom: bottomInset,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: colorScheme === 'dark' ? 0.28 : 0.12,
-          shadowRadius: 12,
+          elevation: 0,
+          shadowOpacity: 0,
         },
+        tabBarBackground: () => (
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                marginHorizontal: 0,
+                marginBottom: bottomInset,
+                borderRadius: 30,
+                backgroundColor: colors.background,
+                elevation: 8,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: colorScheme === 'dark' ? 0.28 : 0.12,
+                shadowRadius: 12,
+              },
+            ]}
+          />
+        ),
         tabBarItemStyle: {
           paddingVertical: 2,
         },

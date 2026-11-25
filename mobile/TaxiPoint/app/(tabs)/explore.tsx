@@ -16,7 +16,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Modal,
-  PermissionsAndroid,
   Platform,
   ScrollView,
   StyleSheet,
@@ -140,27 +139,15 @@ export default function ExploreScreen() {
   const [layoutReady, setLayoutReady] = useState(true);
   const [tracksView, setTracksView] = useState(true);
 
-  // Request location permissions (No change)
+  // Request location permission through Expo so Android shows one consistent prompt.
   const requestLocationPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: 'TaxiPoint Location Permission',
-            message: 'TaxiPoint needs access to your location to show nearby taxi ranks',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.error('Error requesting location permission:', err);
-        return false;
-      }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (err) {
+      console.error('Error requesting location permission:', err);
+      return false;
     }
-    return true; // iOS permissions handled via app.json
   };
 
   // Helper function for Levenshtein distance (Fuzzy Search)
@@ -801,12 +788,6 @@ export default function ExploreScreen() {
     }
 
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Location permission not granted');
-        setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-        return;
-      }
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const { latitude, longitude } = location.coords;
       setUserLocation({ latitude, longitude });
