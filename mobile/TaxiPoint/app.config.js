@@ -9,6 +9,7 @@ module.exports = {
   runtimeVersion: expo.runtimeVersion || { policy: 'appVersion' },
   android: {
     ...(expo.android || {}),
+    softwareKeyboardLayoutMode: 'resize',
     config: {
       ...(expo.android?.config || {}),
       googleMaps: {
