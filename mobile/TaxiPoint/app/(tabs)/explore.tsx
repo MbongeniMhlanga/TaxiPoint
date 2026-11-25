@@ -72,6 +72,8 @@ interface ActiveRoute {
   coordinates: { latitude: number; longitude: number }[];
   distance: number;
   duration: number;
+  walkingDistance: number;
+  walkingDuration: number;
   steps: RouteStep[];
 }
 
@@ -293,8 +295,12 @@ export default function ExploreScreen() {
 
   const parseGoogleDuration = (value: unknown) => {
     if (typeof value === 'string') {
-      const seconds = Number.parseFloat(value.replace('s', ''));
+      const seconds = Number.parseFloat(value.replace(/s$/, '').trim());
       return Number.isFinite(seconds) ? seconds : 0;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
     }
 
     return 0;
@@ -485,61 +491,63 @@ export default function ExploreScreen() {
         throw new Error('Missing Google Maps API key in app configuration');
       }
 
-      const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': googleMapsApiKey,
-          'X-Goog-FieldMask': [
-            'routes.duration',
-            'routes.distanceMeters',
-            'routes.polyline.encodedPolyline',
-            'routes.legs.steps.distanceMeters',
-            'routes.legs.steps.staticDuration',
-            'routes.legs.steps.navigationInstruction.instructions',
-            'routes.legs.steps.navigationInstruction.maneuver',
-          ].join(','),
-        },
-        body: JSON.stringify({
-          origin: {
-            location: {
-              latLng: {
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-              },
-            },
+      const computeRoute = async (travelMode: 'DRIVE' | 'WALK') => {
+        const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': googleMapsApiKey,
+            'X-Goog-FieldMask': [
+              'routes.duration',
+              'routes.staticDuration',
+              'routes.distanceMeters',
+              'routes.polyline.encodedPolyline',
+              'routes.legs.steps.distanceMeters',
+              'routes.legs.steps.staticDuration',
+              'routes.legs.steps.navigationInstruction.instructions',
+              'routes.legs.steps.navigationInstruction.maneuver',
+            ].join(','),
           },
-          destination: {
-            location: {
-              latLng: {
-                latitude: destination.latitude,
-                longitude: destination.longitude,
-              },
-            },
-          },
-          travelMode: 'DRIVE',
-          polylineEncoding: 'ENCODED_POLYLINE',
-          polylineQuality: 'OVERVIEW',
-          languageCode: 'en-US',
-          computeAlternativeRoutes: false,
-        }),
-      });
+          body: JSON.stringify({
+            origin: { location: { latLng: { latitude: userLocation.latitude, longitude: userLocation.longitude } } },
+            destination: { location: { latLng: { latitude: destination.latitude, longitude: destination.longitude } } },
+            travelMode,
+            ...(travelMode === 'DRIVE' ? { routingPreference: 'TRAFFIC_AWARE' } : {}),
+            polylineEncoding: 'ENCODED_POLYLINE',
+            polylineQuality: 'OVERVIEW',
+            languageCode: 'en-US',
+            computeAlternativeRoutes: false,
+          }),
+        });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error('Routes API error:', response.status, errorBody);
-        throw new Error(`Route request failed (${response.status}): ${errorBody.slice(0, 240)}`);
-      }
+        if (!response.ok) {
+          const errorBody = await response.text();
+          console.error(`${travelMode} Routes API error:`, response.status, errorBody);
+          throw new Error(`${travelMode} route request failed (${response.status})`);
+        }
 
-      const data = await response.json();
-      const route = data?.routes?.[0];
+        const data = await response.json();
+        const route = data?.routes?.[0];
+        if (!route) throw new Error(`No ${travelMode.toLowerCase()} route returned`);
+        console.log(`${travelMode} route estimate:`, {
+          distanceMeters: route.distanceMeters,
+          duration: route.duration,
+          staticDuration: route.staticDuration,
+        });
+        return route;
+      };
 
-      if (!route?.polyline?.encodedPolyline) {
+      const [drivingRoute, walkingRoute] = await Promise.all([
+        computeRoute('DRIVE'),
+        computeRoute('WALK'),
+      ]);
+
+      if (!drivingRoute?.polyline?.encodedPolyline) {
         throw new Error('No route geometry returned');
       }
 
-      const coordinates = decodePolyline(route.polyline.encodedPolyline);
-      const steps = (route?.legs ?? []).flatMap((leg: any) =>
+      const coordinates = decodePolyline(drivingRoute.polyline.encodedPolyline);
+      const steps = (drivingRoute?.legs ?? []).flatMap((leg: any) =>
         (leg?.steps ?? []).map((step: any) => ({
           instruction: buildRouteInstruction(step),
           distance: step?.distanceMeters ?? 0,
@@ -550,8 +558,10 @@ export default function ExploreScreen() {
       setActiveRoute({
         destination,
         coordinates,
-        distance: route?.distanceMeters ?? 0,
-        duration: parseGoogleDuration(route?.duration),
+        distance: drivingRoute?.distanceMeters ?? 0,
+        duration: parseGoogleDuration(drivingRoute?.duration),
+        walkingDistance: walkingRoute?.distanceMeters ?? 0,
+        walkingDuration: parseGoogleDuration(walkingRoute?.duration ?? walkingRoute?.staticDuration),
         steps,
       });
       setSelectedRank(null);
@@ -1392,7 +1402,13 @@ export default function ExploreScreen() {
               <View style={[styles.routeStatChip, { backgroundColor: secondaryBgColor }]}>
                 <Feather name="clock" size={14} color={primaryColor} />
                 <ThemedText style={[styles.routeStatText, { color: textColor }]}>
-                  {formatDuration(activeRoute.duration)}
+                  Drive {formatDuration(activeRoute.duration)}
+                </ThemedText>
+              </View>
+              <View style={[styles.routeStatChip, { backgroundColor: secondaryBgColor }]}>
+                <Feather name="navigation" size={14} color={primaryColor} />
+                <ThemedText style={[styles.routeStatText, { color: textColor }]}>
+                  Walk {formatDuration(activeRoute.walkingDuration)}
                 </ThemedText>
               </View>
             </View>
