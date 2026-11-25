@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TripOption = {
@@ -61,6 +61,23 @@ export default function AssistantScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const formatDistance = (meters = 0) => meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
   const formatDuration = (seconds = 0) => {
@@ -123,7 +140,7 @@ export default function AssistantScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
         <View style={[styles.header, { borderBottomColor: colors.border }]}><View style={[styles.headerIcon, { backgroundColor: colors.tint }]}><Feather name="cpu" size={22} color="#fff" /></View><View><Text style={[styles.headerTitle, { color: colors.text }]}>TaxiPoint Assistant</Text><Text style={{ color: colors.success, fontSize: 12 }}>● Ready to help you plan your trip</Text></View></View>
@@ -136,7 +153,7 @@ export default function AssistantScreen() {
           </React.Fragment>)}
           {loading && <View style={styles.row}><View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View><ActivityIndicator color={colors.tint} /></View>}
         </ScrollView>
-        <View style={[styles.bottomControls, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={[styles.bottomControls, { paddingBottom: Platform.OS === 'android' && keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom, 8) }]}>
           {messages.length === 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>{suggestions.map((suggestion) => <TouchableOpacity key={suggestion} onPress={() => void askQuestion(suggestion)} style={[styles.suggestion, { backgroundColor: `${colors.tint}12`, borderColor: `${colors.tint}35` }]}><Text style={{ color: colors.tint, fontSize: 12, fontWeight: '600' }}>{suggestion}</Text></TouchableOpacity>)}</ScrollView>}
           <View style={[styles.composer, { borderColor: colors.border, backgroundColor: colors.secondaryBackground }]}><Feather name="message-circle" size={19} color={colors.textSecondary} /><TextInput value={input} onChangeText={setInput} onSubmitEditing={() => void askQuestion()} placeholder="Ask about your journey..." placeholderTextColor={colors.textSecondary} style={[styles.input, { color: colors.text }]} editable={!loading} returnKeyType="send" /><TouchableOpacity onPress={() => void askQuestion()} disabled={!input.trim() || loading} style={[styles.send, { backgroundColor: colors.tint, opacity: input.trim() && !loading ? 1 : 0.4 }]}><Feather name="send" size={17} color="#fff" /></TouchableOpacity></View>
         </View>
