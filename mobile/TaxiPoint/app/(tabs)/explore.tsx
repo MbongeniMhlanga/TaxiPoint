@@ -595,10 +595,13 @@ export default function ExploreScreen() {
   // ...existing code...
 
   // 🔑 REFACTORED: Sets both the master list and the displayed list initially
-  const fetchTaxiRanks = async () => {
+  const fetchTaxiRanks = async (location?: { latitude: number; longitude: number }) => {
     try {
       console.log('Fetching taxi ranks...');
-      const res = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
+      const nearbyUrl = location
+        ? `${API_BASE_URL}/api/taxi-ranks/nearby?lat=${location.latitude}&lng=${location.longitude}&radius_m=50000`
+        : `${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`;
+      const res = await fetch(nearbyUrl, {
         headers: { 'Authorization': `Bearer ${user?.token || ''}` }
       });
 
@@ -610,14 +613,42 @@ export default function ExploreScreen() {
       }
 
       const data = await res.json();
-      // Handle both Page object and direct arrays
-      const ranks = data.content || (Array.isArray(data) ? data : []);
-      console.log(`Received ${ranks.length} taxi ranks`);
+      // The nearby endpoint returns an array; the fallback endpoint returns a Page.
+      let ranks = data.content || (Array.isArray(data) ? data : []);
+
+      // Match the web landing page: if the user is outside the supported area,
+      // fall back to the full directory instead of leaving the map empty.
+      if (location && ranks.length === 0) {
+        const fallbackResponse = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
+          headers: { 'Authorization': `Bearer ${user?.token || ''}` },
+        });
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          ranks = fallbackData.content || (Array.isArray(fallbackData) ? fallbackData : []);
+        }
+      }
+
+      console.log(`Received ${ranks.length} taxi ranks${location ? ' near the user' : ''}`);
 
       setAllTaxiRanks(ranks);
       setDisplayedTaxiRanks(ranks);
     } catch (err) {
       console.error('Error fetching taxi ranks:', err);
+      if (location) {
+        try {
+          const fallbackResponse = await fetch(`${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`, {
+            headers: { 'Authorization': `Bearer ${user?.token || ''}` },
+          });
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            const fallbackRanks = fallbackData.content || (Array.isArray(fallbackData) ? fallbackData : []);
+            setAllTaxiRanks(fallbackRanks);
+            setDisplayedTaxiRanks(fallbackRanks);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback taxi ranks fetch failed:', fallbackError);
+        }
+      }
     }
   };
 
@@ -820,18 +851,20 @@ export default function ExploreScreen() {
   };
 
   // Get user's current location
-  const getUserLocation = async () => {
+  const getUserLocation = async (): Promise<{ latitude: number; longitude: number }> => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) {
       console.log('Location permission denied');
-      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
-      return;
+      const fallback = { latitude: -26.2044, longitude: 28.0473 };
+      setUserLocation(fallback);
+      return fallback;
     }
 
     try {
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const { latitude, longitude } = location.coords;
-      setUserLocation({ latitude, longitude });
+      const currentLocation = { latitude, longitude };
+      setUserLocation(currentLocation);
       if (mapRef.current && mapReady) {
         mapRef.current.animateToRegion(
           {
@@ -843,9 +876,12 @@ export default function ExploreScreen() {
           1000
         );
       }
+      return currentLocation;
     } catch (err) {
       console.error('Expo Location error:', err);
-      setUserLocation({ latitude: -26.2044, longitude: 28.0473 });
+      const fallback = { latitude: -26.2044, longitude: 28.0473 };
+      setUserLocation(fallback);
+      return fallback;
     }
   };
 
@@ -860,10 +896,10 @@ export default function ExploreScreen() {
       if (!isRefresh) setLoading(true);
       else setRefreshing(true);
 
-      await getUserLocation();
-      // Only fetch the initial, full list here
+      const currentLocation = await getUserLocation();
+      // Load ranks near the user's location, matching the web landing page.
       await Promise.all([
-        fetchTaxiRanks().catch(e => console.error('Ranks fetch error:', e)),
+        fetchTaxiRanks(currentLocation).catch(e => console.error('Ranks fetch error:', e)),
         fetchIncidents().catch(e => console.error('Incidents fetch error:', e))
       ]);
     } catch (error) {
@@ -989,8 +1025,7 @@ export default function ExploreScreen() {
     }, 700);
   }, [displayedTaxiRanks, mapReady, searchQuery, showSearchResults]);
 
-  // On the initial map view, fit every taxi rank into the viewport instead of
-  // centering only on the emulator's simulated GPS location.
+  // On the initial map view, fit the nearby taxi ranks into the viewport.
   useEffect(() => {
     if (!mapReady || searchQuery.trim() || displayedTaxiRanks.length === 0 || !mapRef.current) return;
 
