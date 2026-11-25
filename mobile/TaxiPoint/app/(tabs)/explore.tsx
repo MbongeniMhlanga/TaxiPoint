@@ -495,7 +495,7 @@ export default function ExploreScreen() {
             'routes.distanceMeters',
             'routes.polyline.encodedPolyline',
             'routes.legs.steps.distanceMeters',
-            'routes.legs.steps.duration',
+            'routes.legs.steps.staticDuration',
             'routes.legs.steps.navigationInstruction.instructions',
             'routes.legs.steps.navigationInstruction.maneuver',
           ].join(','),
@@ -526,7 +526,9 @@ export default function ExploreScreen() {
       });
 
       if (!response.ok) {
-        throw new Error(`Route request failed with status ${response.status}`);
+        const errorBody = await response.text();
+        console.error('Routes API error:', response.status, errorBody);
+        throw new Error(`Route request failed (${response.status}): ${errorBody.slice(0, 240)}`);
       }
 
       const data = await response.json();
@@ -569,9 +571,10 @@ export default function ExploreScreen() {
         }, 200);
       }
     } catch (error) {
-      console.error('Route load failed:', error);
-      setRouteError('We could not load in-app directions right now.');
-      Alert.alert('Route Unavailable', 'We could not load directions inside the app right now. Please try again.');
+      const message = error instanceof Error ? error.message : 'Unknown route error';
+      console.error('Route load failed:', message);
+      setRouteError(message);
+      Alert.alert('Route Unavailable', message);
     } finally {
       setRouteLoading(false);
     }
@@ -916,7 +919,9 @@ export default function ExploreScreen() {
 
   // NEW: Animate map once ready and user location is available
   useEffect(() => {
-    if (mapReady && userLocation && mapRef.current) {
+    // Once ranks are loaded, the rank-fit effect owns the viewport. Otherwise
+    // the emulator's simulated GPS location can move the map away from them.
+    if (mapReady && userLocation && displayedTaxiRanks.length === 0 && mapRef.current) {
       mapRef.current.animateToRegion({
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
@@ -924,7 +929,47 @@ export default function ExploreScreen() {
         longitudeDelta: 0.05,
       }, 1000);
     }
-  }, [mapReady, userLocation]);
+  }, [displayedTaxiRanks.length, mapReady, userLocation]);
+
+  // Keep search results visible by moving the map to the first matching rank.
+  useEffect(() => {
+    if (!mapReady || !showSearchResults || !searchQuery.trim() || !mapRef.current) return;
+
+    const firstMatch = displayedTaxiRanks.find((rank) => {
+      const latitude = Number(rank.latitude);
+      const longitude = Number(rank.longitude);
+      return Number.isFinite(latitude) && Number.isFinite(longitude);
+    });
+
+    if (!firstMatch) return;
+
+    mapRef.current.animateToRegion({
+      latitude: Number(firstMatch.latitude),
+      longitude: Number(firstMatch.longitude),
+      latitudeDelta: 0.03,
+      longitudeDelta: 0.03,
+    }, 700);
+  }, [displayedTaxiRanks, mapReady, searchQuery, showSearchResults]);
+
+  // On the initial map view, fit every taxi rank into the viewport instead of
+  // centering only on the emulator's simulated GPS location.
+  useEffect(() => {
+    if (!mapReady || searchQuery.trim() || displayedTaxiRanks.length === 0 || !mapRef.current) return;
+
+    const coordinates = displayedTaxiRanks
+      .map((rank) => ({
+        latitude: Number(rank.latitude),
+        longitude: Number(rank.longitude),
+      }))
+      .filter(({ latitude, longitude }) => Number.isFinite(latitude) && Number.isFinite(longitude));
+
+    if (coordinates.length === 0) return;
+
+    mapRef.current.fitToCoordinates(coordinates, {
+      edgePadding: { top: 140, right: 70, bottom: 240, left: 70 },
+      animated: true,
+    });
+  }, [displayedTaxiRanks, mapReady, searchQuery]);
 
   // 🎙️ Voice Search Effect
   useEffect(() => {
@@ -1105,7 +1150,7 @@ export default function ExploreScreen() {
         {/* Suggestions Dropdown */}
         {showSearchResults && (placeSuggestions.length > 0 || filteredSuggestions.length > 0) && (
           <View style={[styles.suggestionsDropdown, { backgroundColor: secondaryBgColor, borderColor: borderColor, borderWidth: 1 }]}>
-            {placeSuggestions.length > 0 && (
+            {placeSuggestions.length > 0 && filteredSuggestions.length === 0 && (
               <View style={{ marginBottom: filteredSuggestions.length > 0 ? 10 : 0 }}>
                 <ThemedText style={[styles.suggestionsSectionTitle, { color: placeholderColor }]}>
                   Places
@@ -1197,22 +1242,25 @@ export default function ExploreScreen() {
             {mapReady && (
               <>
                 {displayedTaxiRanks
-                  .filter(rank => rank.latitude && rank.longitude)
+                  .filter((rank) => Number.isFinite(Number(rank.latitude)) && Number.isFinite(Number(rank.longitude)))
                   .slice(0, 30)
-                  .map((rank) => (
-                    <MarkerComponent
-                      key={`taxi-${rank.id}`}
-                      tracksViewChanges={tracksView}
-                      anchor={{ x: 0.5, y: 0.5 }}
-                      opacity={1}
-                      coordinate={{
-                        latitude: parseFloat(rank.latitude.toString()),
-                        longitude: parseFloat(rank.longitude.toString()),
-                      }}
-                      onPress={() => setSelectedRank(rank)}>
-                      <View style={styles.webStyleMarkerCircle} />
-                    </MarkerComponent>
-                  ))}
+                  .map((rank) => {
+                    const latitude = Number(rank.latitude);
+                    const longitude = Number(rank.longitude);
+
+                    return (
+                      <MarkerComponent
+                        key={`taxi-${rank.id}`}
+                        pinColor="#2563EB"
+                        title={rank.name}
+                        description={rank.address}
+                        anchor={{ x: 0.5, y: 0.5 }}
+                        opacity={1}
+                        coordinate={{ latitude, longitude }}
+                        onPress={() => setSelectedRank(rank)}
+                      />
+                    );
+                  })}
 
                 {/* Incident Markers */}
                 {incidents
@@ -1487,8 +1535,16 @@ export default function ExploreScreen() {
                       <Feather name="map-pin" size={28} color={primaryColor} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={styles.rankModalTitleWhite}>{selectedRank.name}</ThemedText>
-                      <ThemedText style={styles.rankModalSubtitleWhite}>{selectedRank.district}</ThemedText>
+                      <ThemedText
+                        style={styles.rankModalTitleWhite}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                      >
+                        {selectedRank.name}
+                      </ThemedText>
+                      <ThemedText style={styles.rankModalSubtitleWhite} numberOfLines={2} ellipsizeMode="tail">
+                        {selectedRank.district}
+                      </ThemedText>
                     </View>
                   </View>
                 </LinearGradient>
@@ -2012,7 +2068,7 @@ const styles = StyleSheet.create({
   },
   rankModalHeader: {
     padding: 24,
-    paddingTop: 24,
+    paddingTop: 64,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -2038,6 +2094,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    paddingRight: 0,
   },
   largeIconBg: {
     backgroundColor: '#EFF6FF',
@@ -2045,12 +2102,17 @@ const styles = StyleSheet.create({
     borderRadius: 12
   },
   rankModalTitleWhite: {
+    flex: 1,
+    flexShrink: 1,
     fontSize: 24,
+    lineHeight: 29,
     fontWeight: 'bold',
     color: '#FFFFFF'
   },
   rankModalSubtitleWhite: {
+    flexShrink: 1,
     fontSize: 16,
+    lineHeight: 21,
     color: '#DBEAFE'
   },
   rankModalBody: {
