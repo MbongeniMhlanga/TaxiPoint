@@ -3,11 +3,13 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type TripOption = {
+  rankId?: string | null;
   name: string;
   address?: string | null;
   district?: string | null;
@@ -52,6 +54,7 @@ export default function AssistantScreen() {
   const { user } = useAuth();
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
+  const router = useRouter();
   const greeting = `Hi ${user?.name || 'there'}! I'm your TaxiPoint commuter assistant. How can I help with your trip today?`;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -106,16 +109,28 @@ export default function AssistantScreen() {
     }
   };
 
+  const showRankOnMap = (option: TripOption) => {
+    if (!option.rankId && !option.name) return;
+    router.push({
+      pathname: '/(tabs)/explore',
+      params: { rankId: option.rankId ?? '', rankName: option.name },
+    });
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
         <View style={[styles.header, { borderBottomColor: colors.border }]}><View style={[styles.headerIcon, { backgroundColor: colors.tint }]}><Feather name="cpu" size={22} color="#fff" /></View><View><Text style={[styles.headerTitle, { color: colors.text }]}>TaxiPoint Assistant</Text><Text style={{ color: colors.success, fontSize: 12 }}>● Ready to help you plan your trip</Text></View></View>
         <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent} keyboardShouldPersistTaps="handled">
           <View style={styles.row}><View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View><View style={[styles.bubble, { backgroundColor: colors.secondaryBackground }]}><Text style={{ color: colors.text, lineHeight: 20 }}><AnimatedText content={greeting} speed={16} /></Text></View></View>
           {messages.map((message) => <React.Fragment key={message.id}>
             <View style={[styles.row, message.role === 'user' && styles.userRow]}>{message.role === 'assistant' && <View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View>}<View style={[styles.bubble, { backgroundColor: message.role === 'user' ? colors.tint : colors.secondaryBackground }, message.role === 'user' && styles.userBubble]}><Text style={{ color: message.role === 'user' ? '#fff' : colors.text, lineHeight: 20 }}>{message.role === 'assistant' ? <AnimatedText content={message.content} /> : message.content}</Text></View>{message.role === 'user' && <View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="user" size={15} color={colors.tint} /></View>}</View>
             {message.role === 'assistant' && message.tripPlan && <View style={[styles.planCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.text }]}>{message.tripPlan.origin} → {message.tripPlan.destination}</Text><Text style={{ color: colors.textSecondary }}>{message.tripPlan.summary}</Text><Text style={[styles.cardMeta, { color: colors.tint }]}>{formatDistance(message.tripPlan.totalDistanceMeters)} · {formatDuration(message.tripPlan.totalDurationSeconds)}</Text></View>}
-            {message.role === 'assistant' && (message.tripOptions?.length ?? 0) > 0 && <View style={styles.options}><Text style={[styles.sectionTitle, { color: colors.text }]}>Suggested taxi ranks</Text>{message.tripOptions?.map((option, index) => <View key={`${message.id}-option-${index}`} style={[styles.optionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.text }]}>{option.name}</Text><Text style={{ color: colors.textSecondary }}>{option.address || option.district || 'Taxi rank'}</Text>{option.routes?.length ? <Text style={{ color: colors.tint, marginTop: 5 }}>{option.routes.slice(0, 3).join(', ')}</Text> : null}{option.incidents?.length ? <Text style={{ color: colors.error, marginTop: 5 }}>{option.incidents.length} active incident{option.incidents.length === 1 ? '' : 's'}</Text> : null}</View>)}</View>}
+            {message.role === 'assistant' && (message.tripOptions?.length ?? 0) > 0 && <View style={styles.options}><Text style={[styles.sectionTitle, { color: colors.text }]}>Suggested taxi ranks</Text>{message.tripOptions?.map((option, index) => <TouchableOpacity key={`${message.id}-option-${index}`} activeOpacity={0.75} onPress={() => showRankOnMap(option)} style={[styles.optionCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}><View style={styles.optionHeader}><Text style={[styles.cardTitle, { color: colors.text, flex: 1 }]}>{option.name}</Text><Feather name="map-pin" size={17} color={colors.tint} /></View><Text style={{ color: colors.textSecondary }}>{option.address || option.district || 'Taxi rank'}</Text>{option.routes?.length ? <Text style={{ color: colors.tint, marginTop: 5 }}>{option.routes.slice(0, 3).join(', ')}</Text> : null}{option.incidents?.length ? <Text style={{ color: colors.error, marginTop: 5 }}>{option.incidents.length} active incident{option.incidents.length === 1 ? '' : 's'}</Text> : null}<Text style={[styles.viewOnMap, { color: colors.tint }]}>Tap to view on map</Text></TouchableOpacity>)}</View>}
           </React.Fragment>)}
           {loading && <View style={styles.row}><View style={[styles.avatar, { backgroundColor: `${colors.tint}18` }]}><Feather name="cpu" size={15} color={colors.tint} /></View><ActivityIndicator color={colors.tint} /></View>}
         </ScrollView>
@@ -146,6 +161,8 @@ const styles = StyleSheet.create({
   options: { width: '100%', gap: 8, marginLeft: 39 },
   sectionTitle: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
   optionCard: { borderWidth: 1, borderRadius: 14, padding: 12, width: '88%' },
+  optionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  viewOnMap: { marginTop: 8, fontSize: 12, fontWeight: '800' },
   planCard: { marginLeft: 39, width: '88%', borderWidth: 1, borderRadius: 14, padding: 12, gap: 5 },
   cardTitle: { fontSize: 15, fontWeight: '800' },
   cardMeta: { marginTop: 4, fontSize: 13, fontWeight: '700' },

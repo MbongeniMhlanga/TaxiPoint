@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -85,6 +86,7 @@ interface GooglePlaceSuggestion {
 
 export default function ExploreScreen() {
   const { user } = useAuth();
+  const { rankId: requestedRankId, rankName: requestedRankName } = useLocalSearchParams<{ rankId?: string; rankName?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   // Use theme-aware colors
@@ -618,6 +620,32 @@ export default function ExploreScreen() {
       console.error('Error fetching taxi ranks:', err);
     }
   };
+
+  useEffect(() => {
+    if ((!requestedRankId && !requestedRankName) || allTaxiRanks.length === 0) return;
+
+    const rank = allTaxiRanks.find((candidate) =>
+      (requestedRankId && candidate.id === requestedRankId) ||
+      (requestedRankName && candidate.name.toLowerCase() === requestedRankName.toLowerCase())
+    );
+    if (!rank) return;
+
+    suppressAutocompleteRef.current = true;
+    setSearchQuery(rank.name);
+    setDisplayedTaxiRanks([rank]);
+    setSelectedRank(rank);
+    setShowSearchResults(false);
+    setPlaceSuggestions([]);
+
+    if (mapReady && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: rank.latitude,
+        longitude: rank.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 900);
+    }
+  }, [allTaxiRanks, mapReady, requestedRankId, requestedRankName]);
 
   const fetchFavorites = async () => {
     if (!user?.token) {
