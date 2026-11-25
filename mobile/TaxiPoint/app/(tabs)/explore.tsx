@@ -599,7 +599,7 @@ export default function ExploreScreen() {
     try {
       console.log('Fetching taxi ranks...');
       const nearbyUrl = location
-        ? `${API_BASE_URL}/api/taxi-ranks/nearby?lat=${location.latitude}&lng=${location.longitude}&radius_m=50000`
+        ? `${API_BASE_URL}/api/taxi-ranks/nearby?lat=${location.latitude}&lng=${location.longitude}&radius_m=25000`
         : `${API_BASE_URL}/api/taxi-ranks?page=0&size=1000`;
       const res = await fetch(nearbyUrl, {
         headers: { 'Authorization': `Bearer ${user?.token || ''}` }
@@ -1025,24 +1025,18 @@ export default function ExploreScreen() {
     }, 700);
   }, [displayedTaxiRanks, mapReady, searchQuery, showSearchResults]);
 
-  // On the initial map view, fit the nearby taxi ranks into the viewport.
+  // Match the crosshair button on the initial map view: center on the user
+  // with a fixed city-level zoom instead of zooming out to fit every pin.
   useEffect(() => {
-    if (!mapReady || searchQuery.trim() || displayedTaxiRanks.length === 0 || !mapRef.current) return;
+    if (!mapReady || searchQuery.trim() || displayedTaxiRanks.length === 0 || !userLocation || !mapRef.current) return;
 
-    const coordinates = displayedTaxiRanks
-      .map((rank) => ({
-        latitude: Number(rank.latitude),
-        longitude: Number(rank.longitude),
-      }))
-      .filter(({ latitude, longitude }) => Number.isFinite(latitude) && Number.isFinite(longitude));
-
-    if (coordinates.length === 0) return;
-
-    mapRef.current.fitToCoordinates(coordinates, {
-      edgePadding: { top: 140, right: 70, bottom: 240, left: 70 },
-      animated: true,
-    });
-  }, [displayedTaxiRanks, mapReady, searchQuery]);
+    mapRef.current.animateToRegion({
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    }, 1000);
+  }, [displayedTaxiRanks.length, mapReady, searchQuery, userLocation]);
 
   // 🎙️ Voice Search Effect
   useEffect(() => {
@@ -1400,7 +1394,7 @@ export default function ExploreScreen() {
               {refreshing ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Feather name="rotate-cw" size={22} color="#fff" />
+                <Feather name="rotate-cw" size={19} color="#fff" />
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -1422,7 +1416,7 @@ export default function ExploreScreen() {
                 colors={['#3B82F6', '#2563EB']}
                 style={styles.fabGradient}
               >
-                <Feather name="crosshair" size={22} color="#fff" />
+                <Feather name="crosshair" size={19} color="#fff" />
               </LinearGradient>
             </TouchableOpacity>
           ) : null}
@@ -1434,7 +1428,7 @@ export default function ExploreScreen() {
               colors={['#EF4444', '#DC2626']}
               style={styles.fabGradientLarge}
             >
-              <Feather name="plus" size={30} color="#fff" style={{ transform: [{ rotate: showIncidentForm ? '45deg' : '0deg' }] }} />
+                <Feather name="plus" size={22} color="#fff" style={{ transform: [{ rotate: showIncidentForm ? '45deg' : '0deg' }] }} />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -1889,10 +1883,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modernFab: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginBottom: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginBottom: 9,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1901,9 +1895,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   modernFabLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     elevation: 10,
     shadowColor: '#EF4444',
     shadowOffset: { width: 0, height: 6 },
@@ -2061,7 +2055,7 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     bottom: 90,
-    right: 20,
+    right: 16,
     zIndex: 2000,
   },
   fabContainerLifted: {

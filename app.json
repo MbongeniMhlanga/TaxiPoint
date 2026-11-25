@@ -1,3 +1,12 @@
 {
-  "expo": {}
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "d25e3162-4f10-4f23-a415-a87d96fdc729"
+      }
+    },
+    "android": {
+      "package": "com.mbongenimhlanga.taxipoint"
+    }
+  }
 }
