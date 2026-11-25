@@ -8,7 +8,7 @@ import { getErrorMessage } from '@/utils/errorMessage';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -109,6 +109,9 @@ export default function AdminDashboard() {
     const [currentRankId, setCurrentRankId] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [mapModules, setMapModules] = useState<{ MapView: any; Marker: any; providerGoogle?: any } | null>(null);
+    const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+    const mapRef = useRef<any>(null);
     const [form, setForm] = useState<TaxiRankForm>({
         name: '',
         description: '',
@@ -126,6 +129,34 @@ export default function AdminDashboard() {
     const [routeFareDraft, setRouteFareDraft] = useState<{ route: string; fare: string }>({ route: '', fare: '' });
     const [showRoutePicker, setShowRoutePicker] = useState(false);
     const [reviewNotesDrafts, setReviewNotesDrafts] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadMapModule = async () => {
+            try {
+                if (Platform.OS === 'web') {
+                    setMapLoadError('Map view is not available on web.');
+                    return;
+                }
+
+                const maps = (await import('react-native-maps')) as any;
+                const MapView = maps.default ?? maps.MapView;
+                if (!MapView || !maps.Marker) throw new Error('Map components unavailable');
+
+                if (mounted) {
+                    setMapModules({ MapView, Marker: maps.Marker, providerGoogle: maps.PROVIDER_GOOGLE });
+                    setMapLoadError(null);
+                }
+            } catch (error) {
+                console.error('Admin map module load failed:', error);
+                if (mounted) setMapLoadError('Map view could not be initialized on this device.');
+            }
+        };
+
+        void loadMapModule();
+        return () => { mounted = false; };
+    }, []);
 
     const fetchTaxiRanks = async () => {
         try {
@@ -391,6 +422,12 @@ export default function AdminDashboard() {
                 latitude: String(point.latitude),
                 longitude: String(point.longitude),
             }));
+            mapRef.current?.animateToRegion({
+                latitude: point.latitude,
+                longitude: point.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+            }, 700);
             Alert.alert('Location found', point.address || point.displayName || 'Coordinates received.');
         } catch (error) {
             Alert.alert('Location unavailable', error instanceof Error ? error.message : 'Could not find that location.');
@@ -413,6 +450,12 @@ export default function AdminDashboard() {
                 latitude: String(position.coords.latitude),
                 longitude: String(position.coords.longitude),
             }));
+            mapRef.current?.animateToRegion({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+            }, 700);
             Alert.alert('GPS location captured', 'Review the coordinates before saving the rank.');
         } catch (error) {
             Alert.alert('GPS unavailable', 'Could not access your current location. Check device permissions.');
@@ -533,6 +576,19 @@ export default function AdminDashboard() {
     })).sort((a, b) => b.count - a.count).slice(0, 5);
 
     const maxCount = Math.max(...chartData.map(d => d.count), 1);
+    const mapLatitude = Number.isFinite(Number(form.latitude)) && Number(form.latitude) !== 0 ? Number(form.latitude) : -26.2044;
+    const mapLongitude = Number.isFinite(Number(form.longitude)) && Number(form.longitude) !== 0 ? Number(form.longitude) : 28.0473;
+
+    const updateFormLocation = (latitude: number, longitude: number) => {
+        setForm((previous) => ({
+            ...previous,
+            latitude: String(latitude),
+            longitude: String(longitude),
+        }));
+    };
+
+    const MapViewComponent = mapModules?.MapView;
+    const MarkerComponent = mapModules?.Marker;
 
     const StatCard = ({ title, value, icon, color, subText, subTextColor }: any) => (
         <View style={[styles.statCard, { backgroundColor: colors.secondaryBackground, borderColor: colors.border }]}>
@@ -894,6 +950,54 @@ export default function AdminDashboard() {
                                             <ThemedText style={{ color: colors.tint, fontWeight: '700', fontSize: 13 }}>Use GPS</ThemedText>
                                         </TouchableOpacity>
                                     </View>
+                                </View>
+
+                                <View style={[styles.mapPickerCard, { borderColor: colors.border, backgroundColor: colors.secondaryBackground }]}>
+                                    <View style={styles.mapPickerHeader}>
+                                        <View style={{ flex: 1 }}>
+                                            <ThemedText style={styles.label}>Confirm location</ThemedText>
+                                            <ThemedText style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                                Tap the map or drag the pin to adjust the exact position.
+                                            </ThemedText>
+                                        </View>
+                                        <Feather name="move" size={20} color={colors.tint} />
+                                    </View>
+                                    {MapViewComponent && MarkerComponent ? (
+                                        <View style={styles.mapPickerFrame}>
+                                            <MapViewComponent
+                                                ref={mapRef}
+                                                provider={Platform.OS === 'android' ? mapModules?.providerGoogle : undefined}
+                                                style={StyleSheet.absoluteFillObject}
+                                                initialRegion={{
+                                                    latitude: mapLatitude,
+                                                    longitude: mapLongitude,
+                                                    latitudeDelta: form.latitude !== '0' && form.longitude !== '0' ? 0.01 : 0.08,
+                                                    longitudeDelta: form.latitude !== '0' && form.longitude !== '0' ? 0.01 : 0.08,
+                                                }}
+                                                onPress={(event: any) => {
+                                                    const coordinate = event.nativeEvent.coordinate;
+                                                    updateFormLocation(coordinate.latitude, coordinate.longitude);
+                                                }}
+                                            >
+                                                <MarkerComponent
+                                                    coordinate={{ latitude: mapLatitude, longitude: mapLongitude }}
+                                                    draggable
+                                                    title={form.name || 'Taxi rank location'}
+                                                    onDragEnd={(event: any) => {
+                                                        const coordinate = event.nativeEvent.coordinate;
+                                                        updateFormLocation(coordinate.latitude, coordinate.longitude);
+                                                    }}
+                                                />
+                                            </MapViewComponent>
+                                        </View>
+                                    ) : (
+                                        <View style={[styles.mapPickerFallback, { borderColor: colors.border }]}>
+                                            <Feather name="map-pin" size={22} color={colors.tint} />
+                                            <ThemedText style={{ color: colors.textSecondary, textAlign: 'center' }}>
+                                                {mapLoadError || 'Loading map...'}
+                                            </ThemedText>
+                                        </View>
+                                    )}
                                 </View>
 
                                 <View style={[styles.row, { gap: 12 }]}>
@@ -1501,6 +1605,33 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 7,
+    },
+    mapPickerCard: {
+        borderWidth: 1,
+        borderRadius: 14,
+        padding: 12,
+        gap: 10,
+        marginBottom: 20,
+    },
+    mapPickerHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+    },
+    mapPickerFrame: {
+        height: 230,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    mapPickerFallback: {
+        height: 150,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 20,
     },
     inputGroup: {
         marginBottom: 20,
